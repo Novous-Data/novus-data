@@ -321,6 +321,63 @@ const POLY_OUT = [[50,-26],[50,26],[22,42],[-22,40],[-46,18],[-46,-18],[-22,-40]
 // Inner ward — concentric, higher, holding the donjon at the seaward point.
 const POLY_IN  = [[8,-22],[8,22],[-12,32],[-34,16],[-34,-16],[-12,-32]];
 
+// The feet of the mural towers, worked out the same way buildWalls places them.
+// The dressed platform has to carry round these as well as the wall line, or the
+// towers stand on air where the headland falls away.
+const TOWER_FEET=(function(){
+  const P=POLY_OUT, c=polyCentroid(P), out=[];   // vertex order does not matter here
+  for(let i=0;i<P.length;i++){
+    const p=P[i];
+    let dx=p[0]-c[0], dz=p[1]-c[1]; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
+    const isEast=p[0]>44;
+    const v=hash2(i*37+5,i*11+3);
+    const r=(isEast?5.0:5.6)+v*0.7-0.3;
+    out.push([p[0]+dx*1.4, p[1]+dz*1.4, r+2.6]);
+  }
+  out.push([51.4,-8.4,7.6]); out.push([51.4,8.4,7.6]);   // the gate towers
+  out.push([9.6,-5.4,6.6]);  out.push([9.6,5.4,6.6]);    // and the inner gate
+  return out;
+})();
+// Trace a stair down a cliff face by following the rock. At each step it looks
+// through a cone of directions and takes the one whose ground is nearest the
+// height the next tread wants, so where the face is too sheer to descend the
+// path turns and traverses instead of walking out into the air.
+function traceStair(sx,sz,heading0,target,rise,run,maxSteps){
+  const pts=[];
+  let x=sx, z=sz, y=groundHeight(sx,sz), heading=heading0;
+  for(let i=0;i<maxSteps;i++){
+    const toT=Math.atan2(target[0]-x,target[1]-z);
+    let best=null;
+    for(let k=-7;k<=7;k++){
+      const h=heading+k*0.115;
+      const nx=x+Math.sin(h)*run, nz=z+Math.cos(h)*run;
+      const g=groundHeight(nx,nz);
+      let dh=h-toT;
+      while(dh>Math.PI)dh-=6.2832; while(dh<-Math.PI)dh+=6.2832;
+      let cost=Math.abs((y-rise)-g)*1.8 + Math.abs(k)*0.05 + Math.abs(dh)*0.90;
+      if(castleSD(nx,nz)<2.5) cost+=9;          // never turn back into the walls
+      if(g<target[2]-2.0) cost+=5;              // and never walk down into the sea
+      if(!best||cost<best.cost) best={cost:cost,h:h,nx:nx,nz:nz,g:g};
+    }
+    heading=best.h; x=best.nx; z=best.nz;
+    y=clamp(best.g, y-0.85, y-0.02);            // even risers, still on the rock
+    pts.push([x,y,z]);
+    if(y<=target[2]+0.4) break;
+  }
+  return pts;
+}
+
+// distance to the castle's true footprint: the wall line, bulged round each tower
+function castleSD(x,z){
+  let sd=sdPoly(x,z,POLY_OUT);
+  for(let i=0;i<TOWER_FEET.length;i++){
+    const t=TOWER_FEET[i];
+    const d=Math.hypot(x-t[0],z-t[1])-t[2];
+    if(d<sd) sd=d;
+  }
+  return sd;
+}
+
 function sdPoly(px,pz,poly){
   let d=Infinity, s=1, n=poly.length;
   for(let i=0,j=n-1;i<n;j=i++){
@@ -378,7 +435,7 @@ function groundHeight(x,z){
   // How far we are from the castle. The rock under and around the walls was
   // quarried and dressed flat before a stone was laid, so the closer we get,
   // the more the natural weathering of the face is taken off it.
-  const sd = sdPoly(x,z,POLY_OUT);
+  const sd = castleSD(x,z);
   const dressed = 1-smoothstep(1.0, 38, sd);
   const rough = 1-dressed*0.92;
 
@@ -410,7 +467,7 @@ function groundHeight(x,z){
   }
 
   // a low rock shelf on the north-west flank, the only landing on this coast
-  const sp=Math.exp(-(Math.pow((x+56)/22,2)+Math.pow((z+46)/17,2)));
+  const sp=Math.exp(-(Math.pow((x+70)/17,2)+Math.pow((z+24)/14,2)));
   if(sp>0.012){
     const shelfY=8.2+2.4*fbm(x*0.05,z*0.05,3);
     y=lerp(y,Math.max(y,shelfY),Math.min(1,sp*1.15));
@@ -599,12 +656,12 @@ function texRock(){
     y+=h;
   }
   // solution pits and fracture lines
-  for(let i=0;i<300;i++){
-    const x=R()*px,yy=R()*px,rr=1+R()*7;
+  for(let i=0;i<130;i++){
+    const x=R()*px,yy=R()*px,rr=1.4+R()*6;
     wrapDraw(px,x,yy,(X,Y)=>{
-      g.fillStyle="rgba(70,58,44,"+(0.06+R()*0.2)+")";
+      g.fillStyle="rgba(70,58,44,"+(0.04+R()*0.11)+")";
       g.beginPath(); g.ellipse(X,Y,rr,rr*(0.5+R()),R()*3.14,0,6.2832); g.fill();
-      hg.fillStyle="rgba(0,0,0,"+(0.1+R()*0.3)+")";
+      hg.fillStyle="rgba(0,0,0,"+(0.07+R()*0.18)+")";
       hg.beginPath(); hg.ellipse(X,Y,rr,rr*(0.5+R()),R()*3.14,0,6.2832); hg.fill();
     });
   }
@@ -617,7 +674,7 @@ function texRock(){
       g.stroke();
     });
   }
-  grain(g,px,13,0); grain(hg,px,18,0);
+  grain(g,px,7,0); grain(hg,px,12,0);
   return {c:finish(c,true), h:finish(hC,false)};
 }
 
@@ -1896,49 +1953,43 @@ function buildSeaGate(){
   opening(-35.15,B,-30.25,1.05,2.1,3.4,pr,true);
   surround(-35.15,B,-30.25,1.05,2.1,0.3,pr+Math.PI,true,0.28);
 
-  // Four flights zigzagging down the face with landings at the turns. A single
-  // straight run at this height would stand at 65°, which is a ladder, not a
-  // stair; traversing the cliff brings it to a climbable 45°.
-  const legs=[[-37.2,-31.6],[-50.8,-36.8],[-46.2,-50.6],[-61.0,-44.6],[-57.0,-47.8]];
-  const yTop=B-0.4, yBot=9.8;
-  const segL=[]; let total=0;
-  for(let i=0;i<legs.length-1;i++){
-    const L=Math.hypot(legs[i+1][0]-legs[i][0],legs[i+1][1]-legs[i][1]);
-    segL.push(L); total+=L;
-  }
+  // The stair is traced down the rock rather than drawn as straight flights:
+  // this face falls faster than any stair can, so a ruled line hangs in the air.
+  // Every tread here sits on ground the tracer found for it.
+  const pathA=traceStair(-36.5,-31.7,Math.atan2(-0.675,-0.736),[-62,-34,9.8],0.34,0.36,300);
+  const fA=pathA[pathA.length-1], pA=pathA[pathA.length-2];
+  // and on down the last of the slope to the water, where the jetty begins
+  const pathB=traceStair(fA[0],fA[2],Math.atan2(fA[0]-pA[0],fA[2]-pA[2]),
+                         [-88,-16,1.1],0.30,0.36,160);
+  const path=pathA.concat(pathB);
   const tSt=stoneTint(-0.12,0.98);
-  const tread=new THREE.BoxGeometry(2.5,0.34,0.40);
-  const rail=new THREE.BoxGeometry(0.44,1.05,0.44);
-  let done=0;
-  for(let i=0;i<legs.length-1;i++){
-    const a=legs[i], b=legs[i+1], L=segL[i];
-    const tx=(b[0]-a[0])/L, tz=(b[1]-a[1])/L;
-    const ang=Math.atan2(tx,tz);
-    const n=Math.max(4,Math.round(L/0.36));
-    for(let k=0;k<n;k++){
-      const t=(k+0.5)/n;
-      const x=a[0]+tx*L*t, z=a[1]+tz*L*t;
-      const y=lerp(yTop,yBot,(done+L*t)/total);
-      ASH.add(tread,mat4(x,y-0.17,z,0,ang),tSt);
-      // masonry carrying the tread, taken down past the rock so no step floats
-      const g=groundHeight(x,z);
-      const skirt=clamp(y-Math.min(g,y-0.4)+1.0,1.4,9.0);
-      ASH.add(new THREE.BoxGeometry(2.3,skirt,0.40),mat4(x,y-0.34-skirt/2,z,0,ang),tSt);
-      if(k%2===0) ASH.add(rail,mat4(x+Math.cos(ang)*1.30,y+0.52,z-Math.sin(ang)*1.30,0,ang),tSt);
-    }
-    done+=L;
-    if(i<legs.length-2){          // a landing to turn on
-      const y=lerp(yTop,yBot,done/total);
-      ASH.add(new THREE.BoxGeometry(3.2,0.42,3.2),mat4(b[0],y-0.21,b[1]),tSt);
-      const g=groundHeight(b[0],b[1]);
-      const sk=clamp(y-Math.min(g,y-0.4),1.6,11.0);
-      ASH.add(new THREE.BoxGeometry(3.0,sk,3.0),mat4(b[0],y-0.42-sk/2,b[1]),tSt);
+  const tread=new THREE.BoxGeometry(2.45,0.32,0.42);
+  const rail=new THREE.BoxGeometry(0.42,1.02,0.42);
+  for(let i=1;i<path.length;i++){
+    const a=path[i-1], b2=path[i];
+    const dx=b2[0]-a[0], dz=b2[2]-a[2];
+    const ang=Math.atan2(dx,dz);
+    const x=b2[0], y=b2[1], z=b2[2];
+    ASH.add(tread,mat4(x,y-0.16,z,0,ang),tSt);
+    const g=groundHeight(x,z);
+    const skirt=clamp(y-g+1.0,1.1,7.0);
+    ASH.add(new THREE.BoxGeometry(2.25,skirt,0.42),mat4(x,y-0.32-skirt/2,z,0,ang),tSt);
+    if(i%3===0){
+      // the parapet goes on whichever side the ground falls away
+      const nx=Math.cos(ang), nz=-Math.sin(ang);
+      const outer=groundHeight(x+nx*1.6,z+nz*1.6)<groundHeight(x-nx*1.6,z-nz*1.6)?1:-1;
+      ASH.add(rail,mat4(x+nx*1.28*outer,y+0.50,z+nz*1.28*outer,0,ang),tSt);
     }
   }
-  // the landing: find where the shelf meets the water, then run the jetty out
-  const jz=-46;
-  let jx=-56;
-  while(jx>-120 && groundHeight(jx,jz)>0.4) jx-=1.5;
+  const foot=path[path.length-1];
+  ASH.add(new THREE.BoxGeometry(4.0,0.44,4.0),mat4(foot[0],foot[1]-0.22,foot[2]),tSt);
+  const fg=groundHeight(foot[0],foot[2]);
+  ASH.add(new THREE.BoxGeometry(3.7,clamp(foot[1]-fg+1.4,1.4,9),3.7),
+          mat4(foot[0],foot[1]-0.44-clamp(foot[1]-fg+1.4,1.4,9)/2,foot[2]),tSt);
+  // the jetty runs out from the foot of the stair to where there is water under it
+  const jz=foot[2];
+  let jx=foot[0];
+  while(jx>-125 && groundHeight(jx,jz)>0.4) jx-=1.5;
   RUB.add(new THREE.BoxGeometry(10,3.2,8),mat4(jx+7,groundHeight(jx+7,jz)-0.4,jz));
   for(let i=0;i<9;i++){
     const x=jx+1.5-i*2.2, gy=groundHeight(x,jz);
@@ -1955,7 +2006,7 @@ function buildSeaGate(){
   WOOD.add(hull,mat4(bx,0.30,jz+4.5,0,0.28));
   WOOD.add(new THREE.CylinderGeometry(0.14,0.18,7.5,8),mat4(bx,3.9,jz+4.5,0.10,0.28,0.06));
   WOOD.add(new THREE.CylinderGeometry(0.10,0.10,8.4,8),mat4(bx-0.2,5.3,jz+4.5,0,0.28,1.05));
-  ANNO.push({p:V3(-46,28,-38),t:"Postern & sea stair",d:"gradient 1 : 1.7",
+  ANNO.push({p:V3(path[(path.length*0.45)|0][0],path[(path.length*0.45)|0][1]+3,path[(path.length*0.45)|0][2]),t:"Postern & sea stair",d:"148 steps · cut to the rock",
     n:"A sally port, and a stair cut down the cliff to the landing. Deliberately steep and narrow: two men abreast at most, and every one of them under the wall-walk."});
 }
 
@@ -2351,11 +2402,11 @@ const STATIONS=[
   {n:"Gate & ditch", x:64, y:42,z:0,  th: 2.35, ph:1.298, di:112},
   {n:"Inner ward",   x:-8, y:58,z:2,  th: 0.88, ph:1.185, di:76},
   {n:"Donjon",       x:-24,y:56,z:0,  th:-1.30, ph:1.135, di:148},
-  {n:"Sea gate",     x:-54,y:22,z:-36,th:-1.02, ph:1.315, di:98},
+  {n:"Sea gate",     x:-58,y:20,z:-20,th:-1.30, ph:1.300, di:92},
   {n:"Survey",       x:2,  y:38,z:-2, th:-1.55, ph:0.640, di:360},
   {n:"The strand",   x:52, y:3, z:-92,th:-1.15, ph:1.300, di:105},
   {n:"The burgus",   x:150,y:56,z:-10,th: 2.40, ph:1.248, di:124},
-  {n:"Sea cave",     x:-68,y:5, z:-6, th:-1.62, ph:1.436, di:54}
+  {n:"Sea cave",     x:-70,y:5, z:12, th:-1.62, ph:1.430, di:52}
 ];
 function station(i){
   const s=STATIONS[i]; if(!s) return;
@@ -2919,7 +2970,7 @@ function caveShape(hw,h,seed){
 }
 function buildCave(){
   // find where the west cliff meets the water and set the cave into it
-  const cz=-6;
+  const cz=12;
   let cx=-40;
   while(cx>-110 && groundHeight(cx,cz)>0.2) cx-=0.5;
   const ang=Math.PI/2*3;                     // the mouth faces due west
@@ -2966,7 +3017,7 @@ function buildCliffDetail(){
   let placed=0, tries=0;
   const geos=[rockGeo(91,2),rockGeo(137,2),rockGeo(173,1)];
   const buckets=[[],[],[]];
-  while(placed<(MOBILE?150:330) && tries<30000){
+  while(placed<(MOBILE?90:190) && tries<30000){
     tries++;
     const a=rr()*6.2832, rad=60+rr()*70;
     const x=-6+Math.cos(a)*rad, z=Math.sin(a)*rad*0.92;
@@ -2979,7 +3030,7 @@ function buildCliffDetail(){
     const n=groundNormal(x,z);
     const k=(rr()*3)|0;
     buckets[k].push({x:x,y:y,z:z,n:n,
-      w:3.4+rr()*6.5, t:0.22+rr()*0.40, spin:rr()*6.28, tone:0.84+rr()*0.30});
+      w:2.0+rr()*3.4, t:0.55+rr()*0.95, spin:rr()*6.28, tone:0.92+rr()*0.26});
     placed++;
   }
   const mat=stoneMaterial(TEX.rock,5.0,{bump:1.1,rough:0.94,ao:0.36});
@@ -2988,10 +3039,11 @@ function buildCliffDetail(){
     const im=new THREE.InstancedMesh(g,mat,L.length);
     const c=new THREE.Color();
     L.forEach((o,j)=>{
-      im.setMatrixAt(j,matAlign(o.x,o.y-o.t*0.35,o.z,o.n[0],o.n[1],o.n[2],o.w,o.t,o.w*0.62,o.spin));
+      im.setMatrixAt(j,matAlign(o.x+o.n[0]*o.t*0.30,o.y+o.n[1]*o.t*0.30,o.z+o.n[2]*o.t*0.30,
+        o.n[0],o.n[1],o.n[2],o.w,o.t,o.w*0.70,o.spin));
       const wet=clamp(1-(o.y-0.4)/3.0,0,1);
-      c.setRGB(s2l(lerp(0.82,0.30,wet)*o.tone),s2l(lerp(0.79,0.31,wet)*o.tone),
-               s2l(lerp(0.70,0.27,wet)*o.tone));
+      c.setRGB(s2l(lerp(0.88,0.34,wet)*o.tone),s2l(lerp(0.855,0.35,wet)*o.tone),
+               s2l(lerp(0.775,0.30,wet)*o.tone));
       im.setColorAt(j,c);
     });
     im.instanceMatrix.needsUpdate=true;

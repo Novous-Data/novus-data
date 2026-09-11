@@ -103,6 +103,12 @@
   .anno.flip .lead{left:-37px;border-left:none;border-right:1px solid rgba(233,222,198,.55)}
   .anno.flip .card{left:auto;right:37px;border-left:1px solid rgba(233,222,198,.24);border-right:2px solid var(--gules)}
 
+  #hint{position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:6;
+    padding:7px 13px;font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;
+    color:var(--parchment);opacity:0;transition:opacity .45s;pointer-events:none;
+    white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+  #hint.on{opacity:1}
+
   /* ---------- loader / fallback ---------- */
   #loader{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:14px;background:#100D0A;transition:opacity .7s ease}
@@ -199,7 +205,10 @@
        Nothing post-Columbian is planted here: no prickly pear, no agave, no eucalyptus.</p>
 
     <h3>Controls</h3>
-    <p class="src">Drag to orbit · right-drag or two fingers to pan · scroll or pinch to zoom.</p>
+    <p class="src">Drag to orbit · right-drag or two fingers to pan · scroll or pinch to zoom.<br>
+       <b>Free flight</b> (button, or the <b>F</b> key) hands you the camera: <b>W A S D</b> to fly,
+       <b>Q</b> and <b>E</b> for down and up, drag to look, <b>shift</b> to sprint. On a touch screen,
+       drag to look and use two fingers to move.</p>
   </section>
 
   <aside id="rail" class="panel">
@@ -220,15 +229,21 @@
         <button data-view="3">Donjon</button>
         <button data-view="4">Sea gate</button>
         <button data-view="5">Survey</button>
+        <button data-view="6">The strand</button>
+        <button data-view="7">The burgus</button>
+        <button data-view="8">Sea cave</button>
       </div>
     </div>
     <div class="grp full">
       <div class="toggles">
         <button id="annoBtn" aria-pressed="true">Annotations</button>
         <button id="orbitBtn" aria-pressed="true">Auto-orbit</button>
+        <button id="freeBtn" aria-pressed="false">Free flight</button>
       </div>
     </div>
   </aside>
+
+  <div id="hint" class="panel"></div>
 
   <div id="readout" class="panel">
     <div><span class="k">BEARING</span><span id="roBear">—</span></div>
@@ -377,6 +392,15 @@ function groundHeight(x,z){
     const rw = 1-smoothstep(6,13,Math.abs(z));
     const along = smoothstep(58,70,x);
     y = lerp(y, groundProfileAt(x), rw*along*0.92);
+  }
+
+  // a shingle strand in the bay north of the isthmus: a long, gentle gradient
+  // through the waterline instead of the cliff's abrupt one
+  const bb=Math.exp(-(Math.pow((x-58)/30,2)+Math.pow((z+88)/24,2)));
+  if(bb>0.012){
+    const beachY=-2.4+7.6*smoothstep(-0.85,0.95,d)
+                 +0.5*fbm(x*0.09,z*0.09,3)+0.28*Math.sin(x*0.42+z*0.11);
+    y=lerp(y,beachY,Math.min(1,bb*1.12));
   }
 
   // a low rock shelf on the north-west flank, the only landing on this coast
@@ -1530,6 +1554,7 @@ function roundTower(cx,cz,r,H,o){
   }
 }
 
+let WALLTOWERS=[];
 function buildWalls(){
   const towersOut=[];
   const P=ensureOutward(POLY_OUT);
@@ -1577,6 +1602,7 @@ function buildWalls(){
   ASH.add(sweepProfile(POLY_IN,shiftProfile(PARAPET_IN(19),B),{closed:true}));
   crenellate(POLY_IN,B+20.15,towersIn);
   CURTINT=null;
+  WALLTOWERS=towersOut;
   return {towersOut,towersIn};
 }
 
@@ -2239,6 +2265,7 @@ function finishCastle(){
   };
   put(ASH,ashMat); put(RUB,rubMat); put(WOOD,woodMat);
   put(COB,cobMat,false); put(VOID,voidMat,false);
+  put(CLIFF,stoneMaterial(TEX.rock,6.5,{bump:1.15,rough:0.94,ao:0.34,vertexColors:true}));
 
   ANNO.push({p:V3(-49.5,B+2.5,14),t:"Talus",d:"batter 1 : 0.45 · 6.5 m",
     n:"The battered plinth denies a ram a square face, lengthens a mine gallery, and turns anything dropped from the parapet into a ricochet that skips outward into the attackers."});
@@ -2307,17 +2334,22 @@ function updateLabels(){
 
 /* ---- camera ---------------------------------------------------------------- */
 const CTRL={tx:-18,ty:34,tz:4, th:-1.15, ph:1.290, di:272,
-            gx:-18,gy:34,gz:4, gth:-1.15, gph:1.290, gdi:272};
+            gx:-18,gy:34,gz:4, gth:-1.15, gph:1.290, gdi:272, vth:0, vph:0};
 const STATIONS=[
   {n:"Sea approach", x:-18,y:34,z:4,  th:-1.15, ph:1.290, di:272},
   {n:"Gate & ditch", x:64, y:42,z:0,  th: 2.35, ph:1.298, di:112},
   {n:"Inner ward",   x:-8, y:58,z:2,  th: 0.88, ph:1.185, di:76},
   {n:"Donjon",       x:-24,y:56,z:0,  th:-1.30, ph:1.135, di:148},
   {n:"Sea gate",     x:-54,y:22,z:-36,th:-1.02, ph:1.315, di:98},
-  {n:"Survey",       x:2,  y:38,z:-2, th:-1.55, ph:0.640, di:360}
+  {n:"Survey",       x:2,  y:38,z:-2, th:-1.55, ph:0.640, di:360},
+  {n:"The strand",   x:56, y:3, z:-90,th:-1.90, ph:1.352, di:95},
+  {n:"The burgus",   x:150,y:56,z:-10,th: 2.40, ph:1.248, di:124},
+  {n:"Sea cave",     x:-68,y:5, z:-6, th:-1.62, ph:1.436, di:54}
 ];
 function station(i){
   const s=STATIONS[i]; if(!s) return;
+  if(FREE){ FREE=false; const b=document.getElementById("freeBtn");
+            if(b) b.setAttribute("aria-pressed","false"); }
   CTRL.gx=s.x; CTRL.gy=s.y; CTRL.gz=s.z;
   CTRL.gdi=s.di; CTRL.gph=s.ph;
   // take the short way round the circle
@@ -2326,8 +2358,64 @@ function station(i){
   CTRL.gth+=d;
   nudge();
 }
-function placeCamera(){
-  const k=0.09;
+// free flight: the camera leaves its orbit and is flown by hand
+let FREE=false;
+const FLY={x:0,y:0,z:0,yaw:0,pitch:0,vx:0,vy:0,vz:0,push:0,strafe:0};
+const KEYS=Object.create(null);
+const _fwd=new THREE.Vector3();
+function flyForward(){
+  const cp=Math.cos(FLY.pitch);
+  return _fwd.set(Math.sin(FLY.yaw)*cp,Math.sin(FLY.pitch),Math.cos(FLY.yaw)*cp);
+}
+function enterFree(){
+  FREE=true;
+  FLY.x=camera.position.x; FLY.y=camera.position.y; FLY.z=camera.position.z;
+  const dx=CTRL.tx-FLY.x, dy=CTRL.ty-FLY.y, dz=CTRL.tz-FLY.z;
+  const L=Math.hypot(dx,dy,dz)||1;
+  FLY.yaw=Math.atan2(dx/L,dz/L);
+  FLY.pitch=Math.asin(clamp(dy/L,-1,1));
+  FLY.vx=FLY.vy=FLY.vz=0;
+  showHint("W A S D fly · Q E up and down · drag to look · shift to sprint");
+}
+function leaveFree(){
+  FREE=false;
+  const f=flyForward(), d=110;
+  CTRL.gx=CTRL.tx=FLY.x+f.x*d; CTRL.gy=CTRL.ty=FLY.y+f.y*d; CTRL.gz=CTRL.tz=FLY.z+f.z*d;
+  CTRL.gdi=CTRL.di=d;
+  CTRL.gth=CTRL.th=Math.atan2(-f.x,-f.z);
+  CTRL.gph=CTRL.ph=Math.acos(clamp(-f.y,-1,1));
+}
+function flyStep(dt){
+  const fast=(KEYS.ShiftLeft||KEYS.ShiftRight)?3.4:1;
+  const sp=26*fast;
+  let ax=0,ay=0,az=0;
+  const f=flyForward();
+  const rx=Math.cos(FLY.yaw), rz=-Math.sin(FLY.yaw);
+  let go=0, side=0, up=0;
+  if(KEYS.KeyW||KEYS.ArrowUp) go+=1;
+  if(KEYS.KeyS||KEYS.ArrowDown) go-=1;
+  if(KEYS.KeyD||KEYS.ArrowRight) side+=1;
+  if(KEYS.KeyA||KEYS.ArrowLeft) side-=1;
+  if(KEYS.KeyE||KEYS.Space) up+=1;
+  if(KEYS.KeyQ) up-=1;
+  go+=FLY.push; side+=FLY.strafe;
+  FLY.push*=0.82; FLY.strafe*=0.82;
+  ax=(f.x*go+rx*side)*sp; ay=(f.y*go+up)*sp; az=(f.z*go+rz*side)*sp;
+  const k=1-Math.exp(-dt*5.5);
+  FLY.vx+=(ax-FLY.vx)*k; FLY.vy+=(ay-FLY.vy)*k; FLY.vz+=(az-FLY.vz)*k;
+  FLY.x+=FLY.vx*dt; FLY.y+=FLY.vy*dt; FLY.z+=FLY.vz*dt;
+  FLY.x=clamp(FLY.x,-HALF+8,HALF-8); FLY.z=clamp(FLY.z,-HALF+8,HALF-8);
+  FLY.y=clamp(Math.max(FLY.y,groundHeight(FLY.x,FLY.z)+1.7,1.3),1.3,420);
+  camera.position.set(FLY.x,FLY.y,FLY.z);
+  camera.lookAt(FLY.x+f.x,FLY.y+f.y,FLY.z+f.z);
+}
+function placeCamera(dt){
+  if(FREE){ flyStep(dt); return; }
+  // time-based damping, so the glide is the same at any frame rate
+  const k=1-Math.exp(-dt*7.0);
+  CTRL.gth+=CTRL.vth*dt; CTRL.gph=clamp(CTRL.gph+CTRL.vph*dt,0.14,1.532);
+  const decay=Math.exp(-dt*3.6);
+  CTRL.vth*=decay; CTRL.vph*=decay;
   CTRL.tx+=(CTRL.gx-CTRL.tx)*k; CTRL.ty+=(CTRL.gy-CTRL.ty)*k; CTRL.tz+=(CTRL.gz-CTRL.tz)*k;
   CTRL.th+=(CTRL.gth-CTRL.th)*k; CTRL.ph+=(CTRL.gph-CTRL.ph)*k; CTRL.di+=(CTRL.gdi-CTRL.di)*k;
   const sp=Math.sin(CTRL.ph);
@@ -2348,6 +2436,7 @@ canvas.addEventListener("pointerdown",e=>{
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   dragMode=(e.button===2||e.button===1||e.shiftKey)?2:1;
   pinchD=0; nudge();
+  CTRL.vth=0; CTRL.vph=0;
 });
 function endPtr(e){ ptrs.delete(e.pointerId); pinchD=0; }
 canvas.addEventListener("pointerup",endPtr);
@@ -2360,15 +2449,22 @@ canvas.addEventListener("pointermove",e=>{
   if(ptrs.size>=2){
     const it=Array.from(ptrs.values());
     const d=Math.hypot(it[0].x-it[1].x,it[0].y-it[1].y);
+    if(FREE){ FLY.push+=-dy*0.010; FLY.strafe+=dx*0.010; pinchD=d; return; }
     if(pinchD>0) CTRL.gdi=clamp(CTRL.gdi*(pinchD/Math.max(1,d)),16,900);
     pinchD=d;
     panBy(dx*0.5,dy*0.5);
+    return;
+  }
+  if(FREE){
+    FLY.yaw-=dx*0.0032;
+    FLY.pitch=clamp(FLY.pitch-dy*0.0028,-1.40,1.40);
     return;
   }
   if(dragMode===2) panBy(dx,dy);
   else{
     CTRL.gth-=dx*0.0046;
     CTRL.gph=clamp(CTRL.gph-dy*0.0038,0.14,1.532);
+    CTRL.vth=-dx*0.055; CTRL.vph=clamp(-dy*0.045,-1.2,1.2);   // a little momentum
   }
 });
 function panBy(dx,dy){
@@ -2379,16 +2475,28 @@ function panBy(dx,dy){
 }
 canvas.addEventListener("wheel",e=>{
   e.preventDefault();
+  if(FREE){ FLY.push+=-e.deltaY*0.006; nudge(); return; }
   CTRL.gdi=clamp(CTRL.gdi*Math.exp(e.deltaY*0.0011),16,900);
   nudge();
 },{passive:false});
 addEventListener("keydown",e=>{
+  if(e.target&&/^(INPUT|TEXTAREA|BUTTON)$/.test(e.target.tagName)&&e.code!=="Escape") {
+    if(e.code!=="KeyF") return;
+  }
+  KEYS[e.code]=true;
+  if(e.code==="KeyF"){ toggleFree(); return; }
+  if(FREE){
+    if(/^(KeyW|KeyA|KeyS|KeyD|KeyQ|KeyE|Space|Arrow)/.test(e.code)) e.preventDefault();
+    nudge(); return;
+  }
   const k={ArrowLeft:-1,ArrowRight:1}[e.key];
   if(k){ CTRL.gth+=k*0.14; nudge(); }
   if(e.key==="ArrowUp"||e.key==="ArrowDown"){
     CTRL.gdi=clamp(CTRL.gdi*(e.key==="ArrowUp"?0.92:1.08),16,900); nudge();
   }
 });
+addEventListener("keyup",e=>{ KEYS[e.code]=false; });
+addEventListener("blur",()=>{ for(const k in KEYS) KEYS[k]=false; });
 
 /* ---- panel ----------------------------------------------------------------- */
 const $=id=>document.getElementById(id);
@@ -2397,6 +2505,17 @@ $("orbitBtn").setAttribute("aria-pressed",String(orbitOn));
 $("orbitBtn").addEventListener("click",()=>{
   orbitOn=!orbitOn; $("orbitBtn").setAttribute("aria-pressed",String(orbitOn));
 });
+function showHint(msg){
+  const h=$("hint");
+  h.textContent=msg; h.classList.add("on");
+  clearTimeout(showHint._t);
+  showHint._t=setTimeout(()=>h.classList.remove("on"),7000);
+}
+function toggleFree(){
+  if(FREE) leaveFree(); else enterFree();
+  $("freeBtn").setAttribute("aria-pressed",String(FREE));
+}
+$("freeBtn").addEventListener("click",()=>{ toggleFree(); canvas.focus(); });
 $("annoBtn").addEventListener("click",()=>{
   annoOn=!annoOn; $("annoBtn").setAttribute("aria-pressed",String(annoOn));
 });
@@ -2410,7 +2529,7 @@ document.querySelectorAll("[data-view]").forEach(b=>{
 });
 // a station can be linked to directly, and arrives without the travelling shot
 function applyHash(){
-  const m=/^#v=([0-5])$/.exec(location.hash||"");
+  const m=/^#v=([0-8])$/.exec(location.hash||"");
   if(!m) return false;
   const i=+m[1];
   station(i);
@@ -2755,6 +2874,248 @@ function updateMist(t){
   }
 }
 
+
+/* ============================================================================
+   12 · THE SEA CAVE, THE STRAND, AND WHAT THE WALLS HAVE BEEN THROUGH
+   ========================================================================= */
+const CLIFF=new Bag();
+const _upv=new THREE.Vector3(0,1,0), _qn=new THREE.Quaternion(), _nv=new THREE.Vector3();
+function matAlign(x,y,z,nx,ny,nz,sx,sy,sz,spin){
+  _nv.set(nx,ny,nz).normalize();
+  _qn.setFromUnitVectors(_upv,_nv);
+  const m=new THREE.Matrix4().compose(V3(x,y,z),_qn,V3(sx,sy,sz));
+  if(spin) m.multiply(new THREE.Matrix4().makeRotationY(spin));
+  return m;
+}
+function groundNormal(x,z){
+  const e=1.4;
+  const hx=(groundHeight(x+e,z)-groundHeight(x-e,z))/(2*e);
+  const hz=(groundHeight(x,z+e)-groundHeight(x,z-e))/(2*e);
+  const l=Math.sqrt(hx*hx+hz*hz+1);
+  return [-hx/l,1/l,-hz/l];
+}
+// an irregular natural arch, for a cave mouth rather than a doorway
+function caveShape(hw,h,seed){
+  const sh=new THREE.Shape(), N=28;
+  sh.moveTo(-hw,0);
+  for(let i=0;i<=N;i++){
+    const t=i/N, a=Math.PI*t;
+    const r=1+0.17*fbm(t*7+seed,1.7,3)+0.07*Math.sin(a*4.0+seed);
+    sh.lineTo(-Math.cos(a)*hw*r, Math.max(0.0,Math.sin(a)*h*r));
+  }
+  sh.lineTo(hw,0); sh.closePath();
+  return sh;
+}
+function buildCave(){
+  // find where the west cliff meets the water and set the cave into it
+  const cz=-6;
+  let cx=-40;
+  while(cx>-110 && groundHeight(cx,cz)>0.2) cx-=0.5;
+  const ang=Math.PI/2*3;                     // the mouth faces due west
+  const hw=4.6, hh=7.4, depth=26;
+  const g=new THREE.ExtrudeGeometry(caveShape(hw,hh,3.1),{...EX,depth:depth});
+  g.rotateY(Math.PI/2);
+  VOID.add(g,mat4(cx+1.5,-1.6,cz,0,0));      // the dark of the cave itself
+  // a tunnel narrowing and bending away inside, so it does not read as a box
+  for(let i=0;i<5;i++){
+    const t=i/4;
+    VOID.add(new THREE.CylinderGeometry(3.6-t*2.2,4.2-t*2.2,7,12,1,true),
+      mat4(cx+6+i*5.5, -1.0+t*2.4, cz+t*t*9, 0, 0, Math.PI/2));
+  }
+  // the rock collar: blobs round the mouth, blending it into the heightfield
+  const rr=mulberry(6161);
+  for(let i=0;i<16;i++){
+    const a=rr()*6.2832;
+    const rad=hw+2.4+rr()*4.2;
+    const px=cx+2.0+rr()*4.0, py=Math.cos(a)*rad*0.85+hh*0.42, pz=cz+Math.sin(a)*rad;
+    if(py<-2) continue;
+    CLIFF.add(rockGeo(700+i*11,2),
+      mat4(px,py,pz,(rr()-0.5)*0.8,rr()*6.28,(rr()-0.5)*0.8,
+           3.2+rr()*3.4,2.4+rr()*2.6,3.0+rr()*3.2));
+  }
+  // a brow of rock overhanging the opening
+  CLIFF.add(rockGeo(755,3),mat4(cx+1.0,hh+2.2,cz,0.18,0.6,0,9.5,3.4,8.0));
+  // and a lip of wet rock under it, awash
+  CLIFF.add(rockGeo(761,2),mat4(cx-1.4,-1.2,cz+1.5,0,1.1,0.1,7.0,1.6,6.0));
+  ANNO.push({p:V3(cx-2,hh*0.55,cz),t:"Sea cave",d:"mouth 9.2 × 7.4 m",
+    n:"The swell has been working a joint in the limestone since long before the castle. Caves like it are why a besieger's miners were never the only thing undermining a headland."});
+
+  // a stack the sea has driven an arch through, off the point
+  const ax=-124, az=-46;
+  CLIFF.add(rockGeo(811,3),mat4(ax-7,5.5,az,0,0.4,0.10,4.6,13.0,4.4));
+  CLIFF.add(rockGeo(823,3),mat4(ax+7,5.0,az+1.5,0,1.2,-0.08,4.2,12.0,4.0));
+  CLIFF.add(rockGeo(837,3),mat4(ax,13.5,az+0.8,0,0.2,0.04,10.5,3.2,4.2));
+}
+
+// ---- outcrops and rockfall on the cliff faces ----------------------------
+function buildCliffDetail(){
+  const rr=mulberry(2468);
+  let placed=0, tries=0;
+  const geos=[rockGeo(91,2),rockGeo(137,2),rockGeo(173,1)];
+  const buckets=[[],[],[]];
+  while(placed<(MOBILE?260:560) && tries<30000){
+    tries++;
+    const a=rr()*6.2832, rad=60+rr()*70;
+    const x=-6+Math.cos(a)*rad, z=Math.sin(a)*rad*0.92;
+    const y=groundHeight(x,z);
+    if(y<-1||y>54) continue;
+    const sl=groundNormalSlope(x,z);
+    if(sl<0.75) continue;                       // only the steep faces
+    if(sdPoly(x,z,POLY_OUT)<8) continue;
+    const n=groundNormal(x,z);
+    const k=(rr()*3)|0;
+    buckets[k].push({x:x,y:y,z:z,n:n,
+      w:1.8+rr()*4.0, t:0.30+rr()*0.55, spin:rr()*6.28, tone:0.82+rr()*0.34});
+    placed++;
+  }
+  const mat=stoneMaterial(TEX.rock,5.0,{bump:1.1,rough:0.94,ao:0.36});
+  geos.forEach((g,i)=>{
+    const L=buckets[i]; if(!L.length) return;
+    const im=new THREE.InstancedMesh(g,mat,L.length);
+    const c=new THREE.Color();
+    L.forEach((o,j)=>{
+      im.setMatrixAt(j,matAlign(o.x,o.y,o.z,o.n[0],o.n[1],o.n[2],o.w,o.t,o.w*0.75,o.spin));
+      const wet=clamp(1-(o.y-0.4)/3.0,0,1);
+      c.setRGB(s2l(lerp(0.82,0.30,wet)*o.tone),s2l(lerp(0.79,0.31,wet)*o.tone),
+               s2l(lerp(0.70,0.27,wet)*o.tone));
+      im.setColorAt(j,c);
+    });
+    im.instanceMatrix.needsUpdate=true;
+    if(im.instanceColor) im.instanceColor.needsUpdate=true;
+    im.castShadow=true; im.receiveShadow=true;
+    scene.add(im);
+  });
+}
+
+// ---- the strand in the bay -----------------------------------------------
+function buildStrand(){
+  const rr=mulberry(9090);
+  const inBay=(x,z)=>Math.exp(-(Math.pow((x-58)/30,2)+Math.pow((z+88)/24,2)))>0.22;
+  // shingle, graded: fine and dense at the water, coarser up the beach
+  const geos=[rockGeo(311,1),rockGeo(347,1),rockGeo(389,1)];
+  const buckets=[[],[],[]];
+  let n=0,tries=0;
+  while(n<(MOBILE?1600:4200) && tries<40000){
+    tries++;
+    const x=26+rr()*62, z=-118+rr()*62;
+    if(!inBay(x,z)) continue;
+    const y=groundHeight(x,z);
+    if(y<-2.2||y>5.2) continue;
+    const up=1-smoothstep(-1.0,4.6,y);       // 1 at the water, 0 at the top
+    if(rr()>0.35+up*0.62) continue;
+    const nv=groundNormal(x,z);
+    const sz=(0.16+rr()*0.34)*(1.5-up*0.8);
+    buckets[(rr()*3)|0].push({x:x,y:y-sz*0.25,z:z,n:nv,s:sz,spin:rr()*6.28,
+      tone:0.74+rr()*0.42, wet:clamp(1-(y+0.2)/2.4,0,1)});
+    n++;
+  }
+  const pebMat=stoneMaterial(TEX.rock,1.7,{bump:0.8,rough:0.9,ao:0.3});
+  geos.forEach((g,i)=>{
+    const L=buckets[i]; if(!L.length) return;
+    const im=new THREE.InstancedMesh(g,pebMat,L.length);
+    const c=new THREE.Color();
+    L.forEach((o,j)=>{
+      im.setMatrixAt(j,matAlign(o.x,o.y,o.z,o.n[0],o.n[1],o.n[2],o.s*1.35,o.s*0.62,o.s,o.spin));
+      c.setRGB(s2l(lerp(0.80,0.34,o.wet)*o.tone),s2l(lerp(0.77,0.33,o.wet)*o.tone),
+               s2l(lerp(0.69,0.29,o.wet)*o.tone));
+      im.setColorAt(j,c);
+    });
+    im.instanceMatrix.needsUpdate=true;
+    if(im.instanceColor) im.instanceColor.needsUpdate=true;
+    im.receiveShadow=true;
+    scene.add(im);
+  });
+  // the wrack line: weed left along the high-water mark
+  const wrack=[];
+  let wn=0; tries=0;
+  while(wn<(MOBILE?260:700) && tries<24000){
+    tries++;
+    const x=26+rr()*62, z=-118+rr()*62;
+    if(!inBay(x,z)) continue;
+    const y=groundHeight(x,z);
+    if(y<1.5||y>2.9) continue;
+    wrack.push({x:x,y:y-0.08,z:z,s:0.35+rr()*0.55,ry:rr()*6.28}); wn++;
+  }
+  const wrackMat=new THREE.MeshStandardMaterial({map:texLeaf(38,26,15),alphaTest:0.4,
+    side:THREE.DoubleSide,roughness:0.7,metalness:0});
+  instFrom(tuftGeo(1.5,0.5),wrackMat,wrack,false);
+  // driftwood, and a boat hauled up out of the water with its net frame
+  const dw=new Bag();
+  for(let i=0;i<11;i++){
+    const x=32+rr()*50, z=-112+rr()*54;
+    if(!inBay(x,z)) continue;
+    const y=groundHeight(x,z);
+    if(y<0.4||y>4.4) continue;
+    dw.add(new THREE.CylinderGeometry(0.12+rr()*0.1,0.16+rr()*0.12,1.4+rr()*3.4,7),
+      mat4(x,y+0.16,z,Math.PI/2+(rr()-0.5)*0.2,rr()*6.28,(rr()-0.5)*0.3));
+  }
+  const bx=52, bz=-92, by=groundHeight(bx,bz);
+  const hull=new THREE.SphereGeometry(1,14,9); hull.scale(3.6,1.1,1.3);
+  dw.add(hull,mat4(bx,by+0.5,bz,0,0.9,0.06));
+  dw.add(new THREE.CylinderGeometry(0.1,0.12,4.4,7),mat4(bx+1.2,by+1.1,bz+0.6,0.5,0.9,0));
+  for(const sg of [-1,1]){
+    dw.add(BX(0.16,2.0,0.16),mat4(bx+6+sg*0.2,by+1.0,bz+4.5+sg*2.4));
+  }
+  dw.add(BX(0.16,0.16,5.4),mat4(bx+6,by+1.95,bz+4.5));
+  const dwm=new THREE.Mesh(dw.build(),stoneMaterial(TEX.wood,2.0,{bump:0.5,rough:0.9,ao:0.3}));
+  dwm.castShadow=true; dwm.receiveShadow=true; scene.add(dwm);
+  ANNO.push({p:V3(52,4,-92),t:"The strand",d:"19 m of shingle · 1 : 5",
+    n:"The one gentle landing on this coast, and the reason the bay is worth holding: everything the castle could not grow came ashore on a beach like this."});
+}
+
+// ---- what a hundred years does to a curtain wall -------------------------
+function wallFurniture(){
+  const P=ensureOutward(POLY_OUT);
+  const skip=(x,z)=>{
+    if(x>42&&Math.abs(z)<16) return true;             // clear of the gate
+    for(const t of WALLTOWERS) if(Math.hypot(x-t[0],z-t[1])<t[2]+2.4) return true;
+    return false;
+  };
+  // putlog holes: the scaffolding sockets, never filled in
+  alongPath(P,1.45,1.42,true,(x,z,ry)=>{
+    if(skip(x,z)) return;
+    for(const yy of [7.4,10.9,14.0]) VOID.add(BX(0.22,0.24,0.62),mat4(x,B+yy,z,0,ry+Math.PI/2));
+  });
+  // sockets for the beams of a timber hoarding, under the parapet
+  alongPath(P,2.4,1.42,true,(x,z,ry)=>{
+    if(skip(x,z)) return;
+    VOID.add(BX(0.34,0.32,0.62),mat4(x,B+15.3,z,0,ry+Math.PI/2));
+  });
+  let i=0;
+  alongPath(P,6.0,1.70,true,(x,z,ry)=>{
+    const a=ry+Math.PI/2, nx=Math.sin(a), nz=Math.cos(a);
+    i++;
+    if(skip(x,z)) return;
+    // spouts throwing the wall-walk's rainwater clear of the footings
+    if(i%3===0){
+      CURTINT=stoneTint(-0.3,0.94);
+      ASH.add(BX(0.46,0.40,1.5),mat4(x+nx*0.55,B+16.25,z+nz*0.55,0,a),CURTINT);
+      VOID.add(BX(0.2,0.18,1.2),mat4(x+nx*0.62,B+16.32,z+nz*0.62,0,a));
+      CURTINT=null;
+    }
+    // a doorway or window from an earlier build, walled up
+    if(i%7===2){
+      const t=stoneTint(-0.55,0.88);
+      ASH.add(new THREE.ExtrudeGeometry(archShape(1.05,2.1,false),{...EX,depth:0.16})
+        .rotateY(Math.PI/2),mat4(x-nx*0.02,B+6.2,z-nz*0.02,0,a+Math.PI),t);
+      const ring=archShape(1.34,2.1,false);
+      ring.holes.push(archPath(1.05,2.1,false));
+      ASH.add(new THREE.ExtrudeGeometry(ring,{...EX,depth:0.22}).rotateY(Math.PI/2),
+        mat4(x-nx*0.02,B+6.2,z-nz*0.02,0,a+Math.PI),stoneTint(0.45,1.06));
+    }
+    // a patch of newer stone where a breach was made good
+    if(i%9===5){
+      ASH.add(BX(0.10,3.2+((i*7)%3),4.6+((i*5)%4)),
+        mat4(x+nx*0.04,B+8.5+((i*3)%4),z+nz*0.04,0,a),stoneTint(0.6,1.10));
+    }
+  });
+  // the founder's inscription, set beside the gate where it would be read
+  ASH.add(BX(0.14,1.0,1.9),mat4(54.36,B+8.4,-3.4,0,0),stoneTint(-0.7,1.14));
+  ASH.add(BX(0.10,1.3,2.2),mat4(54.30,B+8.4,-3.4,0,0),stoneTint(0.3,0.98));
+  ANNO.push({p:V3(50,B+15.4,-30),t:"Hoarding sockets",d:"0.34 m at 2.40 m centres",
+    n:"The row of holes under the parapet carried a timber gallery run out over the face in wartime, so that the foot of the wall could be watched and struck from directly above."});
+}
+
 /* ---- build ----------------------------------------------------------------- */
 const STAGES=[
   ["quarrying stone…",()=>{
@@ -2763,17 +3124,18 @@ const STAGES=[
   }],
   ["sounding the sea floor…",()=>{ buildDepthTexture(); buildWater(); }],
   ["raising the headland…",()=>{ buildTerrain(); }],
-  ["setting out the enceinte…",()=>{ buildWalls(); buildGate(); buildBridge(); }],
+  ["setting out the enceinte…",()=>{ buildWalls(); buildGate(); buildBridge(); wallFurniture(); }],
   ["building the donjon…",()=>{ buildDonjon(); buildInnerBuildings(); }],
   ["paving the wards…",()=>{ buildYards(); buildSeaGate(); buildColumnBinders(); buildWardDetail(); }],
-  ["raising the burgus…",()=>{ buildTown(); buildRuins(); }],
+  ["raising the burgus…",()=>{ buildTown(); buildRuins(); buildCave(); }],
   ["striking the banners…",()=>{
     banner(-24,B+33.0,-6.4,texJerusalem(),4.6,3.0,0);
     banner(51.4,B+24.6,-8.4,texHospital(),3.2,2.3,0.3);
     banner(51.4,B+24.6, 8.4,texHospital(),3.2,2.3,-0.3);
   }],
   ["dressing the masonry…",()=>{ finishCastle(); }],
-  ["planting the headland…",()=>{ buildPlants(); buildRocks(); buildBirds(); buildMist(); }],
+  ["planting the headland…",()=>{ buildPlants(); buildRocks(); buildCliffDetail(); buildBirds(); }],
+  ["combing the strand…",()=>{ buildStrand(); buildMist(); }],
   ["setting the survey…",()=>{ buildLabels(); setSun(0.74); }]
 ];
 let stageI=0;
@@ -2799,7 +3161,7 @@ function animate(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now; T+=dt;
   idle+=dt;
   if(orbitOn && idle>2.0) CTRL.gth+=dt*0.0165;
-  placeCamera();
+  placeCamera(dt);
   skyU.uTime.value=T;
   if(waterMat){ waterMat.uniforms.uTime.value=T; waterFarMat.uniforms.uTime.value=T; }
   for(const m of WINDMATS) if(m.userData.t) m.userData.t.value=T;

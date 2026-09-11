@@ -174,13 +174,23 @@
     <p>The cistern matters more than the walls. A Frankish garrison held out on stored rainwater,
        not on its masonry &mdash; siege after siege ended at the bottom of a dry cistern.</p>
 
+    <h3>The burgus and the ancient city</h3>
+    <p>A castle of this size was an economy as much as a garrison. Outside the ditch stands
+       the <em>burgus</em> &mdash; a street of flat-roofed houses with outside stairs to their roofs,
+       a parish church apsed to the east like the castle chapel, a market and walled garden plots.
+       The settlement lived off the castle and paid for it.</p>
+    <p>Further inland lies the colonnade the masons robbed. Frankish builders treated antiquity
+       as a quarry: the granite shafts running through the sea wall as binders came off a street
+       like that one, and the dressed blocks went into the curtain.</p>
+
     <h3>Materials &amp; measures</h3>
     <p class="src">
       Curtain 3.4&nbsp;m thick, 16&nbsp;m to the wall-walk · parapet 2.0&nbsp;m · merlons 1.30&nbsp;×&nbsp;1.90&nbsp;m at
       2.40&nbsp;m centres · talus batter 1&nbsp;:&nbsp;0.45 · round towers Ø&nbsp;11&nbsp;m rising 21&nbsp;m ·
       donjon 21&nbsp;×&nbsp;18&nbsp;m, 29&nbsp;m · ditch 26&nbsp;m wide, 20&nbsp;m deep.<br>
       Masonry is drafted-margin ashlar with a rusticated boss, the standard Frankish dressing, laid in
-      0.60&nbsp;m courses over a rubble-and-mortar core.
+      0.80&nbsp;m courses over a rubble-and-mortar core. Colour varies by build: the keep and the gate
+      took the best stone on the site, the curtain is greyer, and the outbuildings are coursed rubble.
     </p>
 
     <h3>Flora</h3>
@@ -198,8 +208,8 @@
       <input id="sun" type="range" min="0" max="100" value="74" aria-label="Hour of the day">
     </div>
     <div class="grp full">
-      <div class="lbl"><span class="eyebrow">Sea state</span><span class="val" id="seaVal">Force 3 · slight</span></div>
-      <input id="sea" type="range" min="0" max="100" value="42" aria-label="Sea state">
+      <div class="lbl"><span class="eyebrow">Sea state</span><span class="val" id="seaVal">Force 2 · smooth</span></div>
+      <input id="sea" type="range" min="0" max="100" value="32" aria-label="Sea state">
     </div>
     <div class="grp full">
       <span class="eyebrow">Stations</span>
@@ -772,7 +782,7 @@ const skyU = {
   uSunTint:{value:new THREE.Color(0xffd9a0)},
   uCloudLit:{value:new THREE.Color(0xfff3e2)},
   uCloudDark:{value:new THREE.Color(0x8494a4)},
-  uTime:{value:0}, uCloud:{value:0.62}
+  uTime:{value:0}, uCloud:{value:0.80}
 };
 const SKY_FN = `
 uniform vec3 uSun,uZenith,uHorizon,uSunTint,uCloudLit,uCloudDark;
@@ -803,13 +813,17 @@ const skyMat = new THREE.ShaderMaterial({
       cp+=vec2(uTime*0.0032,uTime*0.0014);
       vec2 w=vec2(fbm2(cp*1.7+11.0),fbm2(cp*1.7+27.0));
       float f=fbm2(cp*1.25+w*0.75);
-      float dens=smoothstep(0.48,0.84,f)*smoothstep(0.004,0.13,d.y);
+      float dens=smoothstep(0.43,0.76,f)*smoothstep(0.003,0.10,d.y);
       vec2 so=normalize(uSun.xz+vec2(1e-4))*0.055;
       float f2=fbm2((cp+so)*1.25+w*0.75);
       float lit=clamp((f-f2)*4.2+0.52,0.0,1.0);
       vec3 cc=mix(uCloudDark,uCloudLit,lit);
       cc=mix(cc,cc*uSunTint*1.12,pow(max(dot(d,uSun),0.0),4.0)*0.7);
       col=mix(col,cc,dens*uCloud);
+      // a higher, thinner sheet drifting the other way
+      vec2 hp=d.xz/(d.y+0.24)*0.021 + vec2(uTime*0.0011,-uTime*0.0007);
+      float hd=smoothstep(0.50,0.85,fbm2(hp*2.2))*smoothstep(0.02,0.26,d.y)*0.42;
+      col=mix(col,mix(uCloudDark,uCloudLit,0.86),hd*uCloud);
     }
     gl_FragColor=vec4(col,1.0);
     #include <tonemapping_fragment>
@@ -923,6 +937,9 @@ function stoneMaterial(tex, scale, opt){
         float hgt = texture2D(tH,uX).r*tw.x + texture2D(tHY,uY).r*tw.y + texture2D(tH,uZ).r*tw.z;
         DUALSCALE
         diffuseColor *= sRGBToLinear(tcol);
+        float drift = texture2D(tMapY, vec2(vWP.x+vWP.y*0.42, vWP.z-vWP.y*0.31)*uSc*0.05
+                                        + vec2(0.31,0.17)).g;
+        diffuseColor.rgb *= mix(vec3(0.87,0.865,0.855), vec3(1.11,1.075,1.015), drift);
         diffuseColor.rgb *= mix(1.0-uAO, 1.0, clamp(hgt*1.15,0.0,1.0));`)
       .replace("DUALSCALE", dual)
       .replace("#include <roughnessmap_fragment>", `
@@ -967,11 +984,11 @@ function buildDepthTexture(){
 }
 
 const WAVES = [   // direction(deg), wavelength(m), steepness, speed scale
-  [ 292, 74, 0.62, 1.00],
-  [ 276, 41, 0.46, 1.06],
-  [ 310, 23, 0.34, 1.12],
-  [ 262, 13.5,0.26, 1.20],
-  [ 300, 7.4, 0.18, 1.30]
+  [ 292, 86, 0.42, 1.00],
+  [ 276, 49, 0.30, 1.05],
+  [ 310, 27, 0.19, 1.10],
+  [ 262, 15.5,0.12, 1.17],
+  [ 300, 8.6, 0.07, 1.26]
 ];
 function waveUniformArrays(){
   const dirs=[], params=[];
@@ -985,7 +1002,7 @@ function waveUniformArrays(){
 const WU = waveUniformArrays();
 
 const waterUniforms = {
-  uTime:{value:0}, uAmp:{value:1.0}, uFar:{value:0},
+  uTime:{value:0}, uAmp:{value:0.57}, uFar:{value:0},
   uSun:skyU.uSun, uSunCol:{value:new THREE.Color(0xfff0d6)},
   uZenith:skyU.uZenith, uHorizon:skyU.uHorizon, uSunTint:skyU.uSunTint,
   uCloudLit:skyU.uCloudLit, uCloudDark:skyU.uCloudDark, uCloud:skyU.uCloud,
@@ -1042,15 +1059,15 @@ void main(){
   vec3 V = normalize(cameraPosition - vWP);
   vec3 N = normalize(vN);
   // fine capillary detail, two layers drifting apart
-  vec2 q = vWP.xz*0.15;
-  float n1 = fbm2(q + vec2(uTime*0.16,-uTime*0.09));
-  float n2 = fbm2(q*2.7 - vec2(uTime*0.21,uTime*0.13));
-  float det = (n1-0.5)*0.9 + (n2-0.5)*0.45;
+  vec2 q = vWP.xz*0.085;
+  float n1 = fbm2(q + vec2(uTime*0.12,-uTime*0.07));
+  float n2 = fbm2(q*2.1 - vec2(uTime*0.16,uTime*0.10));
+  float det = (n1-0.5)*0.7 + (n2-0.5)*0.26;
   vec3 dPx=dFdx(vWP), dPy=dFdy(vWP);
   float dx=dFdx(det), dy=dFdy(det);
   vec3 r1=cross(dPy,N), r2=cross(N,dPx);
   float dt=dot(dPx,r1);
-  N = normalize(abs(dt)*N - (uFar>0.5?0.35:0.85)*sign(dt)*(dx*r1+dy*r2));
+  N = normalize(abs(dt)*N - (uFar>0.5?0.16:0.40)*sign(dt)*(dx*r1+dy*r2));
 
   float fres = 0.022 + 0.978*pow(1.0-clamp(dot(N,V),0.0,1.0),5.0);
   vec3 R = reflect(-V,N);
@@ -1070,7 +1087,7 @@ void main(){
 
   // foam: at the breaking crest, and washing over the shallow shelf
   float wob = fbm2(vWP.xz*0.42 + vec2(uTime*0.05,uTime*0.03));
-  float crest = smoothstep(1.12,1.72,vCrest + (wob-0.5)*0.30);
+  float crest = smoothstep(0.72,1.18,vCrest + (wob-0.5)*0.26);
   float surge = 0.5+0.5*sin(uTime*0.62 - vDepth*0.9);
   float shore = smoothstep(2.7,0.25,vDepth)*(0.42+0.58*surge);
   shore *= smoothstep(0.22,0.62,fbm2(vWP.xz*0.30+vec2(uTime*0.08,0.0)));
@@ -1143,25 +1160,36 @@ function mat4(x,y,z,rx,ry,rz,sx,sy,sz){
   return m;
 }
 // a collector that merges many small parts into one buffer, one draw call
+let CURTINT=null;                 // tint applied to everything built just now
 function Bag(){ this.parts=[]; this.count=0; }
-Bag.prototype.add=function(geo,m){
+Bag.prototype.add=function(geo,m,tint){
   let g = geo.index ? geo.toNonIndexed() : geo.clone();
   if(!g.attributes.normal) g.computeVertexNormals();
   if(m) g.applyMatrix4(m);
-  this.parts.push(g); this.count+=g.attributes.position.count;
+  this.parts.push({g:g,t:tint||CURTINT||null}); this.count+=g.attributes.position.count;
   return this;
 };
+// warm: -1 grey-cool .. +1 golden; light is a multiplier about 1
+function stoneTint(warm,light){
+  const l=light===undefined?1:light;
+  return [l*(1+warm*0.055), l*(1+warm*0.014), l*(1-warm*0.050)];
+}
 Bag.prototype.build=function(){
-  const pos=new Float32Array(this.count*3), nor=new Float32Array(this.count*3);
+  const pos=new Float32Array(this.count*3), nor=new Float32Array(this.count*3),
+        col=new Float32Array(this.count*3);
   let o=0;
-  for(const g of this.parts){
+  for(const p of this.parts){
+    const g=p.g, n=g.attributes.position.count;
     pos.set(g.attributes.position.array,o*3);
     nor.set(g.attributes.normal.array,o*3);
-    o+=g.attributes.position.count;
+    const t=p.t, tr=t?t[0]:1, tg=t?t[1]:1, tb=t?t[2]:1;
+    for(let i=0;i<n;i++){ const k=(o+i)*3; col[k]=tr; col[k+1]=tg; col[k+2]=tb; }
+    o+=n;
   }
   const out=new THREE.BufferGeometry();
   out.setAttribute("position",new THREE.BufferAttribute(pos,3));
   out.setAttribute("normal",new THREE.BufferAttribute(nor,3));
+  out.setAttribute("color",new THREE.BufferAttribute(col,3));
   out.computeBoundingSphere();
   this.parts.length=0;
   return out;
@@ -1262,12 +1290,13 @@ function rockGeo(seed,detail){
   const g=new THREE.IcosahedronGeometry(1,detail||2).toNonIndexed();
   const p=g.attributes.position, rr=mulberry(seed);
   const o1=rr()*100, o2=rr()*100;
+  const squash=0.62+0.30*rr();     // one per rock: per-vertex would shred it
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
-    let d=1+0.30*fbm(x*1.7+o1,z*1.7+o2,3)+0.20*fbm(y*2.9+o2,x*2.9+o1,3)
-           +0.11*fbm(z*6.1,y*6.1,2);
-    d*=1+0.12*Math.sin(y*3.1+o1);
-    p.setXYZ(i,x*d,y*d*(0.62+0.3*rr()),z*d);
+    let d=1+0.22*fbm(x*1.5+o1,z*1.5+o2,3)+0.15*fbm(y*2.6+o2,x*2.6+o1,3)
+           +0.07*fbm(z*5.2,y*5.2,2);
+    d*=1+0.10*Math.sin(y*3.1+o1);
+    p.setXYZ(i,x*d,y*d*squash,z*d);
   }
   g.computeVertexNormals();
   return g;
@@ -1507,6 +1536,7 @@ function buildWalls(){
   // mural towers at every angle of the enceinte
   for(let i=0;i<P.length;i++){
     const p=P[i];
+    CURTINT=stoneTint(((i*2.7)%2)-1, 0.93+((i*3.1)%1)*0.16);
     const c=polyCentroid(P);
     let dx=p[0]-c[0], dz=p[1]-c[1]; const L=Math.hypot(dx,dz); dx/=L; dz/=L;
     const isEast = p[0]>44;
@@ -1516,10 +1546,13 @@ function buildWalls(){
     towersOut.push([cx,cz,r]);
     roundTower(cx,cz,r,H,{face:Math.atan2(dz,dx)});
   }
+  CURTINT=stoneTint(-0.15,0.97);
   ASH.add(sweepProfile(POLY_OUT,shiftProfile(CURTAIN_OUT,B),{closed:true}));
   ASH.add(sweepProfile(POLY_OUT,shiftProfile(PARAPET(16),B),{closed:true}));
   ASH.add(sweepProfile(POLY_OUT,shiftProfile(PARAPET_IN(16),B),{closed:true}));
+  CURTINT=stoneTint(0.30,1.03);
   crenellate(POLY_OUT,B+17.15,towersOut);
+  CURTINT=null;
   // loops in the wall face, from the covered gallery inside the thickness
   alongPath(ensureOutward(POLY_OUT),7.0,1.66,true,(x,z,ry)=>{
     for(const t of towersOut){ if(Math.hypot(x-t[0],z-t[1])<t[2]+2.6) return; }
@@ -1534,18 +1567,22 @@ function buildWalls(){
     if(p[0]<-30) continue;                 // the donjon takes the west angles
     let dx=p[0]-qc[0], dz=p[1]-qc[1]; const L=Math.hypot(dx,dz); dx/=L; dz/=L;
     const cx=p[0]+dx*1.2, cz=p[1]+dz*1.2;
+    CURTINT=stoneTint(0.15+((i*1.9)%1)*0.5, 1.00+((i*2.3)%1)*0.10);
     towersIn.push([cx,cz,4.6]);
     roundTower(cx,cz,4.6,25,{face:Math.atan2(dz,dx)});
   }
+  CURTINT=stoneTint(0.22,1.05);
   ASH.add(sweepProfile(POLY_IN,shiftProfile(CURTAIN_IN,B),{closed:true}));
   ASH.add(sweepProfile(POLY_IN,shiftProfile(PARAPET(19),B),{closed:true}));
   ASH.add(sweepProfile(POLY_IN,shiftProfile(PARAPET_IN(19),B),{closed:true}));
   crenellate(POLY_IN,B+20.15,towersIn);
+  CURTINT=null;
   return {towersOut,towersIn};
 }
 
 /* ---- the gate: a bent entrance under a box machicolation ------------------ */
 function buildGate(){
+  CURTINT=stoneTint(0.36,1.05);
   const gx=50, hw=7.6, th=6.4;
   // the two towers flanking the passage
   roundTower(gx+1.4,-8.4,5.0,22,{face:0.35});
@@ -1586,6 +1623,7 @@ function buildGate(){
   ASH.add(new THREE.BoxGeometry(1.8,11,7.0),mat4(gx-13.2,B+5.5,-0.4));
   ASH.add(new THREE.BoxGeometry(12.6,1.0,9.6),mat4(gx-8.0,B+11.5,-1.0));
 
+  CURTINT=null;
   ANNO.push({p:V3(gx+6.3,B+13.0,0),t:"Box machicolation",d:"3 corbels · drop 13.0 m",
     n:"A stone box hung over the door. Stones, quicklime and boiling sand went down the slot in its floor onto anyone working at the gate."});
   ANNO.push({p:V3(gx+4.6,B+4.6,0),t:"Bent entrance",d:"passage 3.0 m wide · 90° turn",
@@ -1648,6 +1686,7 @@ function polyFloor(bag,contour,holes,y){
 
 /* ---- the donjon: the last redoubt, over the sea cliff --------------------- */
 function buildDonjon(){
+  CURTINT=stoneTint(0.42,1.07);          // the keep got the best stone on site
   const cx=-24, cz=0, w=21, d=18, H=29;
   const pl=new THREE.CylinderGeometry(Math.SQRT1_2,Math.SQRT1_2*1.30,15,4,1,true);
   pl.rotateY(Math.PI/4);
@@ -1693,6 +1732,7 @@ function buildDonjon(){
   }
   opening(cx+w/2-0.02,B+1.0,cz+1.2,1.35,2.6,1.4,Math.PI,true);
   surround(cx+w/2-0.02,B+1.0,cz+1.2,1.35,2.6,0.3,0,true,0.3);
+  CURTINT=null;
   ANNO.push({p:V3(cx-w/2,B+27,cz+3),t:"Donjon",d:"21 × 18 m · 29 m high",
     n:"The keep is set at the seaward point, astride the inner curtain: the last place to hold, and the one the garrison could still be supplied at by boat."});
 }
@@ -1700,6 +1740,7 @@ function buildDonjon(){
 /* ---- chapel, hall, ranges, cistern ---------------------------------------- */
 function buildInnerBuildings(){
   // --- chapel, apse to the east as the liturgy requires
+  CURTINT=stoneTint(0.5,1.09);
   const cx=-8, cz=18, nw=16, nd=8.5, wall=8.4;
   ASH.add(new THREE.BoxGeometry(nw,wall,nd),mat4(cx,B+1.8+wall/2,cz));
   const roof=sweepProfile([[cx-nw/2-0.4,cz],[cx+nw/2+0.4,cz]],
@@ -1723,6 +1764,7 @@ function buildInnerBuildings(){
     n:"Barrel-vaulted, with a semicircular apse at the east end and a bell-cote over the west gable — the standard Frankish castle chapel."});
 
   // --- great hall on the north side of the inner ward
+  CURTINT=stoneTint(0.05,1.00);
   const hx=-11, hz=-19, hw=24, hd=11, hh=12.5;
   ASH.add(new THREE.BoxGeometry(hw,hh,hd),mat4(hx,B+1.8+hh/2,hz));
   ASH.add(new THREE.BoxGeometry(hw+1.0,0.7,hd+1.0),mat4(hx,B+1.8+hh+0.35,hz));
@@ -1738,6 +1780,7 @@ function buildInnerBuildings(){
   surround(hx+6,B+1.8,hz+hd/2-0.02,1.2,2.5,0.3,-Math.PI/2,true,0.3);
 
   // --- vaulted range along the south-west wall, an arcade onto the ward
+  CURTINT=stoneTint(-0.35,0.93);
   const rx=-24, rz=17, rw=17, rd=7.0, rh=7.6;
   ASH.add(new THREE.BoxGeometry(rw,rh,rd),mat4(rx,B+1.8+rh/2,rz));
   ASH.add(new THREE.BoxGeometry(rw+0.8,0.6,rd+0.8),mat4(rx,B+1.8+rh+0.3,rz));
@@ -1764,10 +1807,12 @@ function buildInnerBuildings(){
   RUB.add(new THREE.BoxGeometry(6.5,4.2,5.5),mat4(-26,B+1.8+2.1,-8));
   RUB.add(new THREE.SphereGeometry(2.0,16,8,0,6.2832,0,Math.PI/2),mat4(-26,B+1.8+4.2,-8));
   VOID.add(new THREE.BoxGeometry(0.8,1.6,1.1),mat4(-22.8,B+1.8+0.8,-8));
+  CURTINT=stoneTint(-0.2,0.9);
   RUB.add(new THREE.BoxGeometry(20,4.6,6.5),mat4(22,B+2.3,-31));
   const lean=sweepProfile([[12,-31],[32,-31]],[[-3.4,B+4.6],[3.4,B+4.6],[3.4,B+5.0],[-3.4,B+6.9]],{closed:false});
   WOOD.add(lean);
   for(let i=0;i<6;i++) WOOD.add(new THREE.BoxGeometry(0.3,4.6,0.3),mat4(13+i*3.6,B+2.3,-27.8));
+  CURTINT=null;
 }
 
 /* ---- courtyards, ramps, stairs ------------------------------------------- */
@@ -1809,19 +1854,49 @@ function buildYards(){
 
 /* ---- postern, rock-cut stair, jetty --------------------------------------- */
 function buildSeaGate(){
-  const A=V3(-36.9,B,-32.0), Cp=V3(-53,9.8,-44);
   // the postern itself, a low door through the curtain
   const pr=-0.829;
   opening(-35.15,B,-30.25,1.05,2.1,3.4,pr,true);
   surround(-35.15,B,-30.25,1.05,2.1,0.3,pr+Math.PI,true,0.28);
-  const n=34;
-  for(let i=0;i<n;i++){
-    const t=(i+0.5)/n;
-    const x=lerp(A.x,Cp.x,t), z=lerp(A.z,Cp.z,t);
-    const y=lerp(A.y,Cp.y,t*t*0.35+t*0.65);
-    const ang=Math.atan2(Cp.x-A.x,Cp.z-A.z);
-    ASH.add(new THREE.BoxGeometry(2.6,4.0,0.72),mat4(x,y-2.0,z,0,ang));
-    if(i%6===0) ASH.add(new THREE.BoxGeometry(0.5,1.5,0.72),mat4(x+Math.cos(ang)*1.5,y+0.75,z-Math.sin(ang)*1.5,0,ang));
+
+  // Four flights zigzagging down the face with landings at the turns. A single
+  // straight run at this height would stand at 65°, which is a ladder, not a
+  // stair; traversing the cliff brings it to a climbable 45°.
+  const legs=[[-37.2,-31.6],[-50.8,-36.8],[-46.2,-50.6],[-61.0,-44.6],[-57.0,-47.8]];
+  const yTop=B-0.4, yBot=9.8;
+  const segL=[]; let total=0;
+  for(let i=0;i<legs.length-1;i++){
+    const L=Math.hypot(legs[i+1][0]-legs[i][0],legs[i+1][1]-legs[i][1]);
+    segL.push(L); total+=L;
+  }
+  const tSt=stoneTint(-0.12,0.98);
+  const tread=new THREE.BoxGeometry(2.5,0.34,0.40);
+  const rail=new THREE.BoxGeometry(0.44,1.05,0.44);
+  let done=0;
+  for(let i=0;i<legs.length-1;i++){
+    const a=legs[i], b=legs[i+1], L=segL[i];
+    const tx=(b[0]-a[0])/L, tz=(b[1]-a[1])/L;
+    const ang=Math.atan2(tx,tz);
+    const n=Math.max(4,Math.round(L/0.36));
+    for(let k=0;k<n;k++){
+      const t=(k+0.5)/n;
+      const x=a[0]+tx*L*t, z=a[1]+tz*L*t;
+      const y=lerp(yTop,yBot,(done+L*t)/total);
+      ASH.add(tread,mat4(x,y-0.17,z,0,ang),tSt);
+      // masonry carrying the tread, taken down past the rock so no step floats
+      const g=groundHeight(x,z);
+      const skirt=clamp(y-Math.min(g,y-0.4)+1.0,1.4,9.0);
+      ASH.add(new THREE.BoxGeometry(2.3,skirt,0.40),mat4(x,y-0.34-skirt/2,z,0,ang),tSt);
+      if(k%2===0) ASH.add(rail,mat4(x+Math.cos(ang)*1.30,y+0.52,z-Math.sin(ang)*1.30,0,ang),tSt);
+    }
+    done+=L;
+    if(i<legs.length-2){          // a landing to turn on
+      const y=lerp(yTop,yBot,done/total);
+      ASH.add(new THREE.BoxGeometry(3.2,0.42,3.2),mat4(b[0],y-0.21,b[1]),tSt);
+      const g=groundHeight(b[0],b[1]);
+      const sk=clamp(y-Math.min(g,y-0.4),1.6,11.0);
+      ASH.add(new THREE.BoxGeometry(3.0,sk,3.0),mat4(b[0],y-0.42-sk/2,b[1]),tSt);
+    }
   }
   // the landing: find where the shelf meets the water, then run the jetty out
   const jz=-46;
@@ -1949,10 +2024,10 @@ function oliveParts(seed){
     tk.add(new THREE.CylinderGeometry(0.10,0.20,1.5,6),
       mat4(Math.cos(a)*r*0.5,y+0.5,Math.sin(a)*r*0.5,Math.cos(a)*0.55,0,-Math.sin(a)*0.55));
   }
-  for(let i=0;i<11;i++){
-    const a=rr()*6.28, r=0.35+rr()*1.5;
-    cn.add(blobGeo(0.62+rr()*0.62,seed+i*13,0.80),
-      mat4(Math.cos(a)*r,y+0.45+rr()*1.5,Math.sin(a)*r));
+  for(let i=0;i<18;i++){
+    const a=rr()*6.28, r=0.25+rr()*1.35;
+    cn.add(blobGeo(0.30+rr()*0.34,seed+i*13,0.82),
+      mat4(Math.cos(a)*r,y+0.30+rr()*1.35,Math.sin(a)*r));
   }
   return {trunk:tk.build(),canopy:foliageColors(cn.build(),71,0.30,0.135)};
 }
@@ -1966,10 +2041,10 @@ function pineParts(seed){
     tk.add(new THREE.CylinderGeometry(0.09,0.17,2.2,6),
       mat4(Math.cos(a)*0.5,H*0.86,Math.sin(a)*0.5,Math.cos(a)*0.62,0,-Math.sin(a)*0.62));
   }
-  for(let i=0;i<9;i++){
-    const a=rr()*6.28, r=0.5+rr()*2.0;
-    cn.add(blobGeo(0.85+rr()*0.85,seed+i*7,0.62),
-      mat4(Math.cos(a)*r,H*(0.72+rr()*0.42),Math.sin(a)*r));
+  for(let i=0;i<14;i++){
+    const a=rr()*6.28, r=0.4+rr()*1.9;
+    cn.add(blobGeo(0.40+rr()*0.46,seed+i*7,0.66),
+      mat4(Math.cos(a)*r,H*(0.74+rr()*0.40),Math.sin(a)*r));
   }
   return {trunk:tk.build(),canopy:foliageColors(cn.build(),98,0.40,0.105)};
 }
@@ -2029,10 +2104,10 @@ function buildPlants(){
     w*=lerp(1.0,0.28,smoothstep(110,260,Math.hypot(x+8,z)));
     return w;
   },(x,y,z,rr)=>tufts.push({x,y:y-0.10,z,s:0.95+rr()*1.15,ry:rr()*6.28}));
-  scatter(MOBILE?900:2100,77,(x,z,y,sl,rr)=>{
+  scatter(MOBILE?700:1500,77,(x,z,y,sl,rr)=>{
     if(y<2.0||inCastle(x,z)||onRoad(x,z)) return 0;
     return smoothstep(0.85,0.25,sl)*clamp(fbm(x*0.02-9,z*0.02+4,3)*2.0,0,1)*0.9;
-  },(x,y,z,rr)=>scrub.push({x,y:y-0.12,z,s:1.1+rr()*1.5,ry:rr()*6.28}));
+  },(x,y,z,rr)=>scrub.push({x,y:y-0.12,z,s:0.95+rr()*1.05,ry:rr()*6.28}));
 
   const grassMat=windify(new THREE.MeshStandardMaterial({
     map:texGrass(),alphaTest:0.44,side:THREE.DoubleSide,roughness:1,metalness:0}),0.055);
@@ -2042,7 +2117,7 @@ function buildPlants(){
     c.setRGB(s2l(lerp(0.88,0.42,k)),s2l(lerp(0.83,0.52,k)),s2l(lerp(0.52,0.26,k)));
   };
   const scrubMat=windify(new THREE.MeshStandardMaterial({
-    map:texLeaf(78,20,26),alphaTest:0.42,side:THREE.DoubleSide,roughness:1,metalness:0}),0.03);
+    map:texLeaf(74,21,34),alphaTest:0.42,side:THREE.DoubleSide,roughness:1,metalness:0}),0.03);
   instFrom(tuftGeo(1.15,0.95),grassMat,tufts,false,tintGrass);
   instFrom(tuftGeo(1.5,1.25),scrubMat,scrub,false);
 
@@ -2068,15 +2143,15 @@ function buildPlants(){
   const barkMat=new THREE.MeshStandardMaterial({color:SC(0x5d4c39),roughness:1,metalness:0,flatShading:true});
   const leafMat=windify(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95,metalness:0,flatShading:true}),0.016);
   const ol=[], pn=[];
-  scatter(MOBILE?40:110,808,(x,z,y,sl,rr)=>{
+  scatter(MOBILE?48:135,808,(x,z,y,sl,rr)=>{
     if(x<96||y<18||y>58||sl>0.34||onRoad(x,z)) return 0;
     return clamp(0.4+fbm(x*0.02,z*0.02,3)*2,0,1);
-  },(x,y,z,rr)=>ol.push({x,y:y-0.25,z,s:1.5+rr()*0.9,ry:rr()*6.28}));
-  scatter(MOBILE?22:64,909,(x,z,y,sl,rr)=>{
+  },(x,y,z,rr)=>ol.push({x,y:y-0.25,z,s:1.15+rr()*0.6,ry:rr()*6.28}));
+  scatter(MOBILE?26:78,909,(x,z,y,sl,rr)=>{
     if(y<9||y>56||sl>0.62||inCastle(x,z)||onRoad(x,z)) return 0;
     if(x>90) return 0.25;
     return clamp(fbm(x*0.03+21,z*0.03,3)*2.2,0,1)*0.8;
-  },(x,y,z,rr)=>pn.push({x,y:y-0.3,z,s:0.85+rr()*0.5,ry:rr()*6.28}));
+  },(x,y,z,rr)=>pn.push({x,y:y-0.3,z,s:0.78+rr()*0.42,ry:rr()*6.28}));
   instFrom(olive.trunk,barkMat,ol,true); instFrom(olive.canopy,leafMat,ol,true);
   instFrom(pine.trunk,barkMat,pn,true);  instFrom(pine.canopy,leafMat,pn,true);
 
@@ -2152,10 +2227,10 @@ function buildColumnBinders(){
 }
 
 function finishCastle(){
-  const ashMat =stoneMaterial(TEX.ash ,6.4,{bump:1.05,rough:0.82,ao:0.44});
-  const rubMat =stoneMaterial(TEX.rub ,3.2,{bump:1.15,rough:0.90,ao:0.40});
-  const woodMat=stoneMaterial(TEX.wood,2.4,{bump:0.50,rough:0.85,ao:0.30});
-  const cobMat =stoneMaterial(TEX.cob ,3.0,{bump:0.85,rough:0.92,ao:0.42});
+  const ashMat =stoneMaterial(TEX.ash ,6.4,{bump:1.05,rough:0.82,ao:0.44,vertexColors:true});
+  const rubMat =stoneMaterial(TEX.rub ,3.2,{bump:1.15,rough:0.90,ao:0.40,vertexColors:true});
+  const woodMat=stoneMaterial(TEX.wood,2.4,{bump:0.50,rough:0.85,ao:0.30,vertexColors:true});
+  const cobMat =stoneMaterial(TEX.cob ,3.0,{bump:0.85,rough:0.92,ao:0.42,vertexColors:true});
   const voidMat=new THREE.MeshStandardMaterial({color:SC(0x171009),roughness:1,metalness:0});
   const put=(bag,mat,cast)=>{
     if(!bag.count) return;
@@ -2362,12 +2437,12 @@ $("sun").addEventListener("input",e=>{
   setSun(lerp(0.045,0.975,t));
   $("sunVal").textContent=hourLabel(lerp(0.045,0.975,t));
 });
-const SEASTATE=[[0.34,"Force 1 · calm"],[0.62,"Force 2 · smooth"],[0.95,"Force 3 · slight"],
-                [1.24,"Force 4 · moderate"],[1.55,"Force 5 · rough"]];
+const SEASTATE=[[0.22,"Force 1 · calm"],[0.45,"Force 2 · smooth"],[0.68,"Force 3 · slight"],
+                [0.88,"Force 4 · moderate"],[1.10,"Force 5 · rough"]];
 $("sea").addEventListener("input",e=>{
   const t=+e.target.value/100;
   const i=Math.min(SEASTATE.length-1,Math.floor(t*SEASTATE.length));
-  const amp=lerp(0.34,1.55,t);
+  const amp=lerp(0.22,1.10,t);
   if(waterMat) waterMat.uniforms.uAmp.value=amp;
   if(waterFarMat) waterFarMat.uniforms.uAmp.value=amp;
   $("seaVal").textContent=SEASTATE[i][1];
@@ -2384,6 +2459,302 @@ function readout(dt){
   $("roSun").textContent=(4+Math.sin(sunT*Math.PI)*58).toFixed(1)+"°";
 }
 
+
+/* ============================================================================
+   11 · THE BURGUS, THE ANTIQUE SITE IT WAS QUARRIED FROM, AND THE SEA MIST
+   ========================================================================= */
+const BX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+// ---- the town outside the gate -------------------------------------------
+function townHouse(x,y,z,rr,face){
+  const w=5.2+rr()*4.4, d=4.8+rr()*3.4, h=3.3+rr()*2.8;
+  const ry=(rr()-0.5)*0.22, base=y-0.45, top=base+h;
+  const t=stoneTint((rr()-0.5)*1.6, 0.84+rr()*0.34);
+  RUB.add(BX(w,h,d),mat4(x,(base+top)/2,z,0,ry),t);
+  RUB.add(BX(w+0.5,0.45,d+0.5),mat4(x,top+0.06,z,0,ry),t);   // roof parapet
+  // door onto the street, with small windows over it
+  opening(x,base,z+face*(d/2-0.03),0.52,1.2,0.85,face>0?Math.PI/2:-Math.PI/2,false);
+  const nw=1+((rr()*3)|0);
+  for(let i=0;i<nw;i++)
+    VOID.add(BX(0.5,0.62,0.26),mat4(x+(rr()-0.5)*w*0.62,base+h*0.62,z+face*(d/2-0.10),0,ry));
+  // an upper room set back on the roof
+  if(rr()<0.40){
+    const h2=2.5+rr()*1.5, w2=w*(0.52+rr()*0.30), d2=d*(0.58+rr()*0.30);
+    const ox=(rr()-0.5)*w*0.22, oz=(rr()-0.5)*d*0.22;
+    RUB.add(BX(w2,h2,d2),mat4(x+ox,top+0.2+h2/2,z+oz,0,ry),t);
+    RUB.add(BX(w2+0.4,0.4,d2+0.4),mat4(x+ox,top+0.2+h2+0.05,z+oz,0,ry),t);
+    VOID.add(BX(0.45,0.55,0.24),mat4(x+ox,top+0.2+h2*0.6,z+oz+face*(d2/2-0.09),0,ry));
+  }
+  // the outside stair every Levantine house has, up to its roof
+  if(rr()<0.45){
+    const sx=x-w/2-0.55, n=Math.round(h/0.35);
+    for(let i=0;i<n;i++){
+      const sh=0.35*(i+1);
+      RUB.add(BX(1.0,sh,0.36),mat4(sx,base+sh/2,z-d/2+0.4+i*0.36,0,ry),t);
+    }
+  }
+  if(rr()<0.30) RUB.add(BX(0.85,1.5,0.85),mat4(x+w*0.28,top+0.75,z-d*0.22,0,ry),t); // chimney
+  // a vine pergola over the yard
+  if(rr()<0.35){
+    const px=x+(face>0?0:-1)*0, pz=z+face*(d/2+1.9);
+    for(const sx2 of [-1,1]) for(const sz2 of [-1,1])
+      WOOD.add(BX(0.18,2.3,0.18),mat4(px+sx2*1.7,base+1.15,pz+sz2*1.5));
+    WOOD.add(BX(4.0,0.16,3.4),mat4(px,base+2.35,pz));
+  }
+}
+function buildTown(){
+  const rr=mulberry(7781);
+  let n=0;
+  for(let gx=0;gx<8;gx++) for(let gz=0;gz<6;gz++){
+    const x=106+gx*13.5+(rr()-0.5)*5.0;
+    const z=-40+gz*15.5+(rr()-0.5)*5.0;
+    if(Math.abs(z)<10.5) continue;                 // the street stays open
+    if(rr()<0.24) continue;                        // yards and gaps
+    const y=groundHeight(x,z);
+    if(y<24||groundNormalSlope(x,z)>0.34) continue;
+    townHouse(x,y,z,rr,z<0?1:-1); n++;
+  }
+  // the parish church, its apse east like the castle chapel
+  const cx=150, cz=-27, cy=groundHeight(cx,cz), tc=stoneTint(0.2,1.04);
+  ASH.add(BX(13,6.2,6.6),mat4(cx,cy+2.7,cz),tc);
+  ASH.add(sweepProfile([[cx-6.8,cz],[cx+6.8,cz]],
+      [[-3.8,cy+5.8],[3.8,cy+5.8],[0,cy+8.3]],{closed:false}),null,tc);
+  ASH.add(new THREE.CylinderGeometry(2.7,2.7,6.2,18,1,true),mat4(cx+6.5,cy+2.7,cz),tc);
+  ASH.add(new THREE.SphereGeometry(2.7,18,9,0,6.2832,0,Math.PI/2),mat4(cx+6.5,cy+5.8,cz),tc);
+  ASH.add(BX(0.5,2.8,3.2),mat4(cx-6.6,cy+7.2,cz),tc);
+  VOID.add(BX(0.7,1.1,0.85),mat4(cx-6.6,cy+7.0,cz-0.8));
+  VOID.add(BX(0.7,1.1,0.85),mat4(cx-6.6,cy+7.0,cz+0.8));
+  opening(cx-6.5,cy-0.4,cz,0.85,1.9,0.8,0,true);
+  surround(cx-6.5,cy-0.4,cz,0.85,1.9,0.26,Math.PI,true,0.26);
+  for(const sg of [-1,1]){
+    opening(cx+sg*2.6,cy+2.4,cz-3.3,0.42,1.05,0.7,-Math.PI/2,false);
+  }
+  // the well and market stalls on the widening of the street
+  const wx=124, wy=groundHeight(wx,0);
+  ASH.add(new THREE.CylinderGeometry(1.05,1.05,1.15,16),mat4(wx,wy+0.5,0),stoneTint(0,1.05));
+  VOID.add(new THREE.CylinderGeometry(0.78,0.78,1.0,16),mat4(wx,wy+0.62,0));
+  for(const sg of [-1,1]){
+    WOOD.add(BX(0.16,2.3,0.16),mat4(wx-0.1,wy+1.7,sg*1.15));
+    WOOD.add(new THREE.CylinderGeometry(0.14,0.14,2.5,10),mat4(wx-0.1,wy+2.8,0,0,0,Math.PI/2));
+  }
+  const rr2=mulberry(313);
+  for(let i=0;i<5;i++){
+    const sx=112+i*9+rr2()*3, sz=(i%2?1:-1)*(9.5+rr2()*2), sy=groundHeight(sx,sz);
+    for(const a of [-1,1]) for(const b of [-1,1])
+      WOOD.add(BX(0.16,2.1,0.16),mat4(sx+a*1.5,sy+1.05,sz+b*1.1));
+    WOOD.add(BX(3.6,0.14,2.8),mat4(sx,sy+2.2,sz,0,0,0.06));
+    WOOD.add(BX(3.0,0.7,0.5),mat4(sx,sy+0.9,sz+0.7));
+  }
+  // garden plots behind the houses, walled in drystone
+  const fw=new Bag();
+  for(let i=0;i<7;i++){
+    const px=112+i*12+rr2()*6, pz=(i%2?1:-1)*(52+rr2()*12);
+    const py=groundHeight(px,pz);
+    if(py<22) continue;
+    fw.add(BX(10,0.9,0.6),mat4(px,py+0.3,pz-3.6));
+    fw.add(BX(10,0.9,0.6),mat4(px,py+0.3,pz+3.6));
+    fw.add(BX(0.6,0.9,7.8),mat4(px-5,py+0.3,pz));
+    fw.add(BX(0.6,0.9,7.8),mat4(px+5,py+0.3,pz));
+  }
+  // a low wall round the outer side of the town, with its own gate
+  const tw=stoneTint(-0.3,0.9);
+  for(let z=-54;z<54;z+=6){
+    if(Math.abs(z)<5) continue;
+    const y=groundHeight(198,z);
+    if(y<20) continue;
+    fw.add(BX(1.1,3.0,6.2),mat4(198,y+1.1,z),tw);
+    fw.add(BX(1.4,0.4,6.2),mat4(198,y+2.7,z),tw);
+  }
+  const gy=groundHeight(198,0);
+  for(const sg of [-1,1]) fw.add(BX(2.4,5.2,2.6),mat4(198,gy+2.2,sg*3.6),tw);
+  fw.add(BX(2.6,1.3,7.4),mat4(198,gy+5.2,0),tw);
+  const fwm=new THREE.Mesh(fw.build(),
+    stoneMaterial(TEX.rub,3.0,{bump:1.1,rough:0.93,ao:0.42,vertexColors:true}));
+  fwm.castShadow=true; fwm.receiveShadow=true; scene.add(fwm);
+  ANNO.push({p:V3(150,groundHeight(150,-27)+9,-27),t:"The burgus",d:"about 30 households",
+    n:"Frankish castles drew a settlement to their gate: a street of flat-roofed houses, a parish church, a market and garden plots, under the castle's protection and paying for it."});
+}
+
+// ---- the antique site the castle was quarried from ------------------------
+function buildRuins(){
+  const rr=mulberry(4417);
+  const ox=232, oz=-96;
+  const pale=stoneTint(-0.85,1.10), worn=stoneTint(-0.5,0.94);
+  const N=9, sp=3.7;
+  let sum=0;
+  for(let i=0;i<N;i++) sum+=groundHeight(ox+i*sp,oz-4.4)+groundHeight(ox+i*sp,oz+4.4);
+  const gy=sum/(N*2);
+  // the stylobate of a colonnaded street
+  ASH.add(BX(N*sp+4,4.0,13.5),mat4(ox+(N-1)*sp/2,gy-1.4,oz),worn);
+  ASH.add(BX(N*sp+2.4,0.5,11.5),mat4(ox+(N-1)*sp/2,gy+0.75,oz),pale);
+  const standing=[];
+  for(let r=0;r<2;r++){
+    const z=oz+(r?4.4:-4.4);
+    for(let i=0;i<N;i++){
+      const x=ox+i*sp;
+      const k=rr();
+      if(k<0.13){ standing.push(null); continue; }          // gone entirely
+      const full=5.6+rr()*0.9;
+      const h= k<0.42 ? full*(0.22+rr()*0.5) : full;        // snapped, or whole
+      ASH.add(BX(1.25,0.45,1.25),mat4(x,gy+1.22,z),pale);
+      ASH.add(new THREE.CylinderGeometry(0.40,0.46,h,14),mat4(x,gy+1.45+h/2,z),pale);
+      if(h>full*0.95){
+        ASH.add(new THREE.CylinderGeometry(0.52,0.42,0.34,14),mat4(x,gy+1.45+h+0.17,z),pale);
+        ASH.add(BX(1.15,0.45,1.15),mat4(x,gy+1.45+h+0.56,z),pale);
+        standing.push({x:x,z:z,top:gy+1.45+h+0.78});
+      } else standing.push(null);
+    }
+  }
+  // a few lengths of architrave still bridging two columns
+  for(let r=0;r<2;r++) for(let i=0;i<N-1;i++){
+    const a=standing[r*N+i], b=standing[r*N+i+1];
+    if(a&&b&&rr()<0.45) ASH.add(BX(sp+0.4,0.72,1.05),mat4((a.x+b.x)/2,a.top+0.36,a.z),pale);
+  }
+  // drums and blocks thrown down where they fell
+  for(let i=0;i<34;i++){
+    const x=ox-6+rr()*(N*sp+12), z=oz-13+rr()*26;
+    const y=groundHeight(x,z);
+    if(rr()<0.6) ASH.add(new THREE.CylinderGeometry(0.42,0.45,0.9+rr()*1.9,12),
+      mat4(x,y+0.42,z,Math.PI/2,rr()*6.28,(rr()-0.5)*0.5),pale);
+    else ASH.add(BX(0.9+rr()*1.4,0.55,0.8+rr()*0.9),mat4(x,y+0.26,z,(rr()-0.5)*0.2,rr()*6.28,0),worn);
+  }
+  // the shell of a basilica: footings and the stump of an apse
+  const bx2=ox+8, bz=oz+26, by=groundHeight(bx2,bz);
+  for(const e of [[0,-5.2,17,1.0],[0,5.2,17,1.0],[-8.2,0,1.0,11.4]]){
+    ASH.add(BX(e[2],2.1,e[3]),mat4(bx2+e[0],by+0.55,bz+e[1]),worn);
+  }
+  ASH.add(new THREE.CylinderGeometry(5.2,5.2,2.4,20,1,true),mat4(bx2+8.5,by+0.7,bz),worn);
+  for(let i=0;i<5;i++){
+    const a=-1.0+i*0.5;
+    ASH.add(new THREE.CylinderGeometry(0.3,0.34,1.4+rr()*2.6,12),
+      mat4(bx2+Math.cos(a)*4.6,by+1.6,bz+Math.sin(a)*4.6),pale);
+  }
+  ANNO.push({p:V3(ox+12,gy+8,oz),t:"The ancient city",d:"quarried, not admired",
+    n:"The Franks built out of whatever stood nearby. The granite shafts running through the sea wall as binders came off a colonnade like this one."});
+}
+
+// ---- more inside the walls -----------------------------------------------
+function buildWardDetail(){
+  const t1=stoneTint(-0.2,0.95), t2=stoneTint(0.25,1.02), tw=stoneTint(-0.1,0.9);
+  // storehouse range against the east curtain, arcaded onto the ward
+  const sx=38, sz=-9, sw=7.0, sd=22, sh=6.4;
+  RUB.add(BX(sw,sh,sd),mat4(sx,B+sh/2,sz),t1);
+  RUB.add(BX(sw+0.7,0.55,sd+0.7),mat4(sx,B+sh+0.27,sz),t1);
+  for(let i=0;i<4;i++){
+    const z=sz-sd/2+3.4+i*5.1;
+    opening(sx-sw/2+0.02,B,z,1.25,2.3,1.5,0,true);
+    surround(sx-sw/2+0.02,B,z,1.25,2.3,0.26,Math.PI,true,0.28);
+  }
+  // the smithy, its chimney smoking over the lists
+  RUB.add(BX(6.6,4.4,5.4),mat4(33,B+2.2,15),t1);
+  RUB.add(BX(1.5,3.0,1.5),mat4(35.2,B+5.6,13.6),t1);
+  VOID.add(BX(1.5,2.1,0.3),mat4(29.8,B+1.05,15));
+  WOOD.add(sweepProfile([[27.6,12.2],[27.6,17.8]],
+      [[-3.0,B+3.3],[0.6,B+3.3],[0.6,B+3.7],[-3.0,B+4.9]],{closed:false}),null,tw);
+  for(const z of [12.4,17.6]) WOOD.add(BX(0.26,3.3,0.26),mat4(24.7,B+1.65,z),tw);
+  ASH.add(BX(1.1,0.9,0.8),mat4(26.2,B+0.45,15),t1);
+  // a well in the lower ward, and a dovecote
+  ASH.add(new THREE.CylinderGeometry(1.1,1.1,1.2,16),mat4(27,B+0.6,21),t2);
+  VOID.add(new THREE.CylinderGeometry(0.8,0.8,1.05,16),mat4(27,B+0.72,21));
+  for(const sg of [-1,1]) WOOD.add(BX(0.2,2.4,0.2),mat4(27,B+1.8,21+sg*1.25),tw);
+  WOOD.add(new THREE.CylinderGeometry(0.16,0.16,2.6,10),mat4(27,B+2.9,21,0,0,Math.PI/2),tw);
+  RUB.add(new THREE.CylinderGeometry(1.8,2.0,6.0,14),mat4(16,B+3.0,25),t1);
+  RUB.add(new THREE.CylinderGeometry(2.3,2.3,0.5,14),mat4(16,B+6.2,25),t1);
+  for(let i=0;i<14;i++){
+    const a=i/14*6.2832;
+    VOID.add(BX(0.3,0.3,0.26),mat4(16+Math.cos(a)*1.75,B+3.4+(i%3)*0.9,25+Math.sin(a)*1.75,0,-a));
+  }
+  // stores stacked against the range: barrels, crates, a handcart
+  const rr=mulberry(8822);
+  for(let i=0;i<16;i++){
+    const x=33.5-rr()*2.5, z=-19+rr()*20, y=B+(rr()<0.3?0.95:0.42);
+    if(rr()<0.55) WOOD.add(new THREE.CylinderGeometry(0.42,0.36,0.92,10),mat4(x,y,z,0,rr()*3),tw);
+    else WOOD.add(BX(0.85,0.7,0.9),mat4(x,y,z,0,rr()*3),tw);
+  }
+  WOOD.add(BX(2.6,0.22,1.5),mat4(29,B+0.85,4,0,0.3),tw);
+  for(const sg of [-1,1]) WOOD.add(new THREE.CylinderGeometry(0.52,0.52,0.16,14),
+    mat4(29-sg*0.1,B+0.55,4+sg*0.85,0,0.3,Math.PI/2),tw);
+  WOOD.add(BX(2.2,0.14,0.14),mat4(30.8,B+0.8,3.6,0,0.3),tw);
+  // an outside stair up to the hall's first floor, as every great hall had:
+  // it runs along the face of the building, not into it
+  for(let i=0;i<14;i++){
+    const h=0.34*(i+1);
+    ASH.add(BX(0.42,h,1.6),mat4(-6.0+i*0.42,B+1.8+h/2,-12.1),t2);
+  }
+  ASH.add(BX(2.4,0.45,2.2),mat4(1.1,B+1.8+4.76,-12.4),t2);
+  ASH.add(BX(2.4,3.4,0.5),mat4(1.1,B+1.8+2.9,-11.4),t2);
+  opening(1.1,B+1.8+4.98,-13.48,0.62,1.5,0.8,Math.PI/2,true);
+  surround(1.1,B+1.8+4.98,-13.48,0.62,1.5,0.24,-Math.PI/2,true,0.24);
+  // a latrine turret corbelled off the curtain, as sanitary as it got
+  ASH.add(BX(2.2,2.6,2.6),mat4(52.0,B+11.0,18),t1);
+  for(let k=-1;k<=1;k++) ASH.add(BX(1.3,0.7,0.6),mat4(51.6,B+9.4,18+k*0.9),t1);
+  VOID.add(BX(0.5,0.6,0.9),mat4(53.0,B+9.9,18));
+}
+
+// ---- sea mist and the spray under the cliff ------------------------------
+const MIST=[];
+function texPuff(){
+  const px=256,c=mkCanvas(px),g=c.getContext("2d");
+  const gr=g.createRadialGradient(px/2,px/2,0,px/2,px/2,px/2);
+  gr.addColorStop(0,"rgba(255,255,255,0.92)");
+  gr.addColorStop(0.35,"rgba(255,255,255,0.46)");
+  gr.addColorStop(0.68,"rgba(255,255,255,0.13)");
+  gr.addColorStop(1,"rgba(255,255,255,0)");
+  g.fillStyle=gr; g.fillRect(0,0,px,px);
+  g.globalCompositeOperation="destination-out";
+  for(let i=0;i<70;i++){
+    const a=R()*6.2832, r=R()*px*0.5;
+    const x=px/2+Math.cos(a)*r, y=px/2+Math.sin(a)*r, rr2=px*(0.04+R()*0.13);
+    g.fillStyle="rgba(0,0,0,"+(0.05+R()*0.20)+")";
+    g.beginPath(); g.ellipse(x,y,rr2,rr2*(0.5+R()*0.7),R()*3.14,0,6.2832); g.fill();
+  }
+  g.globalCompositeOperation="source-over";
+  const t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding; return t;
+}
+function buildMist(){
+  const tex=texPuff();
+  const add=(x,y,z,w,hh,op,col,kind)=>{
+    const m=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,
+      fog:true,opacity:op,color:col});
+    const s=new THREE.Sprite(m);
+    s.scale.set(w,hh,1); s.position.set(x,y,z); s.renderOrder=4;
+    scene.add(s);
+    MIST.push({s:s,m:m,x:x,y:y,z:z,base:op,ph:Math.random()*6.28,
+               dr:0.25+Math.random()*0.55,kind:kind});
+  };
+  const rr=mulberry(5150);
+  // a band of haze lying on the water round the headland
+  for(let i=0;i<34;i++){
+    const a=rr()*6.2832, r=95+rr()*180;
+    const x=-10+Math.cos(a)*r, z=Math.sin(a)*r*0.95;
+    if(groundHeight(x,z)>6) continue;
+    add(x,2.0+rr()*7,z,95+rr()*130,(30+rr()*30),0.15+rr()*0.17,0xe3eaea,0);
+  }
+  // mist caught in the ditch at the back of the castle
+  for(let i=0;i<5;i++)
+    add(62+rr()*24,29+rr()*8,(rr()-0.5)*46,48+rr()*28,19+rr()*11,0.11+rr()*0.10,0xdde4e6,0);
+  // spray where the swell strikes the foot of the cliff
+  for(let i=0;i<12;i++){
+    const a=rr()*6.2832, r=66+rr()*26;
+    const x=-6+Math.cos(a)*r, z=Math.sin(a)*r*0.92;
+    if(groundHeight(x,z)>9||groundHeight(x,z)<-6) continue;
+    add(x,3+rr()*5,z,20+rr()*18,13+rr()*10,0.24+rr()*0.20,0xf2f6f6,1);
+  }
+}
+function updateMist(t){
+  for(const q of MIST){
+    const d=Math.sin(t*0.045*q.dr+q.ph);
+    q.s.position.x=q.x+d*13; q.s.position.z=q.z+Math.cos(t*0.037*q.dr+q.ph)*9;
+    if(q.kind===1){
+      const pulse=Math.max(0,Math.sin(t*0.55+q.ph));
+      q.m.opacity=q.base*(0.25+0.95*pulse*pulse);
+      q.s.position.y=q.y+pulse*3.2;
+    } else {
+      q.m.opacity=q.base*(0.72+0.28*Math.sin(t*0.11+q.ph*1.7));
+    }
+  }
+}
+
 /* ---- build ----------------------------------------------------------------- */
 const STAGES=[
   ["quarrying stone…",()=>{
@@ -2394,14 +2765,15 @@ const STAGES=[
   ["raising the headland…",()=>{ buildTerrain(); }],
   ["setting out the enceinte…",()=>{ buildWalls(); buildGate(); buildBridge(); }],
   ["building the donjon…",()=>{ buildDonjon(); buildInnerBuildings(); }],
-  ["paving the wards…",()=>{ buildYards(); buildSeaGate(); buildColumnBinders(); }],
+  ["paving the wards…",()=>{ buildYards(); buildSeaGate(); buildColumnBinders(); buildWardDetail(); }],
+  ["raising the burgus…",()=>{ buildTown(); buildRuins(); }],
   ["striking the banners…",()=>{
     banner(-24,B+33.0,-6.4,texJerusalem(),4.6,3.0,0);
     banner(51.4,B+24.6,-8.4,texHospital(),3.2,2.3,0.3);
     banner(51.4,B+24.6, 8.4,texHospital(),3.2,2.3,-0.3);
   }],
   ["dressing the masonry…",()=>{ finishCastle(); }],
-  ["planting the headland…",()=>{ buildPlants(); buildRocks(); buildBirds(); }],
+  ["planting the headland…",()=>{ buildPlants(); buildRocks(); buildBirds(); buildMist(); }],
   ["setting the survey…",()=>{ buildLabels(); setSun(0.74); }]
 ];
 let stageI=0;
@@ -2434,6 +2806,7 @@ function animate(now){
   for(const m of BANNERS)  if(m.userData.t) m.userData.t.value=T;
   sunGlow.lookAt(camera.position);
   updateBirds(T);
+  updateMist(T);
   updateLabels();
   readout(dt);
   renderer.render(scene,camera);

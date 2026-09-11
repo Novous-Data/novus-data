@@ -578,13 +578,18 @@ function texRock(){
   let y=0;
   while(y<px){
     const h=px*(0.03+R()*0.10), t=(R()*2-1);
-    g.fillStyle="rgba("+(t>0?"209,203,186":"113,105,92")+","+(0.06+R()*0.16)+")";
+    g.fillStyle="rgba("+(t>0?"206,200,184":"124,115,101")+","+(0.04+R()*0.10)+")";
     g.fillRect(0,y,px,h);
-    hg.fillStyle="rgba("+(t>0?"255,255,255":"0,0,0")+","+(0.05+R()*0.14)+")";
+    hg.fillStyle="rgba("+(t>0?"255,255,255":"0,0,0")+","+(0.04+R()*0.09)+")";
     hg.fillRect(0,y,px,h);
-    // the parting itself, a dark recessed line
-    g.fillStyle="rgba(58,48,36,.34)"; g.fillRect(0,y,px,1.6+R()*2);
-    hg.fillStyle="rgba(0,0,0,.55)";   hg.fillRect(0,y,px,1.6+R()*2);
+    // the parting: broken along its length, not a ruled line
+    let px0=0;
+    while(px0<px){
+      const seg=18+R()*70, th=1.0+R()*1.7, dy=(R()-0.5)*2.8;
+      g.fillStyle="rgba(64,54,41,"+(0.09+R()*0.12)+")"; g.fillRect(px0,y+dy,seg,th);
+      hg.fillStyle="rgba(0,0,0,"+(0.16+R()*0.20)+")";   hg.fillRect(px0,y+dy,seg,th);
+      px0+=seg+R()*26;
+    }
     y+=h;
   }
   // solution pits and fracture lines
@@ -1350,8 +1355,8 @@ function buildTerrain(){
     const slope=1-up;
     const n1=fbm(x*0.04,z*0.04,3), n2=fbm(x*0.011,z*0.011,4);
     // limestone, banded by its bedding
-    const band=0.5+0.5*Math.sin(y*0.44+n1*4.2+n2*3.1);
-    let r=0.695+band*0.05+n2*0.06, g=0.675+band*0.045+n2*0.055, b=0.615+band*0.036+n2*0.04;
+    const band=0.5+0.5*Math.sin(y*0.34+n1*5.4+n2*4.0);
+    let r=0.695+band*0.030+n2*0.072, g=0.675+band*0.027+n2*0.066, b=0.615+band*0.022+n2*0.050;
     // iron staining in the runnels
     const rust=clamp(fbm(x*0.02+13,z*0.02-7,3)*1.5,0,1)*0.5*slope;
     r=lerp(r,0.60,rust*0.6); g=lerp(g,0.44,rust*0.6); b=lerp(b,0.30,rust*0.6);
@@ -2342,7 +2347,7 @@ const STATIONS=[
   {n:"Donjon",       x:-24,y:56,z:0,  th:-1.30, ph:1.135, di:148},
   {n:"Sea gate",     x:-54,y:22,z:-36,th:-1.02, ph:1.315, di:98},
   {n:"Survey",       x:2,  y:38,z:-2, th:-1.55, ph:0.640, di:360},
-  {n:"The strand",   x:56, y:3, z:-90,th:-1.90, ph:1.352, di:95},
+  {n:"The strand",   x:52, y:3, z:-92,th:-1.15, ph:1.300, di:105},
   {n:"The burgus",   x:150,y:56,z:-10,th: 2.40, ph:1.248, di:124},
   {n:"Sea cave",     x:-68,y:5, z:-6, th:-1.62, ph:1.436, di:54}
 ];
@@ -2912,7 +2917,7 @@ function buildCave(){
   let cx=-40;
   while(cx>-110 && groundHeight(cx,cz)>0.2) cx-=0.5;
   const ang=Math.PI/2*3;                     // the mouth faces due west
-  const hw=4.6, hh=7.4, depth=26;
+  const hw=5.4, hh=8.4, depth=28;
   const g=new THREE.ExtrudeGeometry(caveShape(hw,hh,3.1),{...EX,depth:depth});
   g.rotateY(Math.PI/2);
   VOID.add(g,mat4(cx+1.5,-1.6,cz,0,0));      // the dark of the cave itself
@@ -2924,27 +2929,29 @@ function buildCave(){
   }
   // the rock collar: blobs round the mouth, blending it into the heightfield
   const rr=mulberry(6161);
-  for(let i=0;i<16;i++){
+  const tDark=stoneTint(-0.35,0.74);
+  for(let i=0;i<10;i++){
     const a=rr()*6.2832;
-    const rad=hw+2.4+rr()*4.2;
-    const px=cx+2.0+rr()*4.0, py=Math.cos(a)*rad*0.85+hh*0.42, pz=cz+Math.sin(a)*rad;
-    if(py<-2) continue;
+    const rad=hw+1.2+rr()*2.2;
+    const px=cx+3.0+rr()*4.5, py=Math.cos(a)*rad*0.80+hh*0.46, pz=cz+Math.sin(a)*rad;
+    if(py<-1.5) continue;
     CLIFF.add(rockGeo(700+i*11,2),
-      mat4(px,py,pz,(rr()-0.5)*0.8,rr()*6.28,(rr()-0.5)*0.8,
-           3.2+rr()*3.4,2.4+rr()*2.6,3.0+rr()*3.2));
+      mat4(px,py,pz,(rr()-0.5)*0.7,rr()*6.28,(rr()-0.5)*0.7,
+           1.7+rr()*1.7,1.2+rr()*1.2,1.6+rr()*1.6),tDark);
   }
   // a brow of rock overhanging the opening
-  CLIFF.add(rockGeo(755,3),mat4(cx+1.0,hh+2.2,cz,0.18,0.6,0,9.5,3.4,8.0));
+  CLIFF.add(rockGeo(755,3),mat4(cx+2.2,hh+1.4,cz,0.16,0.6,0,5.8,2.0,5.0),tDark);
   // and a lip of wet rock under it, awash
-  CLIFF.add(rockGeo(761,2),mat4(cx-1.4,-1.2,cz+1.5,0,1.1,0.1,7.0,1.6,6.0));
+  CLIFF.add(rockGeo(761,2),mat4(cx-0.6,-1.4,cz+1.2,0,1.1,0.1,4.6,1.2,4.2),stoneTint(-0.4,0.55));
   ANNO.push({p:V3(cx-2,hh*0.55,cz),t:"Sea cave",d:"mouth 9.2 × 7.4 m",
     n:"The swell has been working a joint in the limestone since long before the castle. Caves like it are why a besieger's miners were never the only thing undermining a headland."});
 
   // a stack the sea has driven an arch through, off the point
   const ax=-124, az=-46;
-  CLIFF.add(rockGeo(811,3),mat4(ax-7,5.5,az,0,0.4,0.10,4.6,13.0,4.4));
-  CLIFF.add(rockGeo(823,3),mat4(ax+7,5.0,az+1.5,0,1.2,-0.08,4.2,12.0,4.0));
-  CLIFF.add(rockGeo(837,3),mat4(ax,13.5,az+0.8,0,0.2,0.04,10.5,3.2,4.2));
+  const tArch=stoneTint(-0.25,0.88);
+  CLIFF.add(rockGeo(811,3),mat4(ax-7,5.5,az,0,0.4,0.10,4.6,13.0,4.4),tArch);
+  CLIFF.add(rockGeo(823,3),mat4(ax+7,5.0,az+1.5,0,1.2,-0.08,4.2,12.0,4.0),tArch);
+  CLIFF.add(rockGeo(837,3),mat4(ax,13.5,az+0.8,0,0.2,0.04,10.5,3.2,4.2),tArch);
 }
 
 // ---- outcrops and rockfall on the cliff faces ----------------------------
@@ -2953,19 +2960,20 @@ function buildCliffDetail(){
   let placed=0, tries=0;
   const geos=[rockGeo(91,2),rockGeo(137,2),rockGeo(173,1)];
   const buckets=[[],[],[]];
-  while(placed<(MOBILE?260:560) && tries<30000){
+  while(placed<(MOBILE?150:330) && tries<30000){
     tries++;
     const a=rr()*6.2832, rad=60+rr()*70;
     const x=-6+Math.cos(a)*rad, z=Math.sin(a)*rad*0.92;
     const y=groundHeight(x,z);
     if(y<-1||y>54) continue;
     const sl=groundNormalSlope(x,z);
-    if(sl<0.75) continue;                       // only the steep faces
+    if(sl<1.15) continue;                       // only where the face is truly sheer
     if(sdPoly(x,z,POLY_OUT)<8) continue;
+    if(Math.exp(-(Math.pow((x-58)/30,2)+Math.pow((z+88)/24,2)))>0.10) continue;  // not the bay
     const n=groundNormal(x,z);
     const k=(rr()*3)|0;
     buckets[k].push({x:x,y:y,z:z,n:n,
-      w:1.8+rr()*4.0, t:0.30+rr()*0.55, spin:rr()*6.28, tone:0.82+rr()*0.34});
+      w:3.4+rr()*6.5, t:0.22+rr()*0.40, spin:rr()*6.28, tone:0.84+rr()*0.30});
     placed++;
   }
   const mat=stoneMaterial(TEX.rock,5.0,{bump:1.1,rough:0.94,ao:0.36});
@@ -2974,7 +2982,7 @@ function buildCliffDetail(){
     const im=new THREE.InstancedMesh(g,mat,L.length);
     const c=new THREE.Color();
     L.forEach((o,j)=>{
-      im.setMatrixAt(j,matAlign(o.x,o.y,o.z,o.n[0],o.n[1],o.n[2],o.w,o.t,o.w*0.75,o.spin));
+      im.setMatrixAt(j,matAlign(o.x,o.y-o.t*0.35,o.z,o.n[0],o.n[1],o.n[2],o.w,o.t,o.w*0.62,o.spin));
       const wet=clamp(1-(o.y-0.4)/3.0,0,1);
       c.setRGB(s2l(lerp(0.82,0.30,wet)*o.tone),s2l(lerp(0.79,0.31,wet)*o.tone),
                s2l(lerp(0.70,0.27,wet)*o.tone));

@@ -5,11 +5,11 @@ limestone headland above the sea. Single self-contained HTML page, Three.js r128
 from cdnjs; every texture, every piece of geometry and the sea itself are
 generated procedurally in the page — no external assets.
 
-## Status: WORK IN PROGRESS — does not run yet
+## Status: complete
 
-Sections 0–9 are written. The file still needs its final section (10) before it
-will render at all: camera controller, annotation layer, UI wiring, staged build
-sequence and the animation loop. See "Remaining" below.
+Open `castrum-maris.html` in any browser with WebGL. Drag to orbit, right-drag
+or two fingers to pan, scroll or pinch to zoom. Six viewing stations are
+deep-linkable: append `#v=0` … `#v=5` to the URL.
 
 ## What the reconstruction is based on
 
@@ -44,15 +44,25 @@ sage and rockrose. Nothing post-Columbian.
 | 7 | The headland mesh, boulders, scree, sea stacks |
 | 8 | The fortress — curtains, towers, gate, bridge, donjon, chapel, hall, cistern, sea stair |
 | 9 | Planting, drystone walls, gulls |
-| 10 | **Not yet written** |
+| 10 | Assembly, camera control, the annotation layer and the loop |
 
-## Remaining
+## Notes on the build
 
-1. Camera controller (orbit / pan / zoom, pointer + touch, terrain clamp).
-2. Annotation layer — project the `ANNO[]` anchors to DOM callouts with leader lines.
-3. UI wiring — hour-of-day and sea-state sliders, six viewing stations, toggles, readout.
-4. `finishCastle()` — merge the `ASH` / `RUB` / `WOOD` / `VOID` / `COB` bags into
-   meshes with their materials, and the staged build sequence that drives the loader.
-5. Animation loop — advance `uTime` on the sea, sky, banners and wind materials;
-   update gulls and labels.
-6. Then: render locally in Chromium, correct what the frame shows, and publish.
+The whole scene is one file with no external assets. The only dependency is
+Three.js r128, loaded from a CDN.
+
+* **Triplanar stone.** Masonry is projected in world space, so courses stay
+  level across a batter, a curve and a corbel alike, and no block is stretched.
+  The same height map drives the bump and the roughness.
+* **The sea knows the shore.** A 256 × 256 height field of the ground is baked
+  into a data texture; the Gerstner swell reads it, so waves shoal and break as
+  the bottom comes up and foam surges over the shelf.
+* **Drawing budget.** Everything the fortress is made of is merged into five
+  buffers by material, so the castle costs five draw calls; the planting is
+  instanced.
+
+Verified by rendering headlessly in Chromium (SwiftShader) and correcting
+against the frames: sun and station angles, the reflection of the sky below the
+horizon, the bedding texture on flat ground, arrow-loop slots that stood proud
+of the wall, and inland ground that had dropped the bridge's far abutment into
+the air.

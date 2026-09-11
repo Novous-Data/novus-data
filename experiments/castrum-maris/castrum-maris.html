@@ -433,7 +433,7 @@ function texAshlar(o){
   const c=mkCanvas(px), g=c.getContext("2d");
   const hC=mkCanvas(px), hg=hC.getContext("2d");
   const ch=px/courses, bwd=px/perRow, joint=Math.max(2,px*0.006);
-  const hue=o.hue!==undefined?o.hue:38, sat=o.sat!==undefined?o.sat:17, lit=o.lit!==undefined?o.lit:63;
+  const hue=o.hue!==undefined?o.hue:38, sat=o.sat!==undefined?o.sat:14, lit=o.lit!==undefined?o.lit:56;
   g.fillStyle="hsl("+hue+","+(sat-5)+"%,"+(lit*0.42)+"%)"; g.fillRect(0,0,px,px);
   hg.fillStyle="#141414"; hg.fillRect(0,0,px,px);
   const marg=Math.max(3,bwd*0.055);
@@ -442,7 +442,7 @@ function texAshlar(o){
     const off=(r%2)?bwd*0.5:0;
     for(let b=-1;b<=perRow;b++){
       const bx=b*bwd+off, by=r*ch;
-      const tone=lit+(R()*2-1)*7, st=sat+(R()*2-1)*5;
+      const tone=lit+(R()*2-1)*4.5, st=sat+(R()*2-1)*3.5;
       const bossTone=tone-3.5-R()*3;
       wrapDraw(px,bx,by,(X,Y)=>{
         const w=bwd-joint, h=ch-joint;
@@ -455,10 +455,10 @@ function texAshlar(o){
         g.fillRect(X+joint*0.5+marg,Y+joint*0.5+marg,w-marg*2,h-marg*2);
         hg.fillStyle="#d8d8d8"; hg.fillRect(X+joint*0.5+marg,Y+joint*0.5+marg,w-marg*2,h-marg*2);
         // pick-marks on the boss
-        for(let i=0;i<90;i++){
+        for(let i=0;i<70;i++){
           const rx=X+joint*0.5+marg+R()*(w-marg*2), ry=Y+joint*0.5+marg+R()*(h-marg*2);
           const v=R(); const s2=0.8+R()*1.7;
-          g.fillStyle="rgba("+(v>0.5?"255,250,238":"46,38,28")+","+(0.05+R()*0.10)+")";
+          g.fillStyle="rgba("+(v>0.5?"255,250,238":"46,38,28")+","+(0.03+R()*0.055)+")";
           g.fillRect(rx,ry,s2,s2);
           hg.fillStyle="rgba("+(v>0.5?"255,255,255":"0,0,0")+","+(0.10+R()*0.16)+")";
           hg.fillRect(rx,ry,s2,s2);
@@ -532,13 +532,13 @@ function texRubble(o){
 // ---- weathered coastal limestone, for the living rock ---------------------
 function texRock(){
   const px=TEXPX, c=mkCanvas(px), g=c.getContext("2d"), hC=mkCanvas(px), hg=hC.getContext("2d");
-  g.fillStyle="#b6a88c"; g.fillRect(0,0,px,px);
+  g.fillStyle="#b0aa9c"; g.fillRect(0,0,px,px);
   hg.fillStyle="#808080"; hg.fillRect(0,0,px,px);
   // bedding: horizontal bands of slightly different stone
   let y=0;
   while(y<px){
     const h=px*(0.03+R()*0.10), t=(R()*2-1);
-    g.fillStyle="rgba("+(t>0?"212,200,172":"120,104,80")+","+(0.06+R()*0.16)+")";
+    g.fillStyle="rgba("+(t>0?"209,203,186":"113,105,92")+","+(0.06+R()*0.16)+")";
     g.fillRect(0,y,px,h);
     hg.fillStyle="rgba("+(t>0?"255,255,255":"0,0,0")+","+(0.05+R()*0.14)+")";
     hg.fillRect(0,y,px,h);
@@ -573,12 +573,12 @@ function texRock(){
 // ---- dry ground: the stony soil of the headland, with no bedding in it ----
 function texGround(){
   const px=TEXPX, c=mkCanvas(px), g=c.getContext("2d"), hC=mkCanvas(px), hg=hC.getContext("2d");
-  g.fillStyle="#a4937a"; g.fillRect(0,0,px,px);
+  g.fillStyle="#918b80"; g.fillRect(0,0,px,px);
   hg.fillStyle="#707070"; hg.fillRect(0,0,px,px);
   for(let i=0;i<2600;i++){
     const x=R()*px,y=R()*px,rr=0.8+R()*5.5, v=R();
     wrapDraw(px,x,y,(X,Y)=>{
-      g.fillStyle="hsl("+(34+(R()*2-1)*16)+","+(8+R()*16)+"%,"+(34+v*36)+"%)";
+      g.fillStyle="hsl("+(36+(R()*2-1)*14)+","+(3+R()*8)+"%,"+(36+v*32)+"%)";
       g.beginPath(); g.ellipse(X,Y,rr,rr*(0.62+R()*0.6),R()*3.14,0,6.2832); g.fill();
       hg.fillStyle="rgba("+(v>0.5?"255,255,255":"0,0,0")+","+(0.08+R()*0.22)+")";
       hg.beginPath(); hg.ellipse(X,Y,rr,rr*0.8,0,0,6.2832); hg.fill();
@@ -598,12 +598,12 @@ function texGround(){
 // ---- courtyard cobbles ----------------------------------------------------
 function texCobble(){
   const px=TEXPX, c=mkCanvas(px), g=c.getContext("2d"), hC=mkCanvas(px), hg=hC.getContext("2d");
-  g.fillStyle="#4c443a"; g.fillRect(0,0,px,px);
+  g.fillStyle="#5d5346"; g.fillRect(0,0,px,px);
   hg.fillStyle="#2a2a2a"; hg.fillRect(0,0,px,px);
   const n=26, cell=px/n;
   for(let r=0;r<n;r++) for(let q=0;q<n;q++){
     const x=(q+(r%2?0.5:0))*cell+(R()*2-1)*cell*0.14, y=r*cell+(R()*2-1)*cell*0.14;
-    const rr=cell*(0.36+R()*0.16), tone=52+(R()*2-1)*16;
+    const rr=cell*(0.36+R()*0.16), tone=58+(R()*2-1)*14;
     wrapDraw(px,x,y,(X,Y)=>{
       g.fillStyle="hsl("+(32+(R()*2-1)*14)+","+(6+R()*9)+"%,"+tone+"%)";
       g.beginPath(); g.ellipse(X,Y,rr,rr*(0.78+R()*0.3),R()*3.14,0,6.2832); g.fill();
@@ -983,7 +983,7 @@ const waterUniforms = {
   uSun:skyU.uSun, uSunCol:{value:new THREE.Color(0xfff0d6)},
   uZenith:skyU.uZenith, uHorizon:skyU.uHorizon, uSunTint:skyU.uSunTint,
   uCloudLit:skyU.uCloudLit, uCloudDark:skyU.uCloudDark, uCloud:skyU.uCloud,
-  uDeep:{value:SC(0x06222f)},
+  uDeep:{value:SC(0x0a2c3c)},
   uShallow:{value:SC(0x1d7a84)},
   uSand:{value:SC(0x6f8f83)},
   uDepthMap:{value:null}, uHalf:{value:HALF},
@@ -1055,12 +1055,12 @@ void main(){
   vec3 body = mix(mix(uSand,uShallow,smoothstep(0.0,3.2,vDepth)),uDeep,dn);
   // light scattered through the back of a wave
   float sss = pow(clamp(dot(V,-normalize(uSun*vec3(1.0,-0.25,1.0))),0.0,1.0),3.0);
-  body += uShallow*sss*0.55*(1.0-dn)*0.9;
+  body += uShallow*sss*0.22*(1.0-dn);
   vec3 col = mix(body, refl, clamp(fres,0.0,1.0));
   // sun glitter
   vec3 H = normalize(normalize(uSun)+V);
-  col += uSunCol*pow(max(dot(N,H),0.0),260.0)*2.6;
-  col += uSunCol*pow(max(dot(N,H),0.0),24.0)*0.10;
+  col += uSunCol*pow(max(dot(N,H),0.0),300.0)*2.2;
+  col += uSunCol*pow(max(dot(N,H),0.0),60.0)*0.020;
 
   // foam: at the breaking crest, and washing over the shallow shelf
   float wob = fbm2(vWP.xz*0.42 + vec2(uTime*0.05,uTime*0.03));
@@ -1292,7 +1292,7 @@ function buildTerrain(){
     const n1=fbm(x*0.04,z*0.04,3), n2=fbm(x*0.011,z*0.011,4);
     // limestone, banded by its bedding
     const band=0.5+0.5*Math.sin(y*0.44+n1*4.2+n2*3.1);
-    let r=0.70+band*0.05+n2*0.06, g=0.655+band*0.045+n2*0.055, b=0.565+band*0.036+n2*0.04;
+    let r=0.695+band*0.05+n2*0.06, g=0.675+band*0.045+n2*0.055, b=0.615+band*0.036+n2*0.04;
     // iron staining in the runnels
     const rust=clamp(fbm(x*0.02+13,z*0.02-7,3)*1.5,0,1)*0.5*slope;
     r=lerp(r,0.60,rust*0.6); g=lerp(g,0.44,rust*0.6); b=lerp(b,0.30,rust*0.6);
@@ -1301,11 +1301,11 @@ function buildTerrain(){
     r=lerp(r,0.50,lich*0.35); g=lerp(g,0.52,lich*0.35); b=lerp(b,0.42,lich*0.35);
     // dry grass and garrigue wherever anything can root
     const patch=clamp(0.5+fbm(x*0.045-17,z*0.045+23,3)*1.9,0,1);
-    let veg=smoothstep(0.58,0.11,slope)*smoothstep(3.0,9.5,y)
-            *clamp(0.66+fbm(x*0.026+5,z*0.026+9,4)*2.0,0,1);
-    veg*=smoothstep(0.02,0.30,up);
-    const vr=lerp(0.445,0.205,patch), vg=lerp(0.420,0.250,patch), vb=lerp(0.205,0.115,patch);
-    r=lerp(r,vr+n1*0.05,veg*0.93); g=lerp(g,vg+n1*0.05,veg*0.93); b=lerp(b,vb+n1*0.025,veg*0.93);
+    let veg=smoothstep(0.62,0.10,slope)*smoothstep(3.0,9.5,y)
+            *clamp(0.88+fbm(x*0.026+5,z*0.026+9,4)*1.7,0,1);
+    veg*=smoothstep(0.02,0.28,up);
+    const vr=lerp(0.395,0.168,patch), vg=lerp(0.392,0.222,patch), vb=lerp(0.172,0.082,patch);
+    r=lerp(r,vr+n1*0.045,veg); g=lerp(g,vg+n1*0.045,veg); b=lerp(b,vb+n1*0.022,veg);
     // the strand: shingle and sand where the slope runs out at the water
     const strand=smoothstep(3.4,0.4,Math.abs(y-0.6))*smoothstep(0.30,0.08,slope);
     r=lerp(r,0.735,strand*0.85); g=lerp(g,0.695,strand*0.85); b=lerp(b,0.60,strand*0.85);
@@ -1337,7 +1337,7 @@ function buildRocks(){
     const x=-4+Math.cos(a)*rad, z=Math.sin(a)*rad*0.9;
     if(Math.abs(x)>HALF-12||Math.abs(z)>HALF-12) continue;
     const y=groundHeight(x,z);
-    if(y<-2.2||y>70) continue;
+    if(y<-1.2||y>70) continue;
     const sl=groundNormalSlope(x,z);
     const inCastle=sdPoly(x,z,POLY_OUT)<6;
     if(inCastle) continue;
@@ -1359,7 +1359,7 @@ function buildRocks(){
     list.forEach((o,j)=>{
       m.copy(mat4(o.x,o.y,o.z,o.rx,o.ry,o.rz,o.s*(0.8+0.5*o.t),o.s*(0.6+0.4*o.t),o.s));
       im.setMatrixAt(j,m);
-      const wet=clamp(1-Math.abs(o.y-1.2)/4,0,1);
+      const wet=clamp(1-(o.y-0.6)/3.2,0,1);
       c.setRGB(s2l(lerp(0.80,0.30,wet)*o.t),s2l(lerp(0.77,0.31,wet)*o.t),s2l(lerp(0.68,0.26,wet)*o.t));
       im.setColorAt(j,c);
     });
@@ -1504,7 +1504,8 @@ function buildWalls(){
     const c=polyCentroid(P);
     let dx=p[0]-c[0], dz=p[1]-c[1]; const L=Math.hypot(dx,dz); dx/=L; dz/=L;
     const isEast = p[0]>44;
-    const r=isEast?5.0:5.6, H=isEast?20:21.5;
+    const v=hash2(i*37+5,i*11+3);
+    const r=(isEast?5.0:5.6)+v*0.7-0.3, H=(isEast?20:21.5)+v*3.4-1.5;
     const cx=p[0]+dx*1.4, cz=p[1]+dz*1.4;
     towersOut.push([cx,cz,r]);
     roundTower(cx,cz,r,H,{face:Math.atan2(dz,dx)});
@@ -1947,18 +1948,24 @@ function oliveParts(seed){
     cn.add(blobGeo(0.62+rr()*0.62,seed+i*13,0.80),
       mat4(Math.cos(a)*r,y+0.45+rr()*1.5,Math.sin(a)*r));
   }
-  return {trunk:tk.build(),canopy:foliageColors(cn.build(),72,0.21,0.215)};
+  return {trunk:tk.build(),canopy:foliageColors(cn.build(),71,0.30,0.135)};
 }
 function pineParts(seed){
   const rr=mulberry(seed);
   const tk=new Bag(), cn=new Bag();
-  const H=6.5+rr()*4;
-  tk.add(new THREE.CylinderGeometry(0.24,0.46,H,8,1,true),mat4((rr()-0.5)*0.5,H/2,(rr()-0.5)*0.5,0.04,0,0.05));
-  for(let i=0;i<5;i++){
-    const a=rr()*6.28, r=1.0+rr()*1.9;
-    cn.add(blobGeo(1.5+rr()*0.9,seed+i*7,0.45),mat4(Math.cos(a)*r,H*0.92+rr()*1.4,Math.sin(a)*r));
+  const H=5.5+rr()*3.4;
+  tk.add(new THREE.CylinderGeometry(0.20,0.42,H,8,1,true),mat4((rr()-0.5)*0.5,H/2,(rr()-0.5)*0.5,0.05,0,0.06));
+  for(let i=0;i<4;i++){
+    const a=rr()*6.28;
+    tk.add(new THREE.CylinderGeometry(0.09,0.17,2.2,6),
+      mat4(Math.cos(a)*0.5,H*0.86,Math.sin(a)*0.5,Math.cos(a)*0.62,0,-Math.sin(a)*0.62));
   }
-  return {trunk:tk.build(),canopy:foliageColors(cn.build(),94,0.30,0.155)};
+  for(let i=0;i<9;i++){
+    const a=rr()*6.28, r=0.5+rr()*2.0;
+    cn.add(blobGeo(0.85+rr()*0.85,seed+i*7,0.62),
+      mat4(Math.cos(a)*r,H*(0.72+rr()*0.42),Math.sin(a)*r));
+  }
+  return {trunk:tk.build(),canopy:foliageColors(cn.build(),98,0.40,0.105)};
 }
 function tuftGeo(w,h){
   const a=new THREE.PlaneGeometry(w,h); a.translate(0,h/2,0);
@@ -1988,12 +1995,16 @@ function scatter(count,seed,test,cb){
     cb(x,y,z,rr); n++;
   }
 }
-function instFrom(geo,mat,list,shadow){
+function instFrom(geo,mat,list,shadow,tint){
   if(!list.length) return null;
   const im=new THREE.InstancedMesh(geo,mat,list.length);
-  const m=new THREE.Matrix4();
-  list.forEach((o,i)=>{ m.copy(mat4(o.x,o.y,o.z,o.rx||0,o.ry||0,o.rz||0,o.s,o.sy||o.s,o.s)); im.setMatrixAt(i,m); });
+  const m=new THREE.Matrix4(), c=new THREE.Color();
+  list.forEach((o,i)=>{
+    m.copy(mat4(o.x,o.y,o.z,o.rx||0,o.ry||0,o.rz||0,o.s,o.sy||o.s,o.s)); im.setMatrixAt(i,m);
+    if(tint){ tint(c,o); im.setColorAt(i,c); }
+  });
   im.instanceMatrix.needsUpdate=true;
+  if(im.instanceColor) im.instanceColor.needsUpdate=true;
   im.castShadow=!!shadow; im.receiveShadow=true;
   scene.add(im);
   return im;
@@ -2003,24 +2014,30 @@ function buildPlants(){
   const onRoad=(x,z)=>x>56&&Math.abs(z)<7.5;
   // --- grass and garrigue
   const tufts=[], scrub=[];
-  scatter(MOBILE?3600:14000,4242,(x,z,y,sl,rr)=>{
+  scatter(MOBILE?4200:15000,4242,(x,z,y,sl,rr)=>{
     if(y<1.2||inCastle(x,z)||onRoad(x,z)) return 0;
     let w=smoothstep(0.62,0.16,sl)*clamp(0.25+fbm(x*0.035+3,z*0.035-2,4)*2.4,0,1);
     if(y>46) w*=1.15;
     if(y<3.5) w*=0.35;
+    // thickest where the eye actually goes, thinning away inland
+    w*=lerp(1.0,0.28,smoothstep(110,260,Math.hypot(x+8,z)));
     return w;
-  },(x,y,z,rr)=>tufts.push({x,y:y-0.07,z,s:0.85+rr()*1.15,ry:rr()*6.28}));
+  },(x,y,z,rr)=>tufts.push({x,y:y-0.10,z,s:0.95+rr()*1.15,ry:rr()*6.28}));
   scatter(MOBILE?900:2100,77,(x,z,y,sl,rr)=>{
     if(y<2.0||inCastle(x,z)||onRoad(x,z)) return 0;
     return smoothstep(0.85,0.25,sl)*clamp(fbm(x*0.02-9,z*0.02+4,3)*2.0,0,1)*0.9;
   },(x,y,z,rr)=>scrub.push({x,y:y-0.12,z,s:1.1+rr()*1.5,ry:rr()*6.28}));
 
   const grassMat=windify(new THREE.MeshStandardMaterial({
-    map:texGrass(),alphaTest:0.44,side:THREE.DoubleSide,roughness:1,metalness:0,
-    color:SC(0xcfc496)}),0.055);
+    map:texGrass(),alphaTest:0.44,side:THREE.DoubleSide,roughness:1,metalness:0}),0.055);
+  // summer grass is burnt straw in the open and green in the hollows
+  const tintGrass=(c,o)=>{
+    const k=clamp(0.5+fbm(o.x*0.05+41,o.z*0.05-13,3)*1.7,0,1);
+    c.setRGB(s2l(lerp(0.88,0.42,k)),s2l(lerp(0.83,0.52,k)),s2l(lerp(0.52,0.26,k)));
+  };
   const scrubMat=windify(new THREE.MeshStandardMaterial({
     map:texLeaf(78,20,26),alphaTest:0.42,side:THREE.DoubleSide,roughness:1,metalness:0}),0.03);
-  instFrom(tuftGeo(1.15,0.95),grassMat,tufts,false);
+  instFrom(tuftGeo(1.15,0.95),grassMat,tufts,false,tintGrass);
   instFrom(tuftGeo(1.5,1.25),scrubMat,scrub,false);
 
   // --- cypress: about the chapel and along the last of the road
@@ -2045,11 +2062,11 @@ function buildPlants(){
   const barkMat=new THREE.MeshStandardMaterial({color:SC(0x5d4c39),roughness:1,metalness:0,flatShading:true});
   const leafMat=windify(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95,metalness:0,flatShading:true}),0.016);
   const ol=[], pn=[];
-  scatter(MOBILE?26:52,808,(x,z,y,sl,rr)=>{
+  scatter(MOBILE?40:110,808,(x,z,y,sl,rr)=>{
     if(x<96||y<18||y>58||sl>0.34||onRoad(x,z)) return 0;
     return clamp(0.4+fbm(x*0.02,z*0.02,3)*2,0,1);
   },(x,y,z,rr)=>ol.push({x,y:y-0.25,z,s:1.5+rr()*0.9,ry:rr()*6.28}));
-  scatter(MOBILE?14:30,909,(x,z,y,sl,rr)=>{
+  scatter(MOBILE?22:64,909,(x,z,y,sl,rr)=>{
     if(y<9||y>56||sl>0.62||inCastle(x,z)||onRoad(x,z)) return 0;
     if(x>90) return 0.25;
     return clamp(fbm(x*0.03+21,z*0.03,3)*2.2,0,1)*0.8;
@@ -2129,7 +2146,7 @@ function buildColumnBinders(){
 }
 
 function finishCastle(){
-  const ashMat =stoneMaterial(TEX.ash ,4.8,{bump:0.95,rough:0.80,ao:0.34});
+  const ashMat =stoneMaterial(TEX.ash ,6.4,{bump:1.05,rough:0.82,ao:0.44});
   const rubMat =stoneMaterial(TEX.rub ,3.2,{bump:1.15,rough:0.90,ao:0.40});
   const woodMat=stoneMaterial(TEX.wood,2.4,{bump:0.50,rough:0.85,ao:0.30});
   const cobMat =stoneMaterial(TEX.cob ,3.0,{bump:0.85,rough:0.92,ao:0.42});
@@ -2214,7 +2231,7 @@ const STATIONS=[
   {n:"Sea approach", x:-18,y:34,z:4,  th:-1.15, ph:1.290, di:272},
   {n:"Gate & ditch", x:64, y:42,z:0,  th: 2.35, ph:1.298, di:112},
   {n:"Inner ward",   x:-8, y:58,z:2,  th: 0.88, ph:1.185, di:76},
-  {n:"Donjon",       x:-26,y:62,z:0,  th:-1.38, ph:1.220, di:92},
+  {n:"Donjon",       x:-24,y:56,z:0,  th:-1.30, ph:1.135, di:148},
   {n:"Sea gate",     x:-54,y:22,z:-36,th:-1.02, ph:1.315, di:98},
   {n:"Survey",       x:2,  y:38,z:-2, th:-1.55, ph:0.640, di:360}
 ];

@@ -1,0 +1,251 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ===========================================================================
+   Novus Data — brand tokens
+
+   The palette is derived from the existing Novus Data logo and is settled.
+   Do not reinterpret it during a polish pass.
+
+   Contrast, measured against --ink (#070C20):
+
+     --text        #F4F6FA   ~17.0:1   body text
+     --text-muted  #9395A0    ~6.5:1   metadata, secondary text
+     --accent-text #7B92BE    ~6.2:1   links, focus rings, interactive text
+     --accent      #4C618A    ~3.1:1   STRUCTURAL ONLY — fails AA for text
+
+   --accent is a border, a fill and a non-text mark. It is never the colour of
+   anything a reader reads or clicks. Use --accent-text for that.
+   =========================================================================== */
+
+:root {
+  --ink: #070c20;
+  --surface: #0e1529;
+  --surface-2: #161f38;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: #222d4a;
+  --text: #f4f6fa;
+  --text-muted: #9395a0;
+  --accent: #4c618a;
+  --accent-text: #7b92be;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  /* Colours. Utility names are chosen so the intent reads at the call site:
+     bg-ink, bg-surface, text-fg, text-muted, text-link, border-hairline. */
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-hairline: var(--border);
+  --color-rule: var(--border-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-link: var(--accent-text);
+}
+
+@theme {
+  /* Typefaces. Source Serif 4 carries headings and issue titles; Inter carries
+     everything read as interface. Both are loaded by next/font in layout.tsx. */
+  --font-serif: var(--font-source-serif), Iowan Old Style, Georgia, Times New Roman, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+
+  /* Type scale. Display sizes use clamp() so they respond continuously rather
+     than jumping at breakpoints. Tracking tightens as size increases. */
+  --text-display: clamp(2.375rem, 1.45rem + 3.9vw, 4.125rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.023em;
+
+  --text-title: clamp(1.875rem, 1.35rem + 2.3vw, 2.75rem);
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.018em;
+
+  --text-heading: clamp(1.375rem, 1.2rem + 0.75vw, 1.6875rem);
+  --text-heading--line-height: 1.22;
+  --text-heading--letter-spacing: -0.012em;
+
+  --text-subhead: 1.1875rem;
+  --text-subhead--line-height: 1.5;
+  --text-subhead--letter-spacing: -0.006em;
+
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.65;
+
+  /* The issue-page reading size, per the brand spec: 1.125rem / 1.75. */
+  --text-reading: 1.125rem;
+  --text-reading--line-height: 1.75;
+
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.45;
+  --text-meta--letter-spacing: 0.012em;
+
+  /* Widths. `page` is the outer measure, `reading` the prose column, and
+     `measure` the hard 66-character cap on long-form body text. */
+  --container-page: 68rem;
+  --container-reading: 44rem;
+  --container-measure: 66ch;
+}
+
+@layer base {
+  html {
+    /* Anchor links land below the sticky header instead of under it. */
+    scroll-padding-top: 2rem;
+  }
+
+  body {
+    background-color: var(--ink);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* One visible focus treatment for the whole site. Any component that hides
+     it must provide its own, but nothing currently does. */
+  :focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* Dates and issue numbers align into true columns. */
+  time,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* A long unbroken string in an issue title must not force a scrollbar. */
+  h1,
+  h2,
+  h3,
+  p,
+  li,
+  figcaption {
+    overflow-wrap: break-word;
+  }
+}
+
+@layer components {
+  /* Prose styling for sanitised issue HTML, tuned to the brand tokens.
+     Applied as `prose prose-novus` on the issue body container. */
+  .prose-novus {
+    --tw-prose-body: var(--text);
+    --tw-prose-headings: var(--text);
+    --tw-prose-lead: var(--text-muted);
+    --tw-prose-links: var(--accent-text);
+    --tw-prose-bold: var(--text);
+    --tw-prose-counters: var(--text-muted);
+    --tw-prose-bullets: var(--accent);
+    --tw-prose-hr: var(--border);
+    --tw-prose-quotes: var(--text);
+    --tw-prose-quote-borders: var(--accent);
+    --tw-prose-captions: var(--text-muted);
+    --tw-prose-code: var(--text);
+    --tw-prose-pre-code: var(--text);
+    --tw-prose-pre-bg: var(--surface);
+    --tw-prose-th-borders: var(--border-strong);
+    --tw-prose-td-borders: var(--border);
+
+    font-size: var(--text-reading);
+    line-height: 1.75;
+    max-width: var(--container-measure);
+  }
+
+  .prose-novus :is(h2, h3, h4) {
+    font-family: var(--font-serif);
+    letter-spacing: -0.012em;
+  }
+
+  .prose-novus h2 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    margin-top: 2.75em;
+    margin-bottom: 0.75em;
+  }
+
+  .prose-novus h3 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    margin-top: 2em;
+    margin-bottom: 0.6em;
+  }
+
+  .prose-novus p {
+    margin-top: 0;
+    margin-bottom: 1.45em;
+  }
+
+  .prose-novus a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: color-mix(in srgb, var(--accent-text) 45%, transparent);
+    transition: text-decoration-color 120ms ease;
+  }
+
+  .prose-novus a:hover {
+    text-decoration-color: var(--accent-text);
+  }
+
+  .prose-novus blockquote {
+    font-style: normal;
+    border-left-width: 2px;
+    padding-left: 1.25em;
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+  }
+
+  .prose-novus blockquote p:first-of-type::before,
+  .prose-novus blockquote p:last-of-type::after {
+    content: "";
+  }
+
+  .prose-novus :is(img, figure) {
+    border-radius: 2px;
+  }
+
+  .prose-novus figcaption {
+    font-family: var(--font-sans);
+    font-size: var(--text-meta);
+    line-height: 1.45;
+  }
+
+  .prose-novus table {
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prose-novus :is(code, pre) {
+    font-size: 0.875em;
+  }
+
+  /* Issue bodies can contain wide tables. Let the table scroll, not the page. */
+  .prose-novus .table-scroll,
+  .prose-novus table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Motion responds to user action only, and not at all when the reader has
+   asked for less of it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

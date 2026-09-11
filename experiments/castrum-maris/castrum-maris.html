@@ -1308,7 +1308,7 @@ function buildTerrain(){
     // dry grass and garrigue wherever anything can root
     const patch=clamp(0.5+fbm(x*0.045-17,z*0.045+23,3)*1.9,0,1);
     let veg=smoothstep(0.62,0.10,slope)*smoothstep(3.0,9.5,y)
-            *clamp(0.88+fbm(x*0.026+5,z*0.026+9,4)*1.7,0,1);
+            *clamp(1.02+fbm(x*0.026+5,z*0.026+9,4)*1.7,0,1);
     veg*=smoothstep(0.02,0.28,up);
     const vr=lerp(0.395,0.168,patch), vg=lerp(0.392,0.222,patch), vb=lerp(0.172,0.082,patch);
     r=lerp(r,vr+n1*0.045,veg); g=lerp(g,vg+n1*0.045,veg); b=lerp(b,vb+n1*0.022,veg);

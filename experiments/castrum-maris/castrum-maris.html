@@ -375,17 +375,23 @@ function groundHeight(x,z){
   const s = smoothstep(0,1,clamp(d,0,1));
   let y = lerp(bed,top,s);
 
+  // How far we are from the castle. The rock under and around the walls was
+  // quarried and dressed flat before a stone was laid, so the closer we get,
+  // the more the natural weathering of the face is taken off it.
+  const sd = sdPoly(x,z,POLY_OUT);
+  const dressed = 1-smoothstep(1.0, 38, sd);
+  const rough = 1-dressed*0.92;
+
   // bedding planes: limestone weathers out in ledges, strongest mid-cliff
-  const cliffness = clamp(s*(1-s)*4,0,1);
+  const cliffness = clamp(s*(1-s)*4,0,1)*rough;
   y += 2.5*Math.sin(y*0.40+fbm(x*0.022,z*0.022,3)*2.6)*cliffness;
   // vertical gullies and karst runnels down the face
   y -= 5.0*Math.pow(clamp(ridged(x*0.016,z*0.016,4),0,1),5)*cliffness*3.0;
-  y += 0.9*fbm(x*0.09,z*0.09,3)*clamp(s*2.2,0,1);
+  y += 0.9*fbm(x*0.09,z*0.09,3)*clamp(s*2.2,0,1)*rough;
 
-  // the rock platform is dressed level under the castle
-  const sd = sdPoly(x,z,POLY_OUT);
-  const f = 1-smoothstep(2.5, x>36?27:10, sd);
-  y = lerp(y, PLATEAU+0.5*fbm(x*0.05,z*0.05,2), f);
+  // the platform itself, level bar a hand's breadth of unevenness
+  const f = 1-smoothstep(2.0, x>36?30:17, sd);
+  y = lerp(y, PLATEAU+0.14*fbm(x*0.028,z*0.028,2), f);
 
   // the approach road is cut as a level shelf along z≈0
   if(x>44){

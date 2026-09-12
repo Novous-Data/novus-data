@@ -44,21 +44,27 @@ export function formatShortDate(iso: string | null | undefined): string | null {
   return date ? SHORT_DATE.format(date) : null;
 }
 
-/** Four-digit year as a string, for grouping the archive. Null if unparseable. */
-export function yearOf(iso: string | null | undefined): string | null {
-  const date = parse(iso);
-  return date ? String(date.getUTCFullYear()) : null;
-}
-
 /** A Date for sorting and for sitemap lastModified. Null if unparseable. */
 export function toDate(iso: string | null | undefined): Date | null {
   return parse(iso);
 }
 
-/** "0007" — zero-padded issue number for column alignment. */
+/**
+ * "0007" — zero-padded, for the archive's issue-number column, where the
+ * padding is what makes the numbers line up into a true column.
+ */
 export function formatIssueNumber(issueNumber: number | null): string | null {
   if (issueNumber === null || !Number.isFinite(issueNumber)) return null;
   return String(Math.trunc(issueNumber)).padStart(4, '0');
+}
+
+/**
+ * "7" — plain, for anywhere the number is read as prose. "Issue 0007" in a
+ * sentence reads like a serial number rather than an issue number.
+ */
+export function formatIssueLabel(issueNumber: number | null): string | null {
+  if (issueNumber === null || !Number.isFinite(issueNumber)) return null;
+  return String(Math.trunc(issueNumber));
 }
 
 /** Words per minute used for reading time. Conventional for prose. */

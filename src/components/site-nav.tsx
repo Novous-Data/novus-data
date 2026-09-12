@@ -5,15 +5,23 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
 
+import { Container } from '@/components/container';
+import { Wordmark } from '@/components/wordmark';
 import { primaryNav } from '@/config/nav';
 
 /**
- * The site's only client component.
+ * The masthead row and the mobile menu.
  *
- * It is a client component for two reasons: the mobile menu is a disclosure
- * that has to open and close, and `aria-current` needs the active pathname,
- * which server components cannot read. Everything else on the site renders on
+ * This is the site's only client component. It needs to be one because the
+ * mobile menu opens and closes, and because `aria-current` needs the active
+ * pathname, which server components cannot read. Everything else renders on
  * the server.
+ *
+ * The open menu sits in the document flow and pushes the page down rather than
+ * floating over it. The header is not sticky, so there is nothing to gain from
+ * an overlay, and an overlay clipping the first line of a headline reads like a
+ * rendering fault. In flow there is no absolute positioning and no z-index to
+ * reason about.
  */
 export function SiteNav() {
   const pathname = usePathname();
@@ -47,53 +55,24 @@ export function SiteNav() {
 
   return (
     <>
-      <nav aria-label="Primary" className="hidden md:block">
-        <ul className="flex items-center gap-7">
-          {primaryNav.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={isActive(item.href) ? 'page' : undefined}
-                className={clsx(
-                  'inline-block py-2 text-[0.9375rem] transition-colors',
-                  isActive(item.href)
-                    ? 'text-fg underline decoration-accent decoration-2 underline-offset-[0.45em]'
-                    : 'text-muted hover:text-fg',
-                )}
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <Container className="flex h-16 items-center justify-between gap-4 sm:h-[4.5rem]">
+        <Link href="/" className="inline-flex items-center py-2">
+          <Wordmark className="text-[1.1875rem] sm:text-[1.25rem]" />
+          <span className="sr-only">— home</span>
+        </Link>
 
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-controls={panelId}
-        className="-mr-2 inline-flex min-h-11 min-w-11 items-center gap-2 px-2 text-[0.9375rem] text-fg md:hidden"
-      >
-        <MenuIcon open={open} />
-        {open ? 'Close' : 'Menu'}
-      </button>
-
-      <div
-        id={panelId}
-        hidden={!open}
-        className="absolute inset-x-0 top-full z-20 border-b border-hairline bg-ink md:hidden"
-      >
-        <nav aria-label="Primary, mobile">
-          <ul className="flex flex-col px-5 pb-4 sm:px-8">
+        <nav aria-label="Primary" className="hidden md:block">
+          <ul className="flex items-center gap-7">
             {primaryNav.map((item) => (
-              <li key={item.href} className="border-t border-hairline first:border-t-0">
+              <li key={item.href}>
                 <Link
                   href={item.href}
                   aria-current={isActive(item.href) ? 'page' : undefined}
                   className={clsx(
-                    'flex min-h-12 items-center text-[1.0625rem]',
-                    isActive(item.href) ? 'text-fg' : 'text-muted',
+                    'inline-flex min-h-11 items-center text-[0.9375rem] transition-colors',
+                    isActive(item.href)
+                      ? 'text-fg underline decoration-accent decoration-2 underline-offset-[0.45em]'
+                      : 'text-muted hover:text-fg',
                   )}
                 >
                   {item.label}
@@ -102,6 +81,40 @@ export function SiteNav() {
             ))}
           </ul>
         </nav>
+
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="-mr-2 inline-flex min-h-11 min-w-11 items-center gap-2 px-2 text-[0.9375rem] text-fg md:hidden"
+        >
+          <MenuIcon open={open} />
+          {open ? 'Close' : 'Menu'}
+        </button>
+      </Container>
+
+      <div id={panelId} hidden={!open} className="border-t border-hairline md:hidden">
+        <Container>
+          <nav aria-label="Primary, mobile">
+            <ul className="flex flex-col pb-3">
+              {primaryNav.map((item) => (
+                <li key={item.href} className="border-t border-hairline first:border-t-0">
+                  <Link
+                    href={item.href}
+                    aria-current={isActive(item.href) ? 'page' : undefined}
+                    className={clsx(
+                      'flex min-h-12 items-center text-[1.0625rem]',
+                      isActive(item.href) ? 'text-fg' : 'text-muted',
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Container>
       </div>
     </>
   );

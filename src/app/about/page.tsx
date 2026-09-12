@@ -4,7 +4,7 @@ import { Container } from '@/components/container';
 import { NeedsInput } from '@/components/needs-input';
 import { PageHeader } from '@/components/page-header';
 import { SubscribePanel } from '@/components/subscribe-panel';
-import { ExternalLink, TextLink } from '@/components/text-link';
+import { MailLink, TextLink } from '@/components/text-link';
 import { publication } from '@/config/publication';
 import { absoluteUrl, env } from '@/lib/env';
 
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <>
-      <PageHeader title={`About ${publication.name}`} lede={publication.description} />
+      <PageHeader width="reading" title={`About ${publication.name}`} lede={publication.description} />
 
       <Container width="reading" className="mt-14 flex flex-col gap-14">
         <Section heading="Who it is for">
@@ -78,7 +78,7 @@ export default function AboutPage() {
           {env.contactEmail ? (
             <p>
               Corrections, questions and sources are welcome at{' '}
-              <ExternalLink href={`mailto:${env.contactEmail}`}>{env.contactEmail}</ExternalLink>.
+              <MailLink email={env.contactEmail} />.
               Corrections are the most useful thing you can send.
             </p>
           ) : (

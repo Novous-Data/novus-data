@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import { Container } from '@/components/container';
 import { PageHeader } from '@/components/page-header';
-import { ExternalLink } from '@/components/text-link';
+import { MailLink } from '@/components/text-link';
 import { publication } from '@/config/publication';
 import { absoluteUrl, env } from '@/lib/env';
 
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <>
-      <PageHeader title="Contact" />
+      <PageHeader width="reading" title="Contact" />
 
       <Container width="reading" className="mt-10">
         {/* No form. There is no backend to receive one, and a form that
@@ -23,7 +23,7 @@ export default function ContactPage() {
         {env.contactEmail ? (
           <>
             <p className="text-subhead">
-              <ExternalLink href={`mailto:${env.contactEmail}`}>{env.contactEmail}</ExternalLink>
+              <MailLink email={env.contactEmail} />
             </p>
             <p className="mt-6 max-w-measure text-muted">
               Corrections, sources, questions about something in an issue, and requests to cover a

@@ -11,7 +11,7 @@ import { publication } from '@/config/publication';
 import type { IssueSummary } from '@/lib/content';
 import { getIssue, getIssueNeighbours, listIssueSlugs } from '@/lib/content';
 import { absoluteUrl } from '@/lib/env';
-import { formatIssueNumber, formatLongDate, readingTimeMinutes } from '@/lib/format';
+import { formatIssueLabel, formatLongDate, readingTimeMinutes } from '@/lib/format';
 import { issueJsonLd } from '@/lib/structured-data';
 
 /**
@@ -78,7 +78,7 @@ export default async function IssuePage(props: PageProps<'/briefings/[slug]'>) {
 
   const { previous, next } = await getIssueNeighbours(slug);
   const date = formatLongDate(issue.publishedAt);
-  const number = formatIssueNumber(issue.issueNumber);
+  const number = formatIssueLabel(issue.issueNumber);
   // A real measurement of the stored text. Omitted entirely when there is no
   // body to measure, rather than defaulted to something.
   const minutes = readingTimeMinutes(issue.contentHtml);
@@ -195,7 +195,7 @@ function AdjacentIssue({
       <p className="text-meta text-muted">{label}</p>
       <Link
         href={`/briefings/${issue.slug}`}
-        className="mt-2 inline-block font-serif text-[1.125rem] font-semibold text-fg transition-colors hover:text-link"
+        className="mt-1 inline-flex min-h-11 items-center font-serif text-[1.125rem] font-semibold text-fg transition-colors hover:text-link"
       >
         {issue.title}
       </Link>

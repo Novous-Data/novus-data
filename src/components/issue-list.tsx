@@ -12,7 +12,7 @@ import { formatIssueNumber, formatShortDate } from '@/lib/format';
  * page. That alignment is the credibility signal: it shows a run of dated,
  * numbered work.
  */
-export function IssueRow({ issue }: { issue: IssueSummary }) {
+function IssueRow({ issue }: { issue: IssueSummary }) {
   const number = formatIssueNumber(issue.issueNumber);
   const date = formatShortDate(issue.publishedAt);
 

@@ -84,7 +84,10 @@
   /* Widths. `page` is the outer measure, `reading` the prose column, and
      `measure` the hard 66-character cap on long-form body text. */
   --container-page: 68rem;
-  --container-reading: 44rem;
+  /* Wide enough that --container-measure below is what actually caps the
+     reading column. At 44rem the container bound first and body copy came out
+     at ~56 characters, short of the 66 the brand spec calls for. */
+  --container-reading: 52rem;
   --container-measure: 66ch;
 }
 
@@ -135,9 +138,16 @@
   }
 }
 
-@layer components {
-  /* Prose styling for sanitised issue HTML, tuned to the brand tokens.
-     Applied as `prose prose-novus` on the issue body container. */
+/* ---------------------------------------------------------------------------
+   Prose styling for sanitised issue HTML, tuned to the brand tokens. Applied
+   as `prose prose-novus` on the issue body container.
+
+   Deliberately NOT inside @layer components. The typography plugin registers
+   `.prose` in Tailwind's utilities layer, which the cascade resolves after
+   components — so a layered override here would lose to the plugin's own
+   defaults and the issue body would render in gray-700 on navy. Unlayered
+   rules beat layered ones, which is what makes these win.
+   --------------------------------------------------------------------------- */
   .prose-novus {
     --tw-prose-body: var(--text);
     --tw-prose-headings: var(--text);
@@ -229,13 +239,11 @@
   }
 
   /* Issue bodies can contain wide tables. Let the table scroll, not the page. */
-  .prose-novus .table-scroll,
   .prose-novus table {
     display: block;
     max-width: 100%;
     overflow-x: auto;
   }
-}
 
 /* Motion responds to user action only, and not at all when the reader has
    asked for less of it. */

@@ -3,7 +3,7 @@ import { ImageResponse } from 'next/og';
 import { publication } from '@/config/publication';
 import { getIssue, listIssueSlugs } from '@/lib/content';
 import { ogColors, ogSize, serifFonts } from '@/lib/og';
-import { formatIssueNumber, formatLongDate } from '@/lib/format';
+import { formatIssueLabel, formatLongDate } from '@/lib/format';
 
 export const alt = `A briefing from ${publication.name}`;
 export const size = ogSize;
@@ -25,7 +25,7 @@ export default async function IssueOpengraphImage({
 
   const title = issue?.title ?? publication.name;
   const date = formatLongDate(issue?.publishedAt);
-  const number = formatIssueNumber(issue?.issueNumber ?? null);
+  const number = formatIssueLabel(issue?.issueNumber ?? null);
 
   // Long titles get a smaller size rather than overflowing the card.
   const titleSize = title.length > 90 ? 50 : title.length > 55 ? 62 : 74;

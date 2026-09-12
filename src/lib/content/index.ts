@@ -23,12 +23,6 @@ export async function getIssue(slug: string): Promise<Issue | null> {
   return getContentSource().getIssue(slug);
 }
 
-/** The most recent issue, or null when nothing has been published yet. */
-export async function getLatestIssue(): Promise<IssueSummary | null> {
-  const [latest] = await listIssues(1);
-  return latest ?? null;
-}
-
 /** Every slug, for generateStaticParams and the sitemap. */
 export async function listIssueSlugs(): Promise<string[]> {
   const issues = await listIssues();
@@ -48,12 +42,6 @@ export async function getIssueNeighbours(slug: string): Promise<IssueNeighbours>
     previous: issues[index + 1] ?? null,
     next: issues[index - 1] ?? null,
   };
-}
-
-/** True when nothing has been published — the site's pre-launch state. */
-export async function isPreLaunch(): Promise<boolean> {
-  const issues = await listIssues(1);
-  return issues.length === 0;
 }
 
 /** Issues grouped by publication year, newest year first. */
@@ -82,5 +70,3 @@ export async function listIssuesByYear(): Promise<Array<{ year: string; issues: 
 
 /** Used by the archive page to decide whether to group by year. */
 export const GROUP_ARCHIVE_ABOVE = 12;
-
-export { getContentSource };

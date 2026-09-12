@@ -17,6 +17,7 @@ export default function SubscribePage() {
   return (
     <>
       <PageHeader
+        width="reading"
         title="Subscribe"
         lede={`${publication.description} Each issue arrives by email.`}
       />

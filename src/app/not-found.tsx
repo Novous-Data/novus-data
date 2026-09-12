@@ -12,12 +12,16 @@ export default function NotFound() {
         There is nothing at this address. It may have been a typo, or a link to something that was
         never published here.
       </p>
-      <ul className="mt-8 flex flex-col gap-2">
+      <ul className="mt-6 flex flex-col">
         <li>
-          <TextLink href="/">Novus Data home</TextLink>
+          <TextLink href="/" className="inline-flex min-h-11 items-center">
+            Novus Data home
+          </TextLink>
         </li>
         <li>
-          <TextLink href="/briefings">The full briefing archive</TextLink>
+          <TextLink href="/briefings" className="inline-flex min-h-11 items-center">
+            The full briefing archive
+          </TextLink>
         </li>
       </ul>
     </Container>

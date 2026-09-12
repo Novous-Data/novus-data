@@ -18,6 +18,25 @@ export function TextLink({
   );
 }
 
+/**
+ * A mail address. Deliberately not an ExternalLink: `mailto:` hands off to the
+ * reader's mail client, so target="_blank" would leave an empty tab behind and
+ * rel="noopener" means nothing.
+ */
+export function MailLink({
+  email,
+  className,
+}: {
+  email: string;
+  className?: string;
+}) {
+  return (
+    <a href={`mailto:${email}`} className={clsx(baseClasses, className)}>
+      {email}
+    </a>
+  );
+}
+
 /** Outbound link. Always rel-hardened; never opens a tab silently. */
 export function ExternalLink({
   className,

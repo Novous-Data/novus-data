@@ -11,14 +11,21 @@ export function PageHeader({
   title,
   lede,
   eyebrow,
+  width = 'page',
 }: {
   title: string;
   lede?: ReactNode;
   /** Used only where it carries information, such as an issue number. */
   eyebrow?: ReactNode;
+  /**
+   * Must match the container the page body uses. A heading in the wide
+   * container above body copy in the reading container leaves the h1 and the
+   * prose on two different left edges, which reads as a mistake.
+   */
+  width?: 'page' | 'reading';
 }) {
   return (
-    <Container className="pt-14 sm:pt-20">
+    <Container width={width} className="pt-14 sm:pt-20">
       {eyebrow ? <p className="mb-4 text-meta text-muted">{eyebrow}</p> : null}
       <h1 className="max-w-[20ch] font-serif text-title font-semibold text-fg">{title}</h1>
       {lede ? (

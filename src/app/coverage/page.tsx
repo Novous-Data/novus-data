@@ -18,21 +18,25 @@ export default function CoveragePage() {
   return (
     <>
       <PageHeader
+        width="reading"
         title="Coverage"
         lede="What Novus Data follows, why each of these matters, and what a briefing actually tells you about it."
       />
 
-      <Container className="mt-12">
+      <Container width="reading" className="mt-12">
         {/* A contents list, because seven topics is more than fits on a screen.
             The numbers are positions in a list, not decoration. */}
-        <nav aria-label="Topics on this page" className="max-w-reading border-t border-hairline pt-5">
-          <ol className="flex flex-col gap-2">
+        <nav aria-label="Topics on this page" className="border-t border-hairline pt-5">
+          <ol className="flex flex-col">
             {coverageTopics.map((topic, index) => (
-              <li key={topic.id} className="flex gap-4">
+              <li key={topic.id} className="flex items-center gap-4">
                 <span data-numeric className="text-meta text-muted">
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <TextLink href={`#${topic.id}`} className="text-[0.9375rem]">
+                <TextLink
+                  href={`#${topic.id}`}
+                  className="inline-flex min-h-11 items-center text-[0.9375rem]"
+                >
                   {topic.title}
                 </TextLink>
               </li>

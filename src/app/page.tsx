@@ -11,7 +11,7 @@ import { coverageTopics } from '@/config/coverage';
 import { publication } from '@/config/publication';
 import { listIssues } from '@/lib/content';
 import { absoluteUrl } from '@/lib/env';
-import { formatIssueNumber, formatLongDate } from '@/lib/format';
+import { formatIssueLabel, formatLongDate } from '@/lib/format';
 import { publicationJsonLd } from '@/lib/structured-data';
 
 export const metadata: Metadata = {
@@ -92,7 +92,7 @@ function LatestBriefingHero({
   issue: Awaited<ReturnType<typeof listIssues>>[number];
 }) {
   const date = formatLongDate(issue.publishedAt);
-  const number = formatIssueNumber(issue.issueNumber);
+  const number = formatIssueLabel(issue.issueNumber);
 
   return (
     <Container className="pt-14 sm:pt-24">
@@ -133,11 +133,13 @@ function PreLaunchHero() {
     <Container className="pt-14 sm:pt-24">
       <p className="text-meta text-muted">Before the first issue</p>
 
-      <h1 className="mt-6 max-w-[19ch] font-serif text-display font-semibold text-fg">
-        {publication.description}
+      {/* The short line carries the display treatment; the full description
+          would run to eight lines at this size and stop reading as a statement. */}
+      <h1 className="mt-6 max-w-[26ch] font-serif text-display font-semibold text-fg">
+        {publication.shortDescription}
       </h1>
 
-      <p className="mt-7 max-w-[60ch] text-subhead text-muted">{publication.positioning}</p>
+      <p className="mt-8 max-w-[60ch] text-subhead text-muted">{publication.positioning}</p>
 
       {firstIssue ? (
         <p className="mt-7 max-w-[60ch] text-muted">

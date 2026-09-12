@@ -23,17 +23,18 @@ export function SiteFooter() {
         <div className="flex flex-col gap-10 md:flex-row md:justify-between md:gap-16">
           <div className="max-w-sm">
             <Wordmark className="text-[1.125rem]" />
-            <p className="mt-3 text-[0.9375rem] text-muted">{publication.description}</p>
+            <p className="mt-3 text-[0.9375rem] text-muted">{publication.shortDescription}</p>
           </div>
 
           <div className="flex flex-col gap-8 sm:flex-row sm:gap-16">
             <nav aria-label="Footer">
-              <ul className="flex flex-col gap-2.5">
+              {/* min-h-11 keeps every standalone link a 44px tap target. */}
+              <ul className="flex flex-col">
                 {footerNav.map((item) => (
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="text-[0.9375rem] text-muted transition-colors hover:text-fg"
+                      className="inline-flex min-h-11 items-center text-[0.9375rem] text-muted transition-colors hover:text-fg"
                     >
                       {item.label}
                     </Link>
@@ -43,10 +44,13 @@ export function SiteFooter() {
             </nav>
 
             {externalLinks.length > 0 ? (
-              <ul className="flex flex-col gap-2.5">
+              <ul className="flex flex-col">
                 {externalLinks.map((link) => (
                   <li key={link.href}>
-                    <ExternalLink href={link.href} className="text-[0.9375rem]">
+                    <ExternalLink
+                      href={link.href}
+                      className="inline-flex min-h-11 items-center text-[0.9375rem]"
+                    >
                       {link.label}
                     </ExternalLink>
                   </li>

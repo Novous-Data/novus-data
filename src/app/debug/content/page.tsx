@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { Container } from '@/components/container';
-import { INPUT_LEDGER, missingLaunchInputs } from '@/config/publication';
+import { INPUT_LEDGER, missingLaunchInputs } from '@/config/input-ledger';
 import { getContentSourceName } from '@/lib/content';
 import { readDiagnostics } from '@/lib/content/sources/local-files';
 import { env } from '@/lib/env';

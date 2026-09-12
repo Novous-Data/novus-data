@@ -3,6 +3,9 @@ import { Inter, Source_Serif_4 } from 'next/font/google';
 
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
+// Imported for its side effect: refuses a production build while a
+// launch-critical fact is still missing. Server-only by design.
+import '@/config/input-ledger';
 import { publication } from '@/config/publication';
 import { env } from '@/lib/env';
 

@@ -413,7 +413,7 @@ The complete list. There is nothing else.
 | **Analytics** | Excluded on purpose. Adding it changes what `/privacy` has to say, and that page currently says the site collects nothing — which is true. Vercel Analytics is the natural Phase 2 choice; it is not installed |
 | **A test framework** | Excluded per the brief. `/debug/content` covers the one place a bug is actually likely — a malformed issue file — at zero dependency cost, and that behaviour is verified above |
 | **Scheduled sync** | A GitHub Action could run `sync-issues` on a cron. Not built: the manual step is one command, and a silent automated sync writing a bad file into the archive of record is a worse failure than remembering to type it |
-| **The site's own RSS feed** | Beehiiv is the source of truth today, so the footer links its feed. **Once Beehiiv is no longer the source of truth, this site should emit its own feed** — it already holds the full archive |
+| **The site's own RSS or JSON feed** | Beehiiv is the source of truth today, so the footer links its feed. **This is now the first piece of app work**, not a nice-to-have: it is the trigger source a notification service should watch, and the archive here already has the permanent ids and honest timestamps that needs. See 10 |
 | **Beehiiv embedded subscribe form** | `/subscribe` links out rather than embedding. The iframe's styling against a dark background cannot be judged without the real URL. Try it after launch; if it renders badly, the link-out is already correct |
 | **Self-hosted fonts** | See the offline caveat in section 7 |
 
@@ -421,33 +421,71 @@ The complete list. There is nothing else.
 
 ## 10. What Phase 2 should tackle first
 
+You have said the plan is to scale this into an app that sends notifications.
+That changes the ordering below, and it changes one thing about v1 worth stating
+plainly: **nothing here forecloses it, and two v1 decisions were made to keep
+that door open.** The seam is written up in `CLAUDE.md` section 14.2.
+
 My view, in order.
 
-**1. Publish issues.** The single highest-value thing is not code. The site's
-entire credibility argument is a hero that shows a real, recent, dated briefing
-and an archive with a run of them behind it. Three issues make this site look
-like a publication; zero make it look like a landing page, however well built.
-Nothing in Phase 2 substitutes for that.
+**1. Publish issues.** Still first, and not close. The site's entire credibility
+argument is a hero showing a real, recent, dated briefing with a run of them
+behind it. Three issues make this look like a publication; zero make it look like
+a landing page, however well built. And a notification product has nothing to
+notify anyone about until there is a stream of work to notify them of — an app
+that pushes nothing is worse than no app.
 
-**2. Answer section 3 of this document.** Half an hour of filling in one config
-file turns a site that cannot deploy into one that can.
+**2. Answer section 3 of this document.** Half an hour in one config file turns a
+site that cannot deploy into one that can.
 
-**3. Then, and only then, the indicators layer.** When live data arrives it
-belongs at `src/lib/indicators/`, mirroring the content layer: its own types, its
-own sources, its own public API, its own failure modes. **Do not bolt it onto
+**3. Emit a machine-readable feed from this site.** This is the first piece of
+actual app work, and it moves up the list because of the app plan. The site does
+not publish its own feed in v1 because Beehiiv is still the source of truth, but
+the archive here is already complete, already has permanent unique slugs, and
+already has honest ISO timestamps — which is exactly what a notification trigger
+needs. A `feed.json` route reading `listIssues()` is small, needs no backend, and
+gives the app something stable to watch. Build it before touching anything
+push-related.
+
+**4. Keep the app's state out of this repository.** Device tokens, per-reader
+preferences and delivery logs are mutable, per-user and privacy-bearing. This
+repo is a static site with no database and no write endpoint, which is a large
+part of why it is fast, cheap and truthfully able to say it collects nothing. The
+shape that keeps both halves simple is: this repo publishes a feed, a separate
+service watches it and owns the subscriber registry, and that service sends. Merge
+them and every future change to notification logic becomes a change to the thing
+that has to stay up.
+
+Two things to know before that work starts, because both are easy to discover too
+late:
+
+- **`/privacy` stops being true the moment push ships.** It currently says the
+  site stores nothing, and that is accurate. Notifications introduce a device
+  identifier and a preference record. Rewrite that page in the same change, not
+  after it.
+- **A notification is a much stronger claim on attention than an email.** An alert
+  that turns out to be stale or wrong costs more trust than the same mistake
+  inside an issue nobody was interrupted for. That argues for a deliberately
+  narrow first version: notify on "a new briefing is out", which is a fact this
+  repo can prove, before notifying on anything derived.
+
+**5. Then the indicators layer.** When live data arrives it belongs at
+`src/lib/indicators/`, mirroring the content layer: its own types, its own
+sources, its own public API, its own failure modes. **Do not bolt it onto
 `ContentSource`.** Issues and indicators have different shapes, different refresh
 characteristics and different ways of going wrong; merging them makes both harder
-to change, and the whole reason the content layer is worth its indirection is that
-it kept one external dependency from reaching into every page.
+to change, and the whole reason the content layer earns its indirection is that it
+kept one external dependency from reaching into every page.
 
-A caution on that layer, given what this publication is about: the moment the site
-displays a number, it inherits an obligation to be right about it. Every indicator
-needs a source, an as-of timestamp, and a visible behaviour for when it is stale —
-decided before the first chart is drawn, not after. A dashboard showing last
-week's freight rate as though it were today's would undo more credibility than the
-whole of this site builds.
+A caution specific to what this publication is about: the moment the site displays
+a number, it inherits an obligation to be right about it. Every indicator needs a
+source, an as-of timestamp, and a defined behaviour when stale — decided before
+the first chart is drawn, not after. A dashboard showing last week's freight rate
+as though it were today's would undo more credibility than this whole site builds.
+Alerting on indicators should come after they have been running visibly and
+correctly for a while, for the same reason.
 
-**4. Smaller things, in rough order of value:** the site's own RSS feed once
-Beehiiv stops being the source of truth; a CSP in report-only mode; search or tag
-filtering once the archive is past roughly thirty issues — not before, since
-reverse-chronological browsing is better than a search box for a small archive.
+**6. Smaller things, in rough order of value:** a CSP in report-only mode after
+cutover; analytics, if and only if `/privacy` is updated in the same change;
+search or tag filtering once the archive is past roughly thirty issues, and not
+before — reverse-chronological browsing beats a search box on a small archive.

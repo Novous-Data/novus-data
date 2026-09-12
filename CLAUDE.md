@@ -281,7 +281,12 @@ tiers; a database, CMS or admin interface; self-hosted email or subscriber
 management; live market-data APIs, charts, dashboards or an indicators layer;
 search, tag filtering or comments; analytics or tracking; a test framework; a
 custom email capture form or any backend endpoint; MDX tooling; a scheduled sync
-workflow; a mobile app; a dark/light mode toggle; a Content Security Policy.
+workflow; a mobile app, a native client or push notifications; a dark/light mode toggle; a
+Content Security Policy.
+
+The app and notifications are a real, stated direction — the seam for them is
+documented in section 14.2 and nothing in v1 forecloses it. They are still out of
+scope for this repository.
 
 **Vercel's Hobby tier is non-commercial-use only.** The site as specified — free
 newsletter, no transactions — is compliant. Paid subscriptions or ads would
@@ -289,7 +294,14 @@ require a Pro plan.
 
 If a task appears to need any of the above, stop and ask.
 
-## 14. Phase 2 seam
+## 14. Phase 2 seams
+
+Documented intent. **None of this is coded, and none of it should be coded until
+issues are publishing on a schedule.** The point of writing it down now is that
+two decisions in v1 were made to keep these doors open, and a later change that
+closes them would be expensive to undo.
+
+### 14.1 The indicators layer
 
 When live indicator data arrives it becomes a **separate typed layer** at
 `src/lib/indicators/`, mirroring the content-layer pattern: its own types, its own
@@ -298,8 +310,69 @@ source implementations, its own public API. It must **not** be bolted onto
 characteristics and different failure modes, and merging them would make both
 harder to change.
 
-A scheduled GitHub Action could later run `sync-issues` automatically. Both are
-documented intent; neither is coded.
+Every indicator needs three things decided before the first one is drawn: a
+**source**, an **as-of timestamp**, and a **defined behaviour when stale**. A
+publication about supply chain disruption that shows last week's freight rate as
+though it were today's would destroy more credibility than this whole site
+builds.
+
+### 14.2 An app with notifications
+
+The stated direction is a Novus Data app that notifies readers. The site is
+already shaped for it; keep it that way.
+
+**What v1 already provides.** Notifications need stable identity and honest
+timestamps, and the archive has both by design:
+
+- `slug` is permanent and unique — enforced, not merely intended. It is a usable
+  notification key, and one that already matches a public URL.
+- `publishedAt` is ISO 8601 and is **never** substituted with today's date when
+  missing. A notification pipeline can trust it or see that it is absent.
+- `issueNumber` may be `null` and is never derived from position, so nothing
+  renumbers under a client that has already stored an id.
+- The content layer is a typed boundary, so a second consumer — an app's API —
+  reads issues through the same contract rather than reaching into files.
+
+**The one piece to build first: a machine-readable feed.** The site does not emit
+its own feed in v1 because Beehiiv is still the source of truth. That is the
+natural trigger source for notifications, and the app work starts there, not with
+a push service. `src/app/feed.json/route.ts` (or `feed.xml`) reading
+`listIssues()` is a small, self-contained addition and it needs no backend.
+Promote it above everything else in 14.3 once an app is actually being built.
+
+**Where the app's state must NOT live.** Device tokens, per-reader preferences,
+delivery logs and read receipts are mutable, per-user, privacy-bearing data. This
+repository is a statically generated site with no database and no backend
+endpoint, and that is a large part of why it is fast, cheap, auditable and
+honest about collecting nothing (see `/privacy`). Do not add a database, an API
+route that writes, or a subscriber table here.
+
+The shape that keeps both halves simple:
+
+```
+this repo (static)            separate service              clients
+  content/issues/  ──►  feed  ──►  watcher + registry  ──►  push / app
+  (archive of record)             (tokens, prefs, log)
+```
+
+The service polls or is webhooked by the feed, owns the subscriber registry, and
+sends. The site stays a publication. If the two are ever merged, every future
+change to notification logic becomes a change to the thing that has to stay up.
+
+**Two consequences worth knowing before starting.** Push notifications put a
+name and a device identifier into a system that currently stores nothing — so
+`/privacy` stops being accurate the moment that ships, and it must be rewritten
+in the same change, not afterwards. And a notification is a far stronger claim on
+attention than an email: an alert that turns out to be stale or wrong costs more
+trust than the same error in an issue nobody was interrupted for. Alerting on
+indicators (14.1) should therefore come **after** the indicators themselves have
+been running visibly and correctly for a while.
+
+### 14.3 Smaller deferred items
+
+A scheduled GitHub Action could run `sync-issues` automatically. A CSP can be
+added in report-only mode after cutover. Analytics, search and tag filtering are
+listed with their reasons in `HANDOFF.md`. None is coded.
 
 ## 15. Open questions and TODOs
 

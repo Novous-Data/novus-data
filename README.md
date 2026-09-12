@@ -1,14 +1,23 @@
 # Novus Data
 
-The public website for **Novus Data**, a research briefing on global supply
-chains, shipping and trade policy.
+**Novus Data** is an information and financial-news site about supply chain
+disruption: a dated, sourced register of what is going wrong in physical trade,
+a chart mapping each problem to the companies it reaches, and an email briefing
+summarising both.
 
 Built with Next.js 16 (App Router), React 19, TypeScript and Tailwind CSS 4.
 Statically generated, deployed on Vercel.
 
-Issues are written and emailed in Beehiiv. They are then stored **in this
-repository** as files, and this repository is the permanent archive. The website
+Both the register and the issue archive live **in this repository** as files.
+Issues are written and emailed in Beehiiv and synced here afterwards; the site
 never contacts Beehiiv at build time or at request time.
+
+| Section | What it is |
+|---|---|
+| `/disruptions` | The register — what is going wrong, dated and sourced |
+| `/exposure` | The chart — which companies and sectors each problem reaches |
+| `/briefings` | The email briefing archive |
+| `/alerts` | The planned notifications app. It does not exist yet |
 
 ---
 
@@ -62,6 +71,24 @@ better outcome than shipping one. To build anyway for review purposes, set
 
 ---
 
+## Adding a disruption to the register
+
+Create `content/disruptions/NN-your-id.md`. The full frontmatter format is in
+`CLAUDE.md` §6a. The short version of what the site will refuse:
+
+- A disruption with **no source** is skipped entirely.
+- An exposure with no **mechanism**, no **confidence**, no **`asOf`** date or no
+  **source** is dropped — the rest of the entry still publishes.
+- Two entries with the same `id`, or two exposures naming the same entity on one
+  disruption, are refused.
+
+Every refusal prints a warning naming the file, both in the build log and on
+`/debug/content`. Run `npm run dev` and open `/debug/content` after editing: the
+warnings there are the list of claims the site would not stand behind.
+
+This is deliberate. The chart tells a reader that a named problem reaches a named
+company, and someone may act on that.
+
 ## Publishing an issue
 
 This is the only recurring manual step in the project.
@@ -99,7 +126,9 @@ carry a hand-edited correction that is the better copy.
 
 | To change… | Edit | Notes |
 |---|---|---|
-| Any fact about the publication or author | `src/config/publication.ts` | Name, description, readers, cadence, methodology, disclaimer. Nothing factual is written inline in a page |
+| Any fact about the publication or author | `src/config/publication.ts` | Name, description, readers, cadence, methodology, newsletter and alerts naming, disclaimer. Nothing factual is written inline in a page |
+| A disruption or an exposure | The file in `content/disruptions/` | See above. Check `/debug/content` afterwards |
+| The severity colours or the chart's rules | `src/app/globals.css` and `src/components/exposure-chart.tsx` | Read `CLAUDE.md` §6a first — the ramp is validated, not chosen by eye |
 | The topics tracked | `src/config/coverage.ts` | The home page and `/coverage` both read this. Add, cut or reorder freely |
 | Navigation, header or footer links | `src/config/nav.ts` | The sitemap derives from this too |
 | Colours, type scale, spacing tokens | `src/app/globals.css` (`@theme`) | Tailwind 4 — there is no `tailwind.config.ts` |

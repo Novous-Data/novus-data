@@ -64,6 +64,18 @@ export interface Publication {
    * status. This is the author's decision, not the site's. Default false.
    */
   discloseStudentStatus: boolean;
+  /** The email briefing. One part of the site, not the whole of it. */
+  newsletter: {
+    name: string;
+    /** One sentence on what the email is, as distinct from the site. */
+    description: string;
+  };
+  /** The alerts app, which does not exist yet. Copy must not imply it does. */
+  alerts: {
+    name: string;
+    /** Null until there is a date worth announcing. */
+    availableFrom: string | null;
+  };
   /** Shown in the footer and on /about. Not legal advice; a plain statement. */
   disclaimer: string;
 }
@@ -72,12 +84,12 @@ export const publication: Publication = {
   name: 'Novus Data',
 
   description:
-    'Novus Data is a research briefing on global supply chains, shipping and trade policy, and what disruption in them means for markets.',
+    'Novus Data tracks disruption in global supply chains, shipping and trade policy, and shows which companies it reaches.',
 
-  shortDescription: 'Supply chains, shipping and trade policy, read for what they mean for markets.',
+  shortDescription: 'Supply chain disruption, tracked, and the companies it reaches.',
 
   positioning:
-    'Physical trade breaks before prices move. Novus Data follows the shipping lanes, ports, chokepoints and trade rules that carry the world’s goods, and reports what a disruption is likely to reach next — which sectors, which costs, which margins.',
+    'Physical trade breaks before prices move. Novus Data keeps a register of what is going wrong across the shipping lanes, ports, chokepoints and trade rules that carry the world’s goods — and maps each problem to the companies and sectors it reaches, with the mechanism and the source stated every time.',
 
   primaryReader:
     'investors and analysts who need to know how a disruption in physical trade reaches prices, earnings and risk',
@@ -96,8 +108,9 @@ export const publication: Publication = {
   firstIssueDate: null,
 
   methodology: [
-    'Each issue starts from primary sources wherever they exist: canal and port authority notices, customs and trade statistics, regulatory texts and official releases, and the filings and announcements of the companies involved. Trade press and carrier commentary are used to find stories, not to settle them.',
-    'The work is reading rather than modelling. Novus Data does not run a proprietary dataset, and it does not publish forecasts dressed as numbers. Where a figure appears in an issue it is sourced and linked, and where something is uncertain the issue says so.',
+    'Everything starts from primary sources wherever they exist: canal and port authority notices, customs and trade statistics, regulatory texts and official releases, and the filings and announcements of the companies involved. Trade press and carrier commentary are used to find stories, not to settle them.',
+    'Every entry in the register carries the date it was last reviewed, and every company or sector named against a disruption carries three things: the mechanism by which the problem reaches it, how confident that assessment is, and at least one source you can follow. An assessment that cannot supply all three is not published — it is dropped by the site itself, not left to editorial discretion.',
+    'The work is reading rather than modelling. Novus Data does not run a proprietary dataset and does not publish forecasts dressed as numbers. Where something is uncertain, it is marked as inferred or estimated rather than stated flatly.',
     'Novus Data publishes analysis and commentary. It is not investment advice, it is not a recommendation to buy or sell any security, and it is not a substitute for your own work.',
   ],
 
@@ -113,6 +126,18 @@ export const publication: Publication = {
   // See the build brief, section 12.2: this is a strategic decision that
   // belongs to the author.
   discloseStudentStatus: false,
+
+  newsletter: {
+    name: 'The Novus Data Briefing',
+    description:
+      'A written round-up of what moved in the register, sent by email. The site is the record; the briefing is the summary.',
+  },
+
+  alerts: {
+    name: 'Novus Data Alerts',
+    // No date is announced until one is real.
+    availableFrom: null,
+  },
 
   disclaimer:
     'Novus Data publishes analysis and commentary, not investment advice. Nothing here is a recommendation to buy or sell any security.',

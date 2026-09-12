@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { Container } from '@/components/container';
-import { IssueBody } from '@/components/issue-body';
+import { ProseBody } from '@/components/prose-body';
 import { JsonLd } from '@/components/json-ld';
 import { SubscribePanel } from '@/components/subscribe-panel';
 import { ExternalLink, TextLink } from '@/components/text-link';
@@ -138,7 +138,7 @@ export default async function IssuePage(props: PageProps<'/briefings/[slug]'>) {
 
       <Container width="reading" className="mt-12">
         {issue.contentHtml ? (
-          <IssueBody html={issue.contentHtml} />
+          <ProseBody html={issue.contentHtml} />
         ) : (
           <p className="max-w-measure text-muted">
             The text of this issue is not stored here.

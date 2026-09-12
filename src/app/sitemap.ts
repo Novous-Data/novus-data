@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 
 import { footerNav } from '@/config/nav';
 import { listIssues } from '@/lib/content';
+import { listDisruptions } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
 import { toDate } from '@/lib/format';
 
@@ -11,15 +12,18 @@ import { toDate } from '@/lib/format';
  * no edit here (Rule 6).
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const issues = await listIssues();
+  const [issues, disruptions] = await Promise.all([listIssues(), listDisruptions()]);
 
   const staticRoutes: MetadataRoute.Sitemap = ['/', ...footerNav.map((item) => item.href)]
     // /debug is development-only and 404s in production, so it is never listed.
     .filter((href) => !href.startsWith('/debug'))
     .map((href) => ({
       url: absoluteUrl(href),
-      changeFrequency: href === '/' || href === '/briefings' ? 'weekly' : 'monthly',
-      priority: href === '/' ? 1 : 0.7,
+      changeFrequency:
+        href === '/' || href === '/disruptions' || href === '/exposure' || href === '/briefings'
+          ? 'weekly'
+          : 'monthly',
+      priority: href === '/' ? 1 : href === '/disruptions' || href === '/exposure' ? 0.9 : 0.7,
     }));
 
   const issueRoutes: MetadataRoute.Sitemap = issues.map((issue) => {
@@ -33,5 +37,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  return [...staticRoutes, ...issueRoutes];
+  const disruptionRoutes: MetadataRoute.Sitemap = disruptions.map((disruption) => {
+    const reviewed = toDate(disruption.updatedAt);
+    return {
+      url: absoluteUrl(`/disruptions/${disruption.id}`),
+      ...(reviewed ? { lastModified: reviewed } : {}),
+      // A live register entry changes as it is re-reviewed.
+      changeFrequency: disruption.status === 'resolved' ? ('yearly' as const) : ('weekly' as const),
+      priority: 0.9,
+    };
+  });
+
+  return [...staticRoutes, ...disruptionRoutes, ...issueRoutes];
 }

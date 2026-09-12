@@ -29,6 +29,39 @@
   --accent: #4c618a;
   --accent-text: #7b92be;
 
+  /* ---------------------------------------------------------------------
+     Exposure chart — severity ramp.
+
+     Severity is magnitude, so the encoding is a SEQUENTIAL single-hue ramp,
+     not a categorical palette and not a traffic-light. On a dark surface the
+     ramp runs dark → light as severity rises, because the lightest step must
+     be the one that reads as "most".
+
+     Validated as an ordinal ramp against --ink: monotone lightness, adjacent
+     lightness gaps above the floor, hue spread 3°, and the darkest step at
+     3.06:1 — clear of the 3:1 required of a non-text mark. The middle step is
+     --accent-text itself, which ties the chart to the rest of the system.
+
+       low      #44608F   3.06:1
+       moderate #7B92BE   6.19:1
+       high     #B4C8EA  11.45:1
+
+     Severity is never carried by colour alone: every cell also states its
+     level in visually-hidden text, the legend is always present, and a full
+     table view sits below the chart.
+     --------------------------------------------------------------------- */
+  --sev-low: #44608f;
+  --sev-moderate: #7b92be;
+  --sev-high: #b4c8ea;
+
+  /* Disruption status. Always rendered with its label beside it — a dot alone
+     never carries the state. Amber is the one warm value in the system and is
+     reserved for "active"; it is not available as a chart series. */
+  --status-active: #e0a73e;
+  --status-easing: #7b92be;
+  --status-watch: #9395a0;
+  --status-resolved: #6e7280;
+
   color-scheme: dark;
 }
 
@@ -44,6 +77,13 @@
   --color-muted: var(--text-muted);
   --color-accent: var(--accent);
   --color-link: var(--accent-text);
+  --color-sev-low: var(--sev-low);
+  --color-sev-moderate: var(--sev-moderate);
+  --color-sev-high: var(--sev-high);
+  --color-status-active: var(--status-active);
+  --color-status-easing: var(--status-easing);
+  --color-status-watch: var(--status-watch);
+  --color-status-resolved: var(--status-resolved);
 }
 
 @theme {
@@ -244,6 +284,103 @@
     max-width: 100%;
     overflow-x: auto;
   }
+
+/* ---------------------------------------------------------------------------
+   Exposure chart
+
+   A CSS grid, not a charting library. Every cell is a real element, so it can
+   be a link, hold visually-hidden text and take keyboard focus — which a
+   canvas chart cannot.
+   --------------------------------------------------------------------------- */
+
+.exposure-cell {
+  position: relative;
+  display: block;
+  min-height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+/* Confidence is a second, non-colour channel: a solid edge for something
+   reported, a dashed edge for something inferred or estimated. The label is
+   always in the cell's hidden text and in the hover card as well. */
+.exposure-cell[data-confidence="reported"] {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.exposure-cell[data-confidence="inferred"],
+.exposure-cell[data-confidence="estimated"] {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+.exposure-cell[data-severity="low"] { background-color: var(--sev-low); }
+.exposure-cell[data-severity="moderate"] { background-color: var(--sev-moderate); }
+.exposure-cell[data-severity="high"] { background-color: var(--sev-high); }
+
+/* No assessment is an absence, not a zero. It reads as empty ground. */
+.exposure-cell[data-severity="none"] {
+  background-color: transparent;
+  border: 1px solid var(--border);
+}
+
+.exposure-cell:hover,
+.exposure-cell:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+
+/* The hover card. CSS only — no script runs on this page. */
+.exposure-card {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max(17rem, 100%);
+  padding: 0.75rem 0.875rem;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+
+.exposure-cell:hover .exposure-card,
+.exposure-cell:focus-visible .exposure-card {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Cards on the last columns would otherwise run off the right edge. */
+.exposure-col-late .exposure-card {
+  left: auto;
+  right: 0;
+}
+
+/* Where colour is unavailable or unreliable — forced colours, a high-contrast
+   preference, or print — severity falls back to a texture channel at 45° and
+   its 135° mirror, which is what the ramp cannot do on its own. */
+@media (forced-colors: active), (prefers-contrast: more), print {
+  .exposure-cell[data-severity="moderate"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent 0 3px,
+      color-mix(in srgb, var(--ink) 45%, transparent) 3px 6px
+    );
+  }
+  .exposure-cell[data-severity="high"] {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 2px,
+      color-mix(in srgb, var(--ink) 55%, transparent) 2px 4px
+    );
+  }
+  .exposure-cell { forced-color-adjust: none; }
+}
 
 /* Motion responds to user action only, and not at all when the reader has
    asked for less of it. */

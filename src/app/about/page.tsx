@@ -35,6 +35,13 @@ export default function AboutPage() {
             costs attached to moving goods, and the economic releases that describe all of it.
           </p>
           <p>
+            What is going wrong at any moment is kept in{' '}
+            <TextLink href="/disruptions">the register</TextLink>, and{' '}
+            <TextLink href="/exposure">the exposure chart</TextLink> maps each entry to the
+            companies and sectors it reaches. {publication.newsletter.name} summarises the
+            movement in both by email.
+          </p>
+          <p>
             <TextLink href="/coverage">
               Each topic is set out in full, with why it matters
             </TextLink>
@@ -42,7 +49,7 @@ export default function AboutPage() {
           </p>
         </Section>
 
-        <Section heading="How it is produced">
+        <Section heading="How it is produced" id="method">
           {publication.methodology.map((paragraph) => (
             <p key={paragraph.slice(0, 40)}>{paragraph}</p>
           ))}
@@ -96,9 +103,17 @@ export default function AboutPage() {
   );
 }
 
-function Section({ heading, children }: { heading: string; children: React.ReactNode }) {
+function Section({
+  heading,
+  id,
+  children,
+}: {
+  heading: string;
+  id?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section>
+    <section id={id}>
       <h2 className="font-serif text-heading font-semibold text-fg">{heading}</h2>
       <div className="mt-4 flex max-w-measure flex-col gap-4 text-muted">{children}</div>
     </section>

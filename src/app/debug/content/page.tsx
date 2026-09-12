@@ -4,6 +4,7 @@ import { Container } from '@/components/container';
 import { INPUT_LEDGER, missingLaunchInputs } from '@/config/input-ledger';
 import { getContentSourceName } from '@/lib/content';
 import { readDiagnostics } from '@/lib/content/sources/local-files';
+import { readDisruptionDiagnostics } from '@/lib/disruptions/sources/local-files';
 import { env } from '@/lib/env';
 
 /**
@@ -23,6 +24,7 @@ export default async function DebugContentPage() {
   if (!env.isDevelopment) notFound();
 
   const diagnostics = await readDiagnostics();
+  const register = await readDisruptionDiagnostics();
   const missing = missingLaunchInputs();
 
   return (
@@ -79,6 +81,62 @@ export default async function DebugContentPage() {
                     <Td>{issue.hasExcerpt ? 'yes' : 'no'}</Td>
                     <Td numeric>{issue.bodyLength}</Td>
                     <Td numeric>{issue.words}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Block>
+
+      <Block title={`Register warnings (${register.warnings.length})`}>
+        <p className="mb-3 text-muted">
+          Reading <code>{register.directory}</code> — {register.fileCount} file
+          {register.fileCount === 1 ? '' : 's'}, {register.entries.length} parsed. Every warning
+          here is a claim the site refused to publish.
+        </p>
+        {register.warnings.length === 0 ? (
+          <p className="text-muted">None.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {register.warnings.map((warning) => (
+              <li key={warning} className="border-l-2 border-accent pl-3 text-muted">
+                {warning}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Block>
+
+      <Block title={`Disruptions (${register.entries.length})`}>
+        {register.entries.length === 0 ? (
+          <p className="text-muted">Register empty.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[46rem] border-collapse text-left text-meta">
+              <thead>
+                <tr className="border-b border-rule text-muted">
+                  <Th>File</Th>
+                  <Th>Id</Th>
+                  <Th>Status</Th>
+                  <Th>Reviewed</Th>
+                  <Th>Date ok</Th>
+                  <Th>Sources</Th>
+                  <Th>Exposures</Th>
+                  <Th>Body chars</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {register.entries.map((entry) => (
+                  <tr key={entry.file} className="border-b border-hairline align-top">
+                    <Td>{entry.file}</Td>
+                    <Td>{entry.id}</Td>
+                    <Td>{entry.status}</Td>
+                    <Td>{entry.updatedAt}</Td>
+                    <Td>{entry.dateParsed ? 'yes' : 'NO'}</Td>
+                    <Td numeric>{entry.sourceCount}</Td>
+                    <Td numeric>{entry.exposureCount}</Td>
+                    <Td numeric>{entry.bodyLength}</Td>
                   </tr>
                 ))}
               </tbody>

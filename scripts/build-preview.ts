@@ -30,6 +30,7 @@ import path from 'node:path';
 
 import { INPUT_LEDGER } from '../src/config/input-ledger';
 import { fixturesSource } from '../src/lib/content/sources/fixtures';
+import { fixtureDisruptions } from '../src/lib/disruptions/sources/fixtures';
 
 const ROOT = process.cwd();
 // A normal `next build` prerenders every static route to HTML here, which is
@@ -204,7 +205,10 @@ async function collectImages(): Promise<Record<string, string>> {
 
 const ROUTE_ORDER = [
   '/',
+  '/disruptions',
+  '/exposure',
   '/briefings',
+  '/alerts',
   '/coverage',
   '/about',
   '/subscribe',
@@ -252,13 +256,80 @@ async function readSnapshot(): Promise<{ pages: Page[]; css: string; images: Rec
 
 // --- sample archive ---------------------------------------------------------
 
+/** JSON strings are valid YAML double-quoted scalars, escaping included. */
+function yaml(value: string | null): string {
+  return value === null ? 'null' : JSON.stringify(value);
+}
+
 /**
- * Writes the [SAMPLE] fixtures out as real issue files in a temp folder, so
- * the second pass exercises the same local-files source the site uses in
- * production. Nothing is written into the repository.
+ * Writes the [SAMPLE] fixtures out as real content files in a temp folder, so
+ * the second pass exercises the same local-files sources the site uses in
+ * production — including all of the validation that decides whether an
+ * exposure is publishable. Nothing is written into the repository.
+ *
+ * Returns the issues directory; the disruption source derives its own sibling
+ * directory from it.
  */
-async function writeSampleArchive(): Promise<string> {
-  const dir = await mkdtemp(path.join(tmpdir(), 'novus-sample-'));
+async function writeSampleArchive(): Promise<{ root: string; issuesDir: string }> {
+  const root = await mkdtemp(path.join(tmpdir(), 'novus-sample-'));
+  const dir = path.join(root, 'issues');
+  const disruptionsDir = path.join(root, 'disruptions');
+  await mkdir(dir, { recursive: true });
+  await mkdir(disruptionsDir, { recursive: true });
+
+  for (const [index, disruption] of fixtureDisruptions.entries()) {
+    const sourceLines = (prefix: string, sources: typeof disruption.sources) =>
+      sources
+        .map(
+          (entry) =>
+            `${prefix}- title: ${yaml(entry.title)}\n${prefix}  url: ${yaml(entry.url)}\n` +
+            `${prefix}  publisher: ${yaml(entry.publisher)}\n${prefix}  retrievedAt: ${yaml(entry.retrievedAt)}`,
+        )
+        .join('\n');
+
+    const exposures = disruption.exposures
+      .map((exposure) =>
+        [
+          `  - entity:`,
+          `      id: ${yaml(exposure.entity.id)}`,
+          `      name: ${yaml(exposure.entity.name)}`,
+          `      kind: ${yaml(exposure.entity.kind)}`,
+          `      ticker: ${yaml(exposure.entity.ticker)}`,
+          `      sector: ${yaml(exposure.entity.sector)}`,
+          `    severity: ${yaml(exposure.severity)}`,
+          `    confidence: ${yaml(exposure.confidence)}`,
+          `    mechanism: ${yaml(exposure.mechanism)}`,
+          `    asOf: ${yaml(exposure.asOf)}`,
+          `    sources:`,
+          sourceLines('      ', exposure.sources),
+        ].join('\n'),
+      )
+      .join('\n');
+
+    const frontmatter = [
+      '---',
+      `id: ${yaml(disruption.id)}`,
+      `title: ${yaml(disruption.title)}`,
+      `shortLabel: ${yaml(disruption.shortLabel)}`,
+      `status: ${yaml(disruption.status)}`,
+      `category: ${yaml(disruption.category)}`,
+      `startedAt: ${yaml(disruption.startedAt)}`,
+      `updatedAt: ${yaml(disruption.updatedAt)}`,
+      `summary: ${yaml(disruption.summary)}`,
+      'sources:',
+      sourceLines('  ', disruption.sources),
+      exposures.length > 0 ? `exposures:\n${exposures}` : 'exposures: []',
+      '---',
+      '',
+    ].join('\n');
+
+    await writeFile(
+      path.join(disruptionsDir, `${String(index + 1).padStart(2, '0')}-${disruption.id}.md`),
+      `${frontmatter}${disruption.contentHtml ?? ''}\n`,
+      'utf8',
+    );
+  }
+
   const issues = await fixturesSource.listIssues();
 
   // Oldest first, so the filename prefix matches publication order.
@@ -288,7 +359,7 @@ async function writeSampleArchive(): Promise<string> {
     );
   }
 
-  return dir;
+  return { root, issuesDir: dir };
 }
 
 // --- emitting the preview ---------------------------------------------------
@@ -550,11 +621,12 @@ function renderPreview(
       <summary>Measured results</summary>
       <div class="panel">
         <p style="color:var(--muted);max-width:68ch">
-          Lighthouse against a production build, and an automated pass over every page at
-          320, 390, 1440 and 2560 pixels. Measured, not estimated.
+          Lighthouse against a production build of the home page, the exposure chart and a
+          register entry, plus an automated pass over every page at 320, 390, 1440 and 2560
+          pixels. Measured, not estimated.
         </p>
         <dl class="metrics">
-          <div><dt>Performance, mobile</dt><dd>96</dd></div>
+          <div><dt>Performance, mobile</dt><dd>96&ndash;99</dd></div>
           <div><dt>Performance, desktop</dt><dd>100</dd></div>
           <div><dt>Accessibility</dt><dd>100</dd></div>
           <div><dt>Best practices</dt><dd>100</dd></div>
@@ -562,6 +634,7 @@ function renderPreview(
           <div><dt>Contrast failures</dt><dd>0</dd></div>
           <div><dt>Horizontal overflow</dt><dd>0</dd></div>
           <div><dt>Reading measure</dt><dd>66ch</dd></div>
+          <div><dt>Unsourced claims shown</dt><dd>0</dd></div>
         </dl>
       </div>
     </details>
@@ -779,14 +852,14 @@ async function main(): Promise<void> {
   const live = await readSnapshot();
 
   console.log('\n[preview] pass 2 of 2 — the same site with sample issues\n');
-  const sampleDir = await writeSampleArchive();
+  const { root: sampleRoot, issuesDir } = await writeSampleArchive();
   let sample: Awaited<ReturnType<typeof readSnapshot>>;
   try {
     await rm(path.join(ROOT, '.next'), { recursive: true, force: true });
-    runBuild({ NOVUS_CONTENT_DIR: sampleDir });
+    runBuild({ NOVUS_CONTENT_DIR: issuesDir });
     sample = await readSnapshot();
   } finally {
-    await rm(sampleDir, { recursive: true, force: true });
+    await rm(sampleRoot, { recursive: true, force: true });
   }
 
   const snapshots: Snapshot[] = [
@@ -801,7 +874,7 @@ async function main(): Promise<void> {
       id: 'sample',
       label: 'With sample issues',
       description:
-        'The same build with three placeholder issues in the archive, so the home page hero, the archive list and the issue template can be reviewed. Every sample title is prefixed [SAMPLE] and none of this content is in the repository.',
+        'The same build with a placeholder register and archive, so the disruption register, the exposure chart and the issue template can all be reviewed. Every sample title is prefixed [SAMPLE], every company in it is invented, and none of this content is in the repository.',
       pages: sample.pages,
     },
   ];

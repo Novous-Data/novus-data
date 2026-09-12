@@ -56,6 +56,20 @@ export const INPUT_LEDGER: InputRecord[] = [
     requiredForLaunch: false,
   },
   {
+    key: 'publication.newsletter / publication.alerts',
+    provenance: 'assumed',
+    usedOn: ['/', '/alerts', '/about', 'every subscribe block'],
+    note: 'The briefing and the alerts app are named here ("The Novus Data Briefing", "Novus Data Alerts"). Rename them freely — nothing hardcodes either string.',
+    requiredForLaunch: false,
+  },
+  {
+    key: 'disruption register (content/disruptions/)',
+    provenance: 'unanswered',
+    usedOn: ['/', '/disruptions', '/exposure', 'sitemap'],
+    note: 'Empty. The register and the exposure chart are the point of the site, and both render a deliberate empty state until the first entry exists. See CLAUDE.md §6a for the file format and the four things every exposure must carry.',
+    requiredForLaunch: false,
+  },
+  {
     key: 'publication.methodology',
     provenance: 'assumed',
     usedOn: ['/about'],

@@ -5,12 +5,23 @@ before changing anything.
 
 ## 1. What this project is
 
-The public website for **Novus Data**, a research briefing on global supply
-chains, shipping and trade policy. It presents the publication as a credible,
-ongoing research product and hosts the permanent archive of every issue.
+**Novus Data is an information and financial-news site about supply chain
+disruption.** It does three things, in this order of importance:
 
-Beehiiv is where issues are written and emailed. This repository is where they
-live afterwards.
+1. **The register** (`/disruptions`) — what is going wrong in physical trade
+   right now, each entry dated, sourced and given a status.
+2. **The exposure chart** (`/exposure`) — which companies and sectors each
+   problem reaches, and by what mechanism.
+3. **The briefing** (`/briefings`) — an email newsletter summarising movement in
+   the first two. **It is one part of the site, not the whole of it.** An
+   earlier version of this repository was built as an information page for the
+   newsletter; that framing is wrong and has been replaced.
+
+A notifications app (`Novus Data Alerts`) is planned and does not exist. The
+`/alerts` page says so in its first sentence. See §14.2 for the seam.
+
+Beehiiv is where issues are written and emailed. This repository is where both
+the register and the issue archive live.
 
 ## 2. The two standing constraints
 
@@ -75,9 +86,21 @@ issue titles anywhere that could reach production.
 If a layout wants a number, use a real one or change the layout. **Empty is
 better than invented.**
 
-Sole exception: `src/lib/content/sources/fixtures.ts`, whose every title is
-prefixed `[SAMPLE]`, which is unreachable without `CONTENT_SOURCE=fixtures`, and
-which throws at module load if a production build tries to use it.
+**This rule got stronger, not weaker, when the site became a data product.** The
+register and the exposure chart do publish claims about named companies — but
+only claims that carry a mechanism, a confidence level, a date and a followable
+source, enforced in code (§6a). Sourced is not the same as invented. Nothing
+else on the site may state a figure at all.
+
+Two fenced exceptions, both `[SAMPLE]`-prefixed, both unreachable without
+`CONTENT_SOURCE=fixtures`, and both throwing at module load if a production
+build touches them:
+
+- `src/lib/content/sources/fixtures.ts` — placeholder issues.
+- `src/lib/disruptions/sources/fixtures.ts` — placeholder register entries.
+  **Every company in it is invented.** Attaching a made-up exposure to a real
+  listed company would read as a sourced claim about a real business, which is
+  exactly the harm §6a exists to prevent. Keep the names fictional.
 
 ### Rule 2 — No implied organisation
 
@@ -117,7 +140,8 @@ step needs account access, write instructions in `DEPLOY.md` instead.
 ## 5. Directory map
 
 ```
-content/issues/            The archive of record. One .md per issue. Hand-editable.
+content/issues/            The issue archive of record. One .md per issue.
+content/disruptions/       The disruption register. One .md per problem.
 scripts/sync-issues.ts     Pulls new issues from Beehiiv RSS. The ONLY Beehiiv code.
 scripts/build-preview.ts   Review tooling. Folds the built site into one HTML file.
 src/config/                Every fact the site states, and the navigation.
@@ -125,7 +149,8 @@ src/config/                Every fact the site states, and the navigation.
   input-ledger.ts            Where each fact came from + the launch guard. SERVER ONLY.
   coverage.ts                The tracked topics. Home and /coverage both read it.
   nav.ts                     Header, footer and sitemap routes.
-src/lib/content/           The typed content layer. See section 6.
+src/lib/content/           The issue content layer. See section 6.
+src/lib/disruptions/       The register and exposure layer. See section 6a.
 src/lib/env.ts             Environment access and URL resolution.
 src/lib/format.ts          Dates, issue numbers, reading time.
 src/lib/og.ts              Font data and colours for generated images.
@@ -175,9 +200,121 @@ of the feed window** (Beehiiv commonly exposes about twenty items). Any issue
 published before this system existed must be back-filled — either sync it now
 while it is still in the window, or write the file by hand.
 
+## 6a. The register and the exposure chart
+
+`src/lib/disruptions/` is the second typed content layer, built to the same
+pattern as the first: its own types, its own source, its own public API,
+enforced by the same lint rule. It is deliberately **not** merged into the issue
+layer — an issue is a document, a disruption is a tracked state with an as-of
+date, and they fail in different ways.
+
+### The rule that makes the chart publishable
+
+The exposure chart tells a reader that a named problem reaches a named company.
+On a site about markets, someone may act on that. So:
+
+> **An assessment that cannot be checked does not render.**
+
+Every exposure must carry four things or it is dropped at load time, with a
+warning naming the file:
+
+1. **a mechanism** — the sentence explaining *how* the problem reaches the
+   company. "Affected" is not a finding.
+2. **a confidence** — `reported`, `inferred` or `estimated`.
+3. **an `asOf` date** — when the assessment was last true.
+4. **at least one source** — with a followable http(s) URL and a publisher.
+
+A disruption with no source is skipped entirely. There is no way to produce a
+coloured cell without all of this, and the enforcement is in
+`sources/local-files.ts`, not in editorial habit. **Do not relax it.** If a
+future change makes a field optional, the chart stops being defensible.
+
+An entry not reviewed within `STALE_AFTER_DAYS` (21) shows as stale on its own
+page rather than presenting itself as current.
+
+### Register file format
+
+`content/disruptions/NN-id.md`. The numeric prefix is a filing convenience; the
+`id` is the permanent URL.
+
+```markdown
+---
+id: "panama-slot-restrictions"      # permanent, URL-safe
+title: "Panama Canal slot restrictions"
+shortLabel: "PAN"                   # 2–4 chars, the chart column header
+status: "active"                    # watch | active | easing | resolved
+category: "chokepoint"              # see DISRUPTION_CATEGORIES
+startedAt: "2026-08-01"
+updatedAt: "2026-09-10"             # the review date. Required.
+summary: "One or two plain sentences."
+sources:
+  - title: "Advisory to Shipping No. 31-2026"
+    url: "https://pancanal.com/..."
+    publisher: "Panama Canal Authority"
+    retrievedAt: "2026-09-10"
+exposures:
+  - entity:
+      id: "example-co"
+      name: "Example Co"
+      kind: "company"               # company | sector
+      ticker: "EXCO"                # or null — never invented
+      sector: "Marine shipping"
+    severity: "high"                # low | moderate | high
+    confidence: "reported"          # reported | inferred | estimated
+    mechanism: "How the disruption reaches this company, in a sentence."
+    asOf: "2026-09-10"
+    sources:
+      - title: "Q3 trading statement"
+        url: "https://..."
+        publisher: "Example Co"
+        retrievedAt: "2026-09-10"
+---
+<p>Optional sanitised analysis body.</p>
+```
+
+`/debug/content` lists every warning the register raised — i.e. every claim the
+site refused to publish. Check it after editing.
+
+### The chart's colour encoding
+
+Severity is **magnitude**, so it uses a sequential single-hue ordinal ramp, not
+a categorical palette and not a traffic light. Defined and justified in
+`globals.css`; validated against `--ink` as an ordinal ramp (monotone lightness,
+adjacent gaps above the floor, hue spread 3°, darkest step 3.06:1).
+
+| Level | Token | Hex | Contrast on `--ink` |
+|---|---|---|---|
+| Low | `--sev-low` | `#44608F` | 3.06:1 |
+| Moderate | `--sev-moderate` | `#7B92BE` | 6.19:1 |
+| High | `--sev-high` | `#B4C8EA` | 11.45:1 |
+
+On a dark surface the ramp runs dark → light as severity rises, because the
+lightest step has to be the one that reads as "most". Severity is **never
+carried by colour alone**: every cell states its level in visually-hidden text,
+the legend is always present, a full table view sits below the chart, and a
+texture channel takes over under `forced-colors`, `prefers-contrast: more` and
+print.
+
+Confidence is the second, non-colour channel: a solid cell edge for `reported`,
+a dashed edge for `inferred` and `estimated`.
+
+`--status-active` (`#E0A73E`) is the one warm value in the system and is
+reserved for the "active" disruption status. **It is not available as a chart
+series colour.** A status dot never appears without its word beside it.
+
+The matrix is capped at nine columns so it never needs a horizontal scroll
+container, which would clip the CSS hover cards. Below `lg` the matrix is
+replaced by a per-entity list — same data, read down instead of across.
+
 ## 7. Dependencies
 
 Runtime: `gray-matter`, `clsx`, `@tailwindcss/typography`.
+
+**There is no charting library and there should not be one.** The exposure chart
+is a `<table>` of styled cells, which is why each cell can be a link, hold
+visually-hidden text and take keyboard focus. A canvas or SVG chart library
+would lose all three and add a client bundle to a page that currently ships no
+JavaScript at all.
 Dev (sync script and review tooling only): `fast-xml-parser`, `sanitize-html`,
 `@types/sanitize-html`, `tsx`.
 
@@ -274,19 +411,25 @@ npm run sync-issues   pull new issues from Beehiiv
 npm run preview       build the single-file review preview
 ```
 
-## 13. Out of scope for v1
+## 13. Out of scope for this repository
 
 Do not build, scaffold or stub: authentication or gated content; payments or paid
 tiers; a database, CMS or admin interface; self-hosted email or subscriber
-management; live market-data APIs, charts, dashboards or an indicators layer;
-search, tag filtering or comments; analytics or tracking; a test framework; a
-custom email capture form or any backend endpoint; MDX tooling; a scheduled sync
-workflow; a mobile app, a native client or push notifications; a dark/light mode toggle; a
-Content Security Policy.
+management; **live market-data APIs or price feeds**; search, tag filtering or
+comments; analytics or tracking; a test framework; a custom email capture form or
+any backend endpoint; MDX tooling; a scheduled sync workflow; a mobile app, a
+native client or push notifications; a dark/light mode toggle; a Content Security
+Policy.
 
-The app and notifications are a real, stated direction — the seam for them is
-documented in section 14.2 and nothing in v1 forecloses it. They are still out of
-scope for this repository.
+**Superseded:** an earlier version of this file said "no dashboards or charts,
+this is not a data product yet". That is no longer true — the register and the
+exposure chart *are* the product. What remains out of scope is **live market
+data**: a price, a rate or an index pulled from a feed and shown as current. The
+site publishes assessments with an as-of date, not a ticker.
+
+The alerts app is a real, stated direction — the seam is documented in §14.2 and
+nothing here forecloses it. It is still out of scope for *this repository*,
+because its state is per-user and mutable and this repo is a static site.
 
 **Vercel's Hobby tier is non-commercial-use only.** The site as specified — free
 newsletter, no transactions — is compliant. Paid subscriptions or ads would
@@ -303,12 +446,12 @@ closes them would be expensive to undo.
 
 ### 14.1 The indicators layer
 
-When live indicator data arrives it becomes a **separate typed layer** at
-`src/lib/indicators/`, mirroring the content-layer pattern: its own types, its own
-source implementations, its own public API. It must **not** be bolted onto
-`ContentSource` — issues and indicators have different shapes, different refresh
-characteristics and different failure modes, and merging them would make both
-harder to change.
+The register layer in `src/lib/disruptions/` is the first instance of this
+pattern and proves it works. When *live indicator data* arrives — a freight
+rate, a transit count, a price — it becomes a **third** typed layer at
+`src/lib/indicators/`, built the same way. It must **not** be bolted onto either
+existing layer: a document, a tracked assessment and a time series have
+different shapes, different refresh characteristics and different failure modes.
 
 Every indicator needs three things decided before the first one is drawn: a
 **source**, an **as-of timestamp**, and a **defined behaviour when stale**. A

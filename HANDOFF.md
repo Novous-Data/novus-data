@@ -5,6 +5,26 @@ decide for me. Written to be read once, in order.
 
 ---
 
+## 0. The brief changed after the first build
+
+The original brief described an information page for a newsletter. That was
+wrong about what this project is, and it was corrected: **Novus Data is an
+information and financial-news site about supply chain disruption.** The
+newsletter is one part of it.
+
+What that changed:
+
+| Before | Now |
+|---|---|
+| Home led with the latest newsletter issue | Home leads with the most pressing open disruption, like a news front page |
+| Five routes, newsletter-shaped | `/disruptions`, `/exposure`, `/briefings`, `/alerts`, `/about` and more |
+| "Not a data product. No dashboards or charts." | The register and the exposure chart **are** the product |
+| Newsletter was the whole site | Newsletter is a named sub-product, `The Novus Data Briefing` |
+| Nothing about an app | `/alerts` describes the planned app, in the future tense, with no fake waiting list |
+
+The one thing that did **not** loosen is the rule against unsupported claims —
+see 4.12. It got stricter, because the site now names companies.
+
 ## 1. Read these three things first
 
 1. **Nothing on this site states a fact you did not supply.** Section 0 of the
@@ -43,6 +63,10 @@ All twelve milestones of the brief, plus a review preview that was not in it.
 | 7 Home page, including pre-launch state | Done |
 | 8 Archive and issue pages | Done |
 | 9 Editorial and information pages | Done |
+| — Reposition as a news and information site | Done — see 0 |
+| — Disruption register (`/disruptions`) | Done. Register ships empty; see 4.12 |
+| — Exposure chart (`/exposure`) | Done. Validated ordinal ramp, table view, mobile list |
+| — Alerts page (`/alerts`) | Done. Future tense throughout; no waiting-list form |
 | 10 Metadata, OG images, sitemap, robots, JSON-LD, headers | Done |
 | 11 Accessibility, performance, responsive | Done and measured — see 7 |
 | 12 README and handoff | This file, plus `README.md`, `CLAUDE.md`, `DEPLOY.md` |
@@ -195,6 +219,55 @@ against a throwaway archive of `[SAMPLE]` issues without ever writing them into
 the repository. It is not used by `dev`, `build` or any deployment, and it must
 not be set on Vercel.
 
+### 4.12 The exposure chart refuses to draw what it cannot source
+
+This is the most important decision in the rebuild, so it is in code rather than
+in a style guide.
+
+A chart saying "problem X reaches company Y" on a finance site is a claim someone
+may act on. I will not invent one. So `src/lib/disruptions/sources/local-files.ts`
+drops any exposure that does not carry **all four** of: a *mechanism* (the
+sentence explaining how the problem reaches the company), a *confidence* level,
+an *`asOf`* date, and *at least one followable source*. A disruption with no
+source at all is skipped entirely. Every refusal prints a warning naming the
+file, and `/debug/content` lists them.
+
+There is no way to produce a coloured cell without all four. That constraint is
+the product, not an obstacle to it — it is the reason a reader should believe the
+chart at all.
+
+Two consequences worth keeping:
+
+- **The register ships empty.** I have not written a single real disruption,
+  because I cannot source one for you. The site renders a deliberate empty state.
+- **Every company in the fixtures is invented.** Using a real listed company with
+  a made-up exposure would read as a sourced claim about a real business — the
+  exact harm this design prevents. The fixture names are fictional and obviously
+  so.
+
+### 4.13 Severity is a validated ordinal ramp, not a traffic light
+
+Severity is magnitude, so the encoding is a sequential single-hue ramp. It was
+run through the palette validator against the site's own background rather than
+chosen by eye: monotone lightness, adjacent gaps above the floor, hue spread 3°,
+darkest step at 3.06:1. Its middle step is the brand's own `--accent-text`, which
+ties the chart into the existing system instead of introducing a second palette.
+
+Red/amber/green was rejected. It reads as a judgement about the company rather
+than a measurement of exposure, and it fails for a substantial share of readers
+without a second channel. Severity here carries three redundant channels: fill,
+visually-hidden text in every cell, and a table view; a texture channel takes
+over under `forced-colors`, `prefers-contrast: more` and print. Confidence is a
+separate non-colour channel — solid versus dashed cell edges.
+
+### 4.14 No charting library, and the chart is a `<table>`
+
+Every cell is a real element, so it can be a link, hold visually-hidden text and
+take keyboard focus. A canvas or SVG chart library loses all three and adds a
+client bundle to a page that currently ships no JavaScript. The hover card is
+CSS. The matrix is capped at nine columns so it never needs a scroll container,
+which would clip those cards; below `lg` it becomes a per-entity list.
+
 ### 4.11 The review preview is built from the real build output
 
 Not in the brief; built because you asked to review the site before publishing it.
@@ -269,6 +342,15 @@ Footer navigation (19px), header navigation (41px), the 404 link list (20px), th
 the brief's 44×44 floor. All now `min-h-11`. Inline links inside prose are left
 alone, which is the correct exemption.
 
+### 5.7 The home page overflowed at 320px
+
+The subscribe and alerts panels sit in a two-column grid. A grid item defaults to
+`min-width: auto` and will not shrink below its longest unbreakable word — and
+the unconfigured subscribe note names an environment variable, which is one
+33-character token. Fixed with `min-w-0` on the grid children and
+`overflow-wrap: anywhere` on the token. Worth remembering: `break-word` does not
+affect intrinsic sizing, only `anywhere` and `break-all` do.
+
 ### 5.6 The open mobile menu overlaid the headline mid-word
 
 The menu was absolutely positioned and floated over the page, so opening it on
@@ -321,17 +403,21 @@ the archive. **These are measured numbers, not estimates.**
 
 | Page | Form factor | Performance | Accessibility | Best practices | SEO |
 |---|---|---|---|---|---|
-| `/` | Mobile | **96** | **100** | **100** | **100** |
+| `/` | Mobile | **99** | **100** | **100** | **100** |
 | `/` | Desktop | **100** | **100** | **100** | **100** |
-| `/briefings/<issue>` | Mobile | **96** | **100** | **100** | **100** |
-| `/briefings/<issue>` | Desktop | **100** | **100** | **100** | **100** |
+| `/exposure` | Mobile | **96** | **100** | **100** | **100** |
+| `/exposure` | Desktop | **100** | **100** | **100** | **100** |
+| `/disruptions/<entry>` | Mobile | **96** | **100** | **100** | **100** |
+| `/disruptions/<entry>` | Desktop | **100** | **100** | **100** | **100** |
 
-No failed audits in accessibility, best practices or SEO on either page.
+No failed audits in accessibility, best practices or SEO on any of them — the
+exposure chart included.
 
 ### Accessibility and layout audit
 
-Across `/`, `/briefings`, an issue page, `/coverage`, `/about`, `/subscribe`,
-`/contact`, `/privacy` and the 404, at 320px, 390px, 1440px and 2560px:
+Across `/`, `/disruptions`, a register entry, `/exposure`, `/briefings`, an issue
+page, `/alerts`, `/coverage`, `/about`, `/subscribe`, `/contact`, `/privacy` and
+the 404, at 320px, 390px, 1440px and 2560px:
 
 - **Contrast:** zero failures. Every text colour meets or beats its threshold
   against `#070C20`.
@@ -349,6 +435,13 @@ Across `/`, `/briefings`, an issue page, `/coverage`, `/about`, `/subscribe`,
 - **Wide tables and unbroken strings:** a seven-column table and a 90-character
   unbroken URL scroll or wrap inside their own container at 320px, 390px and
   1440px without the page scrolling sideways.
+- **Exposure chart:** severity fills render the validated ramp exactly
+  (`#44608F` / `#7B92BE` / `#B4C8EA`), the legend reads in ramp order, confidence
+  shows as solid versus dashed edges, and the matrix is replaced by the
+  per-entity list below `lg`.
+- **The register's refusals work:** entries missing a source, and exposures
+  missing a mechanism, a confidence, a date or a source, are dropped with a
+  warning naming the file, and the rest of the entry still publishes.
 
 ### Behavioural checks
 
@@ -419,73 +512,60 @@ The complete list. There is nothing else.
 
 ---
 
-## 10. What Phase 2 should tackle first
+## 10. What to tackle next
 
-You have said the plan is to scale this into an app that sends notifications.
-That changes the ordering below, and it changes one thing about v1 worth stating
-plainly: **nothing here forecloses it, and two v1 decisions were made to keep
-that door open.** The seam is written up in `CLAUDE.md` section 14.2.
+The shape of the site changed, so the ordering did too.
 
-My view, in order.
+**1. Put one real disruption in the register.** This now matters more than
+anything else, and more than it did when the site was newsletter-shaped. The
+register and the exposure chart are the product; with zero entries the site is a
+well-built empty frame. One entry — properly sourced, with two or three real
+exposures — proves the whole machine and tells you immediately whether the
+authoring format is workable in practice. Do this before writing another line of
+code.
 
-**1. Publish issues.** Still first, and not close. The site's entire credibility
-argument is a hero showing a real, recent, dated briefing with a run of them
-behind it. Three issues make this look like a publication; zero make it look like
-a landing page, however well built. And a notification product has nothing to
-notify anyone about until there is a stream of work to notify them of — an app
-that pushes nothing is worse than no app.
+Expect the first one to be slow. Finding a mechanism you can actually source for
+a named company is the hard part, and that difficulty is the point: it is what
+the chart is promising the reader.
 
 **2. Answer section 3 of this document.** Half an hour in one config file turns a
 site that cannot deploy into one that can.
 
-**3. Emit a machine-readable feed from this site.** This is the first piece of
-actual app work, and it moves up the list because of the app plan. The site does
-not publish its own feed in v1 because Beehiiv is still the source of truth, but
-the archive here is already complete, already has permanent unique slugs, and
-already has honest ISO timestamps — which is exactly what a notification trigger
-needs. A `feed.json` route reading `listIssues()` is small, needs no backend, and
-gives the app something stable to watch. Build it before touching anything
-push-related.
+**3. Decide whether sectors or companies lead.** The model supports both, and the
+fixtures use both. Sector-level claims are far easier to source honestly;
+company-level claims are far more useful to an investor. My suggestion: start
+sector-heavy, add companies only where a filing or a statement supports it, and
+let the confidence column carry the difference. A chart that is mostly
+`estimated` is not worth publishing.
 
-**4. Keep the app's state out of this repository.** Device tokens, per-reader
-preferences and delivery logs are mutable, per-user and privacy-bearing. This
-repo is a static site with no database and no write endpoint, which is a large
-part of why it is fast, cheap and truthfully able to say it collects nothing. The
-shape that keeps both halves simple is: this repo publishes a feed, a separate
-service watches it and owns the subscriber registry, and that service sends. Merge
-them and every future change to notification logic becomes a change to the thing
-that has to stay up.
+**4. Emit a machine-readable feed.** Still the first piece of app work, and the
+register makes it more valuable than before: a feed of register changes is
+exactly what an alerts service needs to watch. `/feed.json` reading
+`listDisruptions()` and `listIssues()` is small and needs no backend.
 
-Two things to know before that work starts, because both are easy to discover too
-late:
+**5. Then the alerts app — and keep its state out of this repository.** Device
+tokens, per-reader preferences and delivery logs are mutable, per-user and
+privacy-bearing; this repo is a static site with no database and no write
+endpoint. A separate service should watch the feed and own the registry.
+
+Two things easy to discover too late:
 
 - **`/privacy` stops being true the moment push ships.** It currently says the
-  site stores nothing, and that is accurate. Notifications introduce a device
-  identifier and a preference record. Rewrite that page in the same change, not
-  after it.
-- **A notification is a much stronger claim on attention than an email.** An alert
-  that turns out to be stale or wrong costs more trust than the same mistake
-  inside an issue nobody was interrupted for. That argues for a deliberately
-  narrow first version: notify on "a new briefing is out", which is a fact this
-  repo can prove, before notifying on anything derived.
+  site stores nothing, and that is accurate. Rewrite it in the same change.
+- **Notify on facts the register can prove first** — a new entry, a status
+  change, a company added. Derived alerts (a threshold crossed, a forecast) come
+  later, if at all. An alert that turns out to be stale costs more trust than the
+  same error inside a written briefing.
 
-**5. Then the indicators layer.** When live data arrives it belongs at
-`src/lib/indicators/`, mirroring the content layer: its own types, its own
-sources, its own public API, its own failure modes. **Do not bolt it onto
-`ContentSource`.** Issues and indicators have different shapes, different refresh
-characteristics and different ways of going wrong; merging them makes both harder
-to change, and the whole reason the content layer earns its indirection is that it
-kept one external dependency from reaching into every page.
+**6. Live indicators, last.** When a freight rate or a transit count arrives it
+becomes a *third* typed layer at `src/lib/indicators/`, built like the other two
+and bolted onto neither. Every indicator needs a source, an as-of timestamp and a
+defined behaviour when stale, decided before the first chart is drawn. The moment
+the site displays a live number it inherits an obligation to be right about it,
+and showing last week's rate as though it were today's would undo more
+credibility than the whole site builds.
 
-A caution specific to what this publication is about: the moment the site displays
-a number, it inherits an obligation to be right about it. Every indicator needs a
-source, an as-of timestamp, and a defined behaviour when stale — decided before
-the first chart is drawn, not after. A dashboard showing last week's freight rate
-as though it were today's would undo more credibility than this whole site builds.
-Alerting on indicators should come after they have been running visibly and
-correctly for a while, for the same reason.
-
-**6. Smaller things, in rough order of value:** a CSP in report-only mode after
-cutover; analytics, if and only if `/privacy` is updated in the same change;
-search or tag filtering once the archive is past roughly thirty issues, and not
-before — reverse-chronological browsing beats a search box on a small archive.
+**7. Smaller things:** a CI workflow (the repo has none — nothing currently
+catches a lint or type regression before a deploy); a CSP in report-only mode
+after cutover; analytics only if `/privacy` is updated in the same change; search
+or filtering on the register once it passes roughly thirty entries.

@@ -45,8 +45,11 @@ export function SubscribePanel({
           <>
             <UnavailableAction>Subscribe on Beehiiv</UnavailableAction>
             <p className="mt-3 max-w-[52ch] text-meta text-muted">
-              No subscribe link is configured yet. Set NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL to
-              enable this.
+              No subscribe link is configured yet. Set{' '}
+              <code className="[overflow-wrap:anywhere]">
+                NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL
+              </code>{' '}
+              to enable this.
             </p>
           </>
         )}

@@ -71,6 +71,11 @@ const eslintConfig = defineConfig([
               message:
                 "Import from '@/lib/content' instead. Pages must not know which content source is in use.",
             },
+            {
+              group: ["@/lib/disruptions/sources", "@/lib/disruptions/sources/*"],
+              message:
+                "Import from '@/lib/disruptions' instead. The register's storage stays behind its public API.",
+            },
           ],
         },
       ],

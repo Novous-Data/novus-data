@@ -20,24 +20,16 @@ const securityHeaders = [
   },
 ];
 
-// `npm run preview` sets NOVUS_EXPORT=1 to emit the site as plain files, so it
-// can be reviewed as a single page before any deployment exists. Vercel builds
-// without it and gets the normal server build. Headers and redirects are served
-// by the host, so a static export declares neither.
-const isStaticExport = process.env.NOVUS_EXPORT === '1';
+const nextConfig: NextConfig = {
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
 
-const nextConfig: NextConfig = isStaticExport
-  ? { output: 'export' }
-  : {
-      async headers() {
-        return [{ source: '/:path*', headers: securityHeaders }];
-      },
-
-      // Slugs are permanent URLs. If one ever has to change, add the old path
-      // here so the original link keeps working.
-      async redirects() {
-        return [];
-      },
-    };
+  // Slugs are permanent URLs. If one ever has to change, add the old path here
+  // so the original link keeps working.
+  async redirects() {
+    return [];
+  },
+};
 
 export default nextConfig;

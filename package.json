@@ -9,8 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "sync-issues": "tsx scripts/sync-issues.ts",
-    "build:preview": "NOVUS_ALLOW_INCOMPLETE=1 NOVUS_EXPORT=1 next build",
-    "preview": "npm run build:preview && tsx scripts/build-preview.ts"
+    "build:preview": "NOVUS_ALLOW_INCOMPLETE=1 next build",
+    "preview": "tsx scripts/build-preview.ts"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.20",

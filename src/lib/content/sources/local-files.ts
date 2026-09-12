@@ -18,7 +18,17 @@ import matter from 'gray-matter';
 import type { ContentDiagnostics, ContentSource, Issue } from '../types';
 import { wordCount } from '@/lib/format';
 
-export const ISSUES_DIRECTORY = path.join(process.cwd(), 'content', 'issues');
+/**
+ * Normally content/issues/ in this repository.
+ *
+ * NOVUS_CONTENT_DIR exists so the review preview can build a second copy of
+ * the site against a throwaway archive of [SAMPLE] issues without ever writing
+ * them into the repository. It is not used by `npm run dev`, `npm run build`
+ * or any deployment, and it should not be set on Vercel.
+ */
+export const ISSUES_DIRECTORY = process.env.NOVUS_CONTENT_DIR
+  ? path.resolve(process.env.NOVUS_CONTENT_DIR)
+  : path.join(process.cwd(), 'content', 'issues');
 
 /** Slugs are URLs. Keep them boring so they never need escaping. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

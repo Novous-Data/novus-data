@@ -104,9 +104,19 @@ build touches them:
 
 ### Rule 2 — No implied organisation
 
-The publication is written by one person. Copy uses first-person singular or the
-publication name. Never "we", "our team", "our analysts", "our research desk", or
-anything implying staff, an office or an institution that does not exist.
+**Amended by the author.** The site now uses a company voice — "we", "us", "what
+we do at Novus Data" — on the marketing sections of the home page and in the
+mission statement. That is a normal way for a company to speak about itself and
+it is not a lie.
+
+What the amendment does **not** license, and what stays forbidden: "our team",
+"our analysts", "our research desk", a claimed office, a headcount, a founding
+year that has not happened, or any phrasing that implies staff or an institution
+that does not exist. "We" as the voice of the company is fine; "we" as a crowd of
+people is not.
+
+Editorial pages — `/about`, register entries, briefings — stay in first-person
+singular or the publication name, because those carry the byline.
 
 ### Rule 3 — No third-party assets
 
@@ -413,13 +423,22 @@ npm run preview       build the single-file review preview
 
 ## 13. Out of scope for this repository
 
-Do not build, scaffold or stub: authentication or gated content; payments or paid
+Do not build, scaffold or stub: gated content; payments or paid
 tiers; a database, CMS or admin interface; self-hosted email or subscriber
 management; **live market-data APIs or price feeds**; search, tag filtering or
 comments; analytics or tracking; a test framework; a custom email capture form or
 any backend endpoint; MDX tooling; a scheduled sync workflow; a mobile app, a
 native client or push notifications; a dark/light mode toggle; a Content Security
 Policy.
+
+**The sign-in shell.** `src/components/sign-in-panel.tsx` renders an account
+panel on the home page. **There is no authentication behind it**, and it is built
+so it cannot mislead anyone: no form action, no network request, the password is
+never held in React state or stored, and the panel says accounts are not open
+both before and after a submit attempt. It exists so the signed-in experience can
+be designed before it is wired up. When real auth arrives, replace the submit
+handler and delete the notice — do not leave a form that looks like it works and
+does not.
 
 **Superseded:** an earlier version of this file said "no dashboards or charts,
 this is not a data product yet". That is no longer true — the register and the

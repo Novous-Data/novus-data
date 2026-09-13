@@ -38,6 +38,15 @@ export interface Publication {
   description: string;
   /** A few words for the footer, where the full sentence would repeat the page. */
   shortDescription: string;
+  /**
+   * The home page's opening claim. Not a fact about the world that needs a
+   * source — a description of how modern production works.
+   */
+  openingLine: string;
+  /** The paragraph beneath it, explaining the interconnection. */
+  openingBody: string;
+  /** Why Novus Data exists, in one sentence. Used on / and /about. */
+  mission: string;
   /** Slightly longer positioning paragraph, used on / and /about. */
   positioning: string;
   primaryReader: string;
@@ -87,6 +96,14 @@ export const publication: Publication = {
     'Novus Data tracks disruption in global supply chains, shipping and trade policy, and shows which companies it reaches.',
 
   shortDescription: 'Supply chain disruption, tracked, and the companies it reaches.',
+
+  openingLine: 'Nothing is made in one place any more.',
+
+  openingBody:
+    'A drought at a canal, a strike at a terminal, a licence withheld on one processed metal — none of it stays where it happens. It travels through the ships, ports, contracts and inventories that every business now sits downstream of, and it surfaces somewhere far from where it started, usually as a cost, a delay or a missed quarter. Novus Data follows it the whole way: from the disruption, to the lane, to the company.',
+
+  mission:
+    'To make disruption in physical trade legible to the people it reaches — early enough to act on, and sourced well enough to trust.',
 
   positioning:
     'Physical trade breaks before prices move. Novus Data keeps a register of what is going wrong across the shipping lanes, ports, chokepoints and trade rules that carry the world’s goods — and maps each problem to the companies and sectors it reaches, with the mechanism and the source stated every time.',

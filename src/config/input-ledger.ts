@@ -70,6 +70,20 @@ export const INPUT_LEDGER: InputRecord[] = [
     requiredForLaunch: false,
   },
   {
+    key: 'publication.openingLine / openingBody / mission',
+    provenance: 'assumed',
+    usedOn: ['/', '/about'],
+    note: 'The home page headline, the paragraph under it and the mission statement. Written with the creative latitude the author asked for — they describe how supply chains work rather than asserting a sourced fact, so nothing here needs a citation. Rewrite freely; it is the most visible copy on the site.',
+    requiredForLaunch: false,
+  },
+  {
+    key: 'sign-in panel (src/components/sign-in-panel.tsx)',
+    provenance: 'unanswered',
+    usedOn: ['/'],
+    note: 'A shell. No authentication exists: nothing is sent, nothing is stored, and the panel says so before and after a submit attempt. Replace the submit handler when accounts are real, and delete the notice at the same time.',
+    requiredForLaunch: false,
+  },
+  {
     key: 'publication.methodology',
     provenance: 'assumed',
     usedOn: ['/about'],

@@ -67,6 +67,7 @@ All twelve milestones of the brief, plus a review preview that was not in it.
 | — Disruption register (`/disruptions`) | Done. Register ships empty; see 4.12 |
 | — Exposure chart (`/exposure`) | Done. Validated ordinal ramp, table view, mobile list |
 | — Alerts page (`/alerts`) | Done. Future tense throughout; no waiting-list form |
+| — Home page rebuilt around sign-in + marketing | Done. See 4.15–4.17 |
 | 10 Metadata, OG images, sitemap, robots, JSON-LD, headers | Done |
 | 11 Accessibility, performance, responsive | Done and measured — see 7 |
 | 12 README and handoff | This file, plus `README.md`, `CLAUDE.md`, `DEPLOY.md` |
@@ -218,6 +219,51 @@ overridden. It exists so the review preview can build a second copy of the site
 against a throwaway archive of `[SAMPLE]` issues without ever writing them into
 the repository. It is not used by `dev`, `build` or any deployment, and it must
 not be set on Vercel.
+
+### 4.15 The home page leads with a sign-in that does nothing — safely
+
+You asked for the account experience to be the first thing on the page, to be
+wired up later. It is built as a shell that **cannot mislead anyone**:
+
+- no form `action`, and the submit handler calls `preventDefault` — nothing is
+  ever sent anywhere;
+- the password is never held in React state, stored, or logged;
+- the panel says "Accounts are not open yet" **before** anyone types, and after a
+  submit attempt it says "nothing was sent. Nothing you typed left this page";
+- `autoComplete` is off on both fields, so no browser offers to save a password
+  for a form that does nothing.
+
+That last set of decisions is deliberate rather than fussy. A real-looking login
+that silently swallows a password is the one version of this that would be
+genuinely harmful, and people reuse passwords. When auth is real, replace the
+submit handler and delete the notice in the same change.
+
+### 4.16 The site now speaks as "we", and Rule 2 was amended rather than ignored
+
+The marketing sections you asked for — "what we do at Novus", "why we are
+invaluable" — need a company voice, and the original brief's Rule 2 banned the
+first person plural outright. Rather than quietly break it, I amended it in
+`CLAUDE.md` and recorded why.
+
+The line I held: "we" as the voice of the company is fine and normal. "Our team",
+"our analysts", a claimed office or a headcount are still forbidden, because
+those assert people who do not exist — which is the thing Rule 2 was actually
+protecting against. Editorial pages (`/about`, register entries, briefings) stay
+in the first person singular, because those carry a byline.
+
+### 4.17 The app is advertised in the future tense
+
+You asked me to advertise the app. It does not exist, so every sentence about it
+says so: "In development", "It is being built now and there is no release date
+worth announcing yet". The calls to action are "What the app will do" and "Get
+told when it lands", pointing at the briefing — the only channel that actually
+exists today.
+
+I would push back hard on changing this before the app ships. The reader this
+site is built for is a finance professional deciding whether you are serious, and
+an app store link that goes nowhere, or a "download now" for something unbuilt,
+costs more credibility than the whole home page earns. The moment there is a
+build, the copy changes in one file.
 
 ### 4.12 The exposure chart refuses to draw what it cannot source
 
@@ -403,11 +449,11 @@ the archive. **These are measured numbers, not estimates.**
 
 | Page | Form factor | Performance | Accessibility | Best practices | SEO |
 |---|---|---|---|---|---|
-| `/` | Mobile | **99** | **100** | **100** | **100** |
+| `/` | Mobile | **97** | **100** | **100** | **100** |
 | `/` | Desktop | **100** | **100** | **100** | **100** |
-| `/exposure` | Mobile | **96** | **100** | **100** | **100** |
+| `/exposure` | Mobile | **95** | **100** | **100** | **100** |
 | `/exposure` | Desktop | **100** | **100** | **100** | **100** |
-| `/disruptions/<entry>` | Mobile | **96** | **100** | **100** | **100** |
+| `/disruptions/<entry>` | Mobile | **97** | **100** | **100** | **100** |
 | `/disruptions/<entry>` | Desktop | **100** | **100** | **100** | **100** |
 
 No failed audits in accessibility, best practices or SEO on any of them — the

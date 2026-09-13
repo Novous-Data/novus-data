@@ -7,6 +7,7 @@ import { Container } from '@/components/container';
 import { JsonLd } from '@/components/json-ld';
 import { NeedsInput } from '@/components/needs-input';
 import { StatusBadge } from '@/components/status-badge';
+import { SignInPanel } from '@/components/sign-in-panel';
 import { SubscribePanel } from '@/components/subscribe-panel';
 import { TextLink } from '@/components/text-link';
 import { coverageTopics } from '@/config/coverage';
@@ -40,13 +41,21 @@ export default async function HomePage() {
     <>
       <JsonLd data={publicationJsonLd()} />
 
+      <Opening />
+
+      <Mission />
+
+      <WhatWeDo />
+
+      <TheApp />
+
+      <WhoItIsFor />
+
       {lead ? (
         <LeadDisruption disruption={lead} />
       ) : latestIssue ? (
         <LeadIssue issue={latestIssue} />
-      ) : (
-        <PreLaunchHero />
-      )}
+      ) : null}
 
       {rest.length > 0 ? (
         <Container className="mt-20 sm:mt-28">
@@ -187,8 +196,9 @@ function LeadDisruption({ disruption }: { disruption: Disruption }) {
   const updated = formatLongDate(disruption.updatedAt);
 
   return (
-    <Container className="pt-14 sm:pt-24">
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-meta text-muted">
+    <Container className="mt-20 sm:mt-28">
+      <SectionHeading id="latest">Leading the register</SectionHeading>
+      <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-meta text-muted">
         <StatusBadge status={disruption.status} />
         <span>{CATEGORY_LABELS[disruption.category]}</span>
         {updated ? (
@@ -198,13 +208,13 @@ function LeadDisruption({ disruption }: { disruption: Disruption }) {
         ) : null}
       </div>
 
-      <h1 className="mt-6 max-w-[17ch] font-serif text-display font-semibold text-fg">
+      <h3 className="mt-4 max-w-[20ch] font-serif text-title font-semibold text-fg">
         {disruption.title}
-      </h1>
+      </h3>
 
-      <p className="mt-7 max-w-[58ch] text-subhead text-muted">{disruption.summary}</p>
+      <p className="mt-5 max-w-[58ch] text-subhead text-muted">{disruption.summary}</p>
 
-      <div className="mt-9 flex flex-wrap gap-4">
+      <div className="mt-7 flex flex-wrap gap-4">
         <ActionLink href={`/disruptions/${disruption.id}`}>Read the analysis</ActionLink>
         {disruption.exposures.length > 0 ? (
           <ActionLink href="/exposure" variant="quiet">
@@ -212,10 +222,6 @@ function LeadDisruption({ disruption }: { disruption: Disruption }) {
           </ActionLink>
         ) : null}
       </div>
-
-      <p className="mt-14 max-w-[60ch] border-t border-hairline pt-6 text-muted">
-        {publication.description}
-      </p>
     </Container>
   );
 }
@@ -225,49 +231,218 @@ function LeadIssue({ issue }: { issue: IssueSummary }) {
   const date = formatLongDate(issue.publishedAt);
 
   return (
-    <Container className="pt-14 sm:pt-24">
-      <p className="flex flex-wrap items-baseline gap-x-8 gap-y-1 text-meta text-muted">
-        <span>Latest briefing</span>
+    <Container className="mt-20 sm:mt-28">
+      <SectionHeading id="latest">Latest briefing</SectionHeading>
+      <p className="mt-6 text-meta text-muted">
         {date ? <time dateTime={issue.publishedAt}>{date}</time> : null}
       </p>
 
-      <h1 className="mt-6 max-w-[17ch] font-serif text-display font-semibold text-fg">
+      <h3 className="mt-3 max-w-[20ch] font-serif text-title font-semibold text-fg">
         {issue.title}
-      </h1>
+      </h3>
 
       {issue.excerpt ? (
-        <p className="mt-7 max-w-[58ch] text-subhead text-muted">{issue.excerpt}</p>
+        <p className="mt-5 max-w-[58ch] text-subhead text-muted">{issue.excerpt}</p>
       ) : null}
 
-      <div className="mt-9">
+      <div className="mt-7">
         <ActionLink href={`/briefings/${issue.slug}`}>Read this briefing</ActionLink>
       </div>
-
-      <p className="mt-14 max-w-[60ch] border-t border-hairline pt-6 text-muted">
-        {publication.description}
-      </p>
     </Container>
   );
 }
 
-/** Nothing published anywhere yet. A deliberate state, not a broken page. */
-function PreLaunchHero() {
+/**
+ * The page opener: what Novus Data is, and the account panel.
+ *
+ * The sign-in is a shell with nothing behind it — see SignInPanel. It leads
+ * because that is where the product is going, not because it works today.
+ */
+function Opening() {
   return (
-    <Container className="pt-14 sm:pt-24">
-      <p className="text-meta text-muted">Before the first entry</p>
+    <Container className="pt-14 sm:pt-20">
+      <div className="grid gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-16 [&>*]:min-w-0">
+        <div>
+          {/* A masthead line rather than a bare repeat of the header wordmark:
+              the name earns its place here by carrying the descriptor. */}
+          <p className="flex flex-col gap-1 border-b border-hairline pb-4 sm:flex-row sm:items-baseline sm:gap-4">
+            <span className="font-serif text-[1.375rem] font-semibold tracking-[-0.012em] text-fg">
+              {publication.name}
+            </span>
+            <span className="text-meta text-muted">{publication.shortDescription}</span>
+          </p>
 
-      <h1 className="mt-6 max-w-[26ch] font-serif text-display font-semibold text-fg">
-        {publication.shortDescription}
-      </h1>
+          <h1 className="mt-8 max-w-[15ch] font-serif text-display font-semibold text-fg">
+            {publication.openingLine}
+          </h1>
 
-      <p className="mt-8 max-w-[60ch] text-subhead text-muted">{publication.positioning}</p>
+          <p className="mt-7 max-w-[58ch] text-subhead text-muted">{publication.openingBody}</p>
 
-      <div className="mt-10 max-w-xl">
-        <SubscribePanel heading="Subscribe before the first entry" />
+          <div className="mt-9 flex flex-wrap gap-4">
+            <ActionLink href="/disruptions">See what is going wrong</ActionLink>
+            <ActionLink href="/exposure" variant="quiet">
+              See who it reaches
+            </ActionLink>
+          </div>
+        </div>
+
+        <div className="lg:pt-14">
+          <SignInPanel />
+        </div>
+      </div>
+    </Container>
+  );
+}
+
+function Mission() {
+  return (
+    <Container className="mt-20 sm:mt-28">
+      <div className="max-w-reading border-t border-hairline pt-8">
+        <p className="text-meta text-muted">Our mission</p>
+        <p className="mt-4 font-serif text-title font-semibold text-fg">{publication.mission}</p>
+      </div>
+    </Container>
+  );
+}
+
+/**
+ * What the site actually is. Deliberately a typographic list rather than a row
+ * of icon cards — every item here is a thing that exists and can be opened.
+ */
+function WhatWeDo() {
+  const pillars = [
+    {
+      href: '/disruptions',
+      title: 'The register',
+      body: 'A live record of what is going wrong in physical trade — chokepoints, ports, trade policy, industrial inputs, energy and labour. Each entry carries the date it was last reviewed, so you are never reading a month-old assessment as though it were today.',
+      cta: 'Open the register',
+    },
+    {
+      href: '/exposure',
+      title: 'The exposure chart',
+      body: 'The part nobody else does. Every tracked problem is mapped to the companies and sectors it reaches, with the mechanism written out — not "affected", but how. A claim without a mechanism, a confidence level, a date and a source cannot appear on the chart at all. That is enforced in code.',
+      cta: 'Open the chart',
+    },
+    {
+      href: '/briefings',
+      title: 'The briefing',
+      body: `${publication.newsletter.name} pulls the week together in writing and sends it by email — what moved, what it is likely to reach next, and what is worth ignoring.`,
+      cta: 'Read the archive',
+    },
+  ];
+
+  return (
+    <Container className="mt-20 sm:mt-28">
+      <SectionHeading id="what-we-do">What we do at Novus Data</SectionHeading>
+      <p className="mt-4 max-w-measure text-muted">
+        Three things, and they feed each other. The register records the problem, the chart says
+        who it lands on, and the briefing explains what it means.
+      </p>
+
+      <div className="mt-8 grid gap-x-14 md:grid-cols-3">
+        {pillars.map((pillar) => (
+          <div key={pillar.href} className="border-t border-hairline py-6">
+            <h3 className="font-serif text-[1.1875rem] font-semibold text-fg">{pillar.title}</h3>
+            <p className="mt-2.5 text-[0.9375rem] text-muted">{pillar.body}</p>
+            <p className="mt-4">
+              <TextLink href={pillar.href} className="text-[0.9375rem]">
+                {pillar.cta}
+              </TextLink>
+            </p>
+          </div>
+        ))}
+      </div>
+    </Container>
+  );
+}
+
+/**
+ * The app is not built. The copy is written in the future tense throughout and
+ * points at the briefing, which is the channel that exists today.
+ */
+function TheApp() {
+  return (
+    <Container className="mt-20 sm:mt-28">
+      <div className="border border-hairline bg-surface p-7 sm:p-10">
+        <div className="grid gap-8 md:grid-cols-[1.4fr_1fr] md:gap-14 [&>*]:min-w-0">
+          <div>
+            <p className="text-meta text-muted">In development</p>
+            <h2 className="mt-3 font-serif text-heading font-semibold text-fg">
+              {publication.alerts.name}
+            </h2>
+            <p className="mt-4 max-w-measure text-muted">
+              The register on your phone, and a notification when it changes — a new disruption
+              opens, one you follow escalates, or a company you hold is added to a problem you
+              are already watching. You find out when it happens rather than when you next think
+              to look.
+            </p>
+            <p className="mt-4 max-w-measure text-muted">
+              It is being built now and there is no release date worth announcing yet. Subscribers
+              to {publication.newsletter.name} hear first.
+            </p>
+          </div>
+
+          <div className="flex flex-col justify-center gap-4">
+            <ActionLink href="/alerts">What the app will do</ActionLink>
+            <ActionLink href="/subscribe" variant="quiet">
+              Get told when it lands
+            </ActionLink>
+          </div>
+        </div>
+      </div>
+    </Container>
+  );
+}
+
+/** Two audiences, two different reasons. Stated separately because they differ. */
+function WhoItIsFor() {
+  return (
+    <Container className="mt-20 sm:mt-28">
+      <SectionHeading id="who-for">Why it is worth your time</SectionHeading>
+
+      <div className="mt-8 grid gap-x-16 gap-y-10 md:grid-cols-2 [&>*]:min-w-0">
+        <div className="border-t border-hairline pt-6">
+          <h3 className="font-serif text-[1.1875rem] font-semibold text-fg">
+            If you invest
+          </h3>
+          <div className="mt-3 flex flex-col gap-3 text-muted">
+            <p>
+              Physical trade breaks before prices move. A chokepoint closing absorbs vessel
+              capacity across a whole market, not one route; a licence on one processed metal can
+              reprice a sector that looked diversified. The gap between the event and the
+              repricing is the only part you can act in.
+            </p>
+            <p>
+              The exposure chart is built to close that gap honestly. It tells you which names sit
+              downstream of a problem and, crucially, how strong the evidence is — reported,
+              inferred or estimated — so you can size your conviction to ours.
+            </p>
+          </div>
+        </div>
+
+        <div className="border-t border-hairline pt-6">
+          <h3 className="font-serif text-[1.1875rem] font-semibold text-fg">
+            If you run a business
+          </h3>
+          <div className="mt-3 flex flex-col gap-3 text-muted">
+            <p>
+              A rerouting adds weeks to transit time, which changes safety stock, working capital
+              and every promise you have made downstream — and the decision usually has to be
+              taken before the disruption is confirmed.
+            </p>
+            <p>
+              The register gives you the problem with its date and its sources attached, so you
+              can judge it yourself rather than act on a headline. Where your suppliers or your
+              own category appear on the chart, the mechanism is written out, which is what makes
+              it usable in a conversation with a board or a customer.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <p className="mt-10">
-        <TextLink href="/coverage">What Novus Data will watch</TextLink>
+      <p className="mt-8 max-w-measure text-meta text-muted">
+        Novus Data publishes analysis and commentary. It is not investment advice, and nothing
+        here is a recommendation to buy or sell any security.
       </p>
     </Container>
   );

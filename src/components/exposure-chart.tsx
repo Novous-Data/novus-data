@@ -110,11 +110,18 @@ function Matrix({
         {rows.map((row) => (
           <tr key={row.entity.id} id={`entity-${row.entity.id}`} className="border-t border-hairline">
             <th scope="row" className="py-2 pr-4 text-left align-middle font-normal">
-              <span className="block text-[0.9375rem] text-fg">{row.entity.name}</span>
-              <span className="mt-0.5 block text-[0.6875rem] text-muted">
-                {row.entity.ticker ? `${row.entity.ticker} · ` : ''}
-                {row.entity.sector}
-              </span>
+              {/* The row header is the way into the entity's own page. The
+                  cells keep linking to the disruption behind each claim, so
+                  the two axes of the chart lead to the two kinds of page. */}
+              <Link href={`/entities/${row.entity.id}`} className="group block">
+                <span className="block text-[0.9375rem] text-fg transition-colors group-hover:text-link">
+                  {row.entity.name}
+                </span>
+                <span className="mt-0.5 block text-[0.6875rem] text-muted">
+                  {row.entity.ticker ? `${row.entity.ticker} · ` : ''}
+                  {row.entity.sector}
+                </span>
+              </Link>
             </th>
             {columns.map((disruption, index) => {
               const exposure = row.byDisruption.get(disruption.id);
@@ -181,11 +188,15 @@ function ExposureList({ matrix }: { matrix: ExposureMatrix }) {
     <ul className="flex flex-col">
       {matrix.rows.map((row) => (
         <li key={row.entity.id} id={`entity-${row.entity.id}`} className="border-t border-hairline py-5">
-          <p className="text-[1.0625rem] text-fg">{row.entity.name}</p>
-          <p className="mt-0.5 text-meta text-muted">
-            {row.entity.ticker ? `${row.entity.ticker} · ` : ''}
-            {row.entity.sector}
-          </p>
+          <Link href={`/entities/${row.entity.id}`} className="group inline-flex min-h-11 flex-col justify-center">
+            <span className="text-[1.0625rem] text-fg transition-colors group-hover:text-link">
+              {row.entity.name}
+            </span>
+            <span className="mt-0.5 text-meta text-muted">
+              {row.entity.ticker ? `${row.entity.ticker} · ` : ''}
+              {row.entity.sector}
+            </span>
+          </Link>
 
           <ul className="mt-3 flex flex-col gap-2.5">
             {[...row.byDisruption.entries()].map(([disruptionId, exposure]) => {

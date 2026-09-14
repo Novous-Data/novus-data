@@ -353,10 +353,13 @@ function RegisterPulse({
     <Container className="mt-12 sm:mt-16">
       <dl className="grid grid-cols-2 gap-px border-y border-hairline bg-hairline sm:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.label} className="min-w-0 bg-ink px-1 py-5 sm:px-2">
+          <div key={stat.label} className="relative min-w-0 bg-ink px-1 py-5 sm:px-2">
             <dt className="text-meta text-muted">
               {stat.href ? (
-                <TextLink href={stat.href} className="text-meta">
+                // A stretched link: the anchor stays inside the <dt> so the
+                // <dl> content model holds, but `after:inset-0` makes the whole
+                // cell the target rather than a 16px line of label text.
+                <TextLink href={stat.href} className="text-meta after:absolute after:inset-0 after:content-['']">
                   {stat.label}
                 </TextLink>
               ) : (
@@ -551,7 +554,7 @@ function ExposureRow({ row }: { row: EntityExposure }) {
   return (
     <li className="border-t border-hairline">
       <Link
-        href={`/exposure#entity-${row.entity.id}`}
+        href={`/entities/${row.entity.id}`}
         className="group grid gap-x-6 gap-y-1 px-2 py-4 transition-colors hover:bg-surface sm:grid-cols-[1fr_auto] sm:px-3"
       >
         <div>

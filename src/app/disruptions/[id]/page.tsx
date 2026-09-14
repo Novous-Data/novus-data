@@ -4,9 +4,10 @@ import { notFound } from 'next/navigation';
 import { Container } from '@/components/container';
 import { JsonLd } from '@/components/json-ld';
 import { ProseBody } from '@/components/prose-body';
+import { SourceList } from '@/components/source-list';
 import { StatusBadge } from '@/components/status-badge';
-import { ExternalLink, TextLink } from '@/components/text-link';
-import type { Exposure, Source } from '@/lib/disruptions';
+import { TextLink } from '@/components/text-link';
+import type { Exposure } from '@/lib/disruptions';
 import {
   CATEGORY_LABELS,
   CONFIDENCE_LABELS,
@@ -171,7 +172,14 @@ function ExposureEntry({ exposure }: { exposure: Exposure }) {
   return (
     <li id={`entity-${exposure.entity.id}`} className="border-t border-hairline py-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <h3 className="text-[1.0625rem] font-medium text-fg">{exposure.entity.name}</h3>
+        <h3 className="text-[1.0625rem] font-medium">
+          <TextLink
+            href={`/entities/${exposure.entity.id}`}
+            className="inline-flex min-h-11 items-center no-underline hover:underline"
+          >
+            {exposure.entity.name}
+          </TextLink>
+        </h3>
         <p className="text-meta text-muted">
           {exposure.entity.ticker ? `${exposure.entity.ticker} · ` : ''}
           {exposure.entity.sector}
@@ -213,40 +221,5 @@ function ExposureEntry({ exposure }: { exposure: Exposure }) {
 
       <SourceList sources={exposure.sources} className="mt-4" compact />
     </li>
-  );
-}
-
-function SourceList({
-  sources,
-  className,
-  compact,
-}: {
-  sources: Source[];
-  className?: string;
-  compact?: boolean;
-}) {
-  // Each citation is a line of running text with a link in it, so the link is
-  // inline prose rather than a standalone control — which is why it is marked
-  // up as a paragraph and not padded out to a 44px target.
-  return (
-    <ol className={className}>
-      {sources.map((source, index) => (
-        <li key={source.url} className={compact ? undefined : 'border-t border-hairline py-3'}>
-          <p className={compact ? 'text-[0.8125rem] leading-relaxed' : undefined}>
-            <span data-numeric className="mr-2 text-muted">
-              {index + 1}.
-            </span>
-            <ExternalLink href={source.url}>{source.title}</ExternalLink>
-            <span className="text-muted">
-              {' '}
-              — {source.publisher}
-              {source.retrievedAt && formatShortDate(source.retrievedAt)
-                ? `, read ${formatShortDate(source.retrievedAt)}`
-                : ''}
-            </span>
-          </p>
-        </li>
-      ))}
-    </ol>
   );
 }

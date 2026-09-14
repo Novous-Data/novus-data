@@ -128,6 +128,47 @@ you want it changed; I have not routed around it.
 
 ---
 
+### 4.20 Entity pages exist because a watchlist needs something to watch
+
+`/entities/[id]` was added before any signed-in experience, on purpose. A
+watchlist holds ids; `Watchlist.entityIds` in the account contract already
+declared that, but there was no URL those ids pointed at — an entity existed
+only as a row anchor on the chart (`/exposure#entity-<id>`). An anchor is not a
+page: it cannot be shared, titled, indexed, given a social card, or followed.
+
+It pays twice, which is why it came first. Logged-out, a page per company is the
+only surface the site has for somebody searching a company name — that entire
+category of search demand had nowhere to land. Logged-in, it becomes the follow
+target with no rework.
+
+Three decisions inside it are worth not reversing:
+
+- **No composite risk score.** The page shows the strongest single assessment
+  and the count, never a blended number. See CLAUDE.md §6c.
+- **Resolved exposures stay on the page**, rather than disappearing when a
+  disruption closes.
+- **No JSON-LD.** Marking up a company the publication neither owns nor
+  represents as a schema.org `Organization` asserts a relationship that does not
+  exist.
+
+### 4.21 The feed is of the register, and its items are state rather than events
+
+CLAUDE.md §14.2 originally said to build `feed.json` from `listIssues()` as the
+first piece of app work. Built as `/register.json` instead, because a
+notification fires when a disruption opens, escalates or is re-reviewed — not
+when a newsletter goes out.
+
+Items carry current state and a review date, not an event log, because this
+repository has no event history to emit: a register entry is a file holding the
+assessment as it stands. A watcher diffs `date_modified` and `_novus.severity`
+per `id`. Inventing `opened` / `escalated` transitions would have been a
+plausible-looking fabrication of exactly the kind Rule 1 exists to stop.
+
+`_novus.entities` carries entity ids, so a watcher can match a disruption
+against a reader's watchlist and link straight to that entity's page. Register →
+feed → watchlist → entity page is now a closed loop, with the account layer the
+only part still unimplemented.
+
 ## 4. Judgement calls I had to make
 
 Ordered roughly by how much they would cost to reverse.

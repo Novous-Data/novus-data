@@ -42,6 +42,11 @@ export default async function ExposurePage() {
             treated as too old — is written out under{' '}
             <TextLink href="/about#method">how this is produced</TextLink>.
           </p>
+          <p className="mt-4 text-muted">
+            Every name on the chart also has its own page, listing each disruption that reaches it
+            and why —{' '}
+            <TextLink href="/entities">browse companies and sectors</TextLink>.
+          </p>
           <p className="mt-4 text-meta text-muted">
             This is analysis, not investment advice, and not a recommendation about any security.
           </p>

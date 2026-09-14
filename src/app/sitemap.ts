@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 import { footerNav } from '@/config/nav';
 import { listIssues } from '@/lib/content';
-import { listDisruptions } from '@/lib/disruptions';
+import { listDisruptions, listEntities } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
 import { toDate } from '@/lib/format';
 
@@ -12,7 +12,11 @@ import { toDate } from '@/lib/format';
  * no edit here (Rule 6).
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [issues, disruptions] = await Promise.all([listIssues(), listDisruptions()]);
+  const [issues, disruptions, entities] = await Promise.all([
+    listIssues(),
+    listDisruptions(),
+    listEntities(),
+  ]);
 
   // The Set is what keeps this correct now that the navigation itself carries a
   // Home entry: '/' is listed first so the home page leads the sitemap whether
@@ -53,5 +57,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  return [...staticRoutes, ...disruptionRoutes, ...issueRoutes];
+  // An entity page is how somebody searching a company name reaches the site,
+  // so these matter for discovery rather than being an afterthought. A name
+  // nothing currently reaches is still listed — the page exists and says so.
+  const entityRoutes: MetadataRoute.Sitemap = entities.map((profile) => {
+    const assessed = toDate(profile.lastAssessedAt);
+    return {
+      url: absoluteUrl(`/entities/${profile.entity.id}`),
+      ...(assessed ? { lastModified: assessed } : {}),
+      changeFrequency: profile.claims.length > 0 ? ('weekly' as const) : ('yearly' as const),
+      priority: profile.claims.length > 0 ? 0.8 : 0.5,
+    };
+  });
+
+  return [...staticRoutes, ...disruptionRoutes, ...entityRoutes, ...issueRoutes];
 }

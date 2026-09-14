@@ -32,6 +32,10 @@ export const primaryNav: NavItem[] = [
 /** Shown in the footer. A superset of the primary navigation. */
 export const footerNav: NavItem[] = [
   ...primaryNav,
+  // Not in the header: the entity index is reached from the chart, which is
+  // where a reader is when the question "what about this name" occurs to them.
+  // A sixth header item to reach a seventh page would cost more than it earns.
+  { href: '/entities', label: 'Companies' },
   { href: '/coverage', label: 'Coverage' },
   { href: '/subscribe', label: 'Subscribe' },
   { href: '/contact', label: 'Contact' },

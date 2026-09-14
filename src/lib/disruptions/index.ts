@@ -151,3 +151,126 @@ export async function buildExposureMatrix(options?: {
     exposureCount: flattened.length,
   };
 }
+
+/* ---------------------------------------------------------------------------
+   Entities
+
+   An entity — a company or a sector — is the second thing a reader arrives
+   looking for, after a disruption. Somebody searching a company name wants
+   "what reaches this name, and how well established is it", which is a
+   different question from "what is going wrong", and it deserves its own URL.
+
+   It is also the thing a reader would follow once accounts exist: a watchlist
+   needs a stable, canonical id to hold, and `entity.id` already is one.
+   --------------------------------------------------------------------------- */
+
+/** One exposure, paired with the disruption it belongs to. */
+export interface EntityClaim {
+  disruption: DisruptionSummary;
+  exposure: Exposure;
+}
+
+export interface EntityProfile {
+  entity: Entity;
+  /** Open disruptions reaching this entity, worst severity first. */
+  claims: EntityClaim[];
+  /**
+   * Disruptions that reached it and have since resolved. Kept and shown rather
+   * than dropped: an assessment quietly disappearing is indistinguishable from
+   * one that was wrong, and the register's whole argument is that it can be
+   * checked after the fact.
+   */
+  resolved: EntityClaim[];
+  /** Worst severity across the OPEN claims only. Null when there are none. */
+  worstSeverity: Severity | null;
+  /** The most recent asOf across open claims — this page's honest "as of". */
+  lastAssessedAt: string | null;
+}
+
+function byWorstFirst(a: EntityClaim, b: EntityClaim): number {
+  const bySeverity = SEVERITY_RANK[b.exposure.severity] - SEVERITY_RANK[a.exposure.severity];
+  if (bySeverity !== 0) return bySeverity;
+  // Then most recently assessed, so the freshest claim leads.
+  return b.exposure.asOf.localeCompare(a.exposure.asOf);
+}
+
+/**
+ * Every entity id the register has ever named, resolved entries included.
+ *
+ * Resolved ones are deliberately in the list: an entity page is a permanent
+ * URL, and a page that 404s the moment its last disruption resolves would
+ * break links that already exist. The page says the exposure has resolved
+ * instead.
+ */
+export async function listEntityIds(): Promise<string[]> {
+  const ids = new Set<string>();
+  for (const disruption of await readFromActiveSource()) {
+    for (const exposure of disruption.exposures) ids.add(exposure.entity.id);
+  }
+  return [...ids].sort();
+}
+
+/**
+ * Every entity, with its open claims — the index page's payload.
+ *
+ * Ordered exactly as the chart's rows are (worst severity, then reach, then
+ * name), so the two pages agree about which names matter most.
+ */
+export async function listEntities(): Promise<EntityProfile[]> {
+  const all = (await readFromActiveSource()).map(toSummary);
+  const ids = new Set<string>();
+  for (const disruption of all) {
+    for (const exposure of disruption.exposures) ids.add(exposure.entity.id);
+  }
+
+  const profiles = [...ids]
+    .map((id) => buildProfile(id, all))
+    .filter((profile): profile is EntityProfile => profile !== null);
+
+  return profiles.sort((a, b) => {
+    const rank = (severity: Severity | null) => (severity ? SEVERITY_RANK[severity] : 0);
+    const bySeverity = rank(b.worstSeverity) - rank(a.worstSeverity);
+    if (bySeverity !== 0) return bySeverity;
+    if (b.claims.length !== a.claims.length) return b.claims.length - a.claims.length;
+    return a.entity.name.localeCompare(b.entity.name);
+  });
+}
+
+export async function getEntityProfile(id: string): Promise<EntityProfile | null> {
+  return buildProfile(id, (await readFromActiveSource()).map(toSummary));
+}
+
+function buildProfile(id: string, all: DisruptionSummary[]): EntityProfile | null {
+  const claims: EntityClaim[] = [];
+  const resolved: EntityClaim[] = [];
+  let entity: Entity | null = null;
+  let lastSeenAt = '';
+
+  for (const disruption of all) {
+    for (const exposure of disruption.exposures) {
+      if (exposure.entity.id !== id) continue;
+      // The entity record is carried on every exposure. The most recently
+      // reviewed disruption wins, so a renamed company or a newly issued
+      // ticker is reflected rather than frozen at whichever file sorted first.
+      if (!entity || disruption.updatedAt > lastSeenAt) {
+        entity = exposure.entity;
+        lastSeenAt = disruption.updatedAt;
+      }
+      (disruption.status === 'resolved' ? resolved : claims).push({ disruption, exposure });
+    }
+  }
+
+  if (!entity) return null;
+
+  claims.sort(byWorstFirst);
+  resolved.sort(byWorstFirst);
+
+  return {
+    entity,
+    claims,
+    resolved,
+    worstSeverity: claims.length > 0 ? worstOf(claims.map((claim) => claim.exposure)) : null,
+    lastAssessedAt:
+      claims.map((claim) => claim.exposure.asOf).sort().at(-1) ?? null,
+  };
+}

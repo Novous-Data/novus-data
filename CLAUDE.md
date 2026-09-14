@@ -167,6 +167,8 @@ src/lib/format.ts          Dates, issue numbers, reading time.
 src/lib/og.ts              Font data and colours for generated images.
 src/lib/structured-data.ts JSON-LD builders.
 src/components/            Presentational components. One client component.
+src/app/entities/          Company and sector pages, derived from the register. See 6c.
+src/app/register.json/     JSON Feed of the register — the alerting seam. See 6c.
 src/app/                   Routes, metadata routes, icons, error boundaries.
 src/assets/fonts/          Source Serif 4 TTFs, for icon and social card rendering.
 ```
@@ -368,6 +370,69 @@ accepted a signup and dropped it would be worse than having none.
 load in a production build, like both fixture sources. When real accounts
 arrive, delete `memory.ts` — do not extend it.
 
+## 6c. Entity pages and the register feed
+
+Two surfaces derived from the register rather than stored separately. Neither
+adds a content layer: both read `@/lib/disruptions` through its public API.
+
+### `/entities` and `/entities/[id]`
+
+A company or sector is the second thing a reader arrives looking for, after a
+disruption, and it is a different question — *what reaches this name, and how
+well established is it*. It gets its own permanent URL.
+
+`entity.id` is already validated URL-safe at load time (`ID_PATTERN` in
+`sources/local-files.ts`), so the route space is enforced, not hoped for.
+
+Three rules this page holds to:
+
+1. **No composite score, ever.** The page shows the *strongest* single
+   assessment — a real maximum across the open claims — and the count. It never
+   blends severities into one number. A composite would be the one invented
+   figure on a site whose entire argument is that it publishes none: it would
+   look like data, travel like data, and trace back to nothing. The same applies
+   to the social card, which travels further than the page and is read with less
+   care.
+2. **Resolved exposures stay visible.** When a disruption resolves it leaves the
+   chart, but the entity page keeps it under *Resolved*. An assessment that
+   simply vanishes is indistinguishable from one that was wrong, and being
+   checkable after the fact is the whole claim.
+3. **The URL outlives the exposure.** `listEntityIds()` includes entities whose
+   every disruption has resolved, so a page that was linked does not start
+   404ing. It says the exposure resolved instead.
+
+There is deliberately **no JSON-LD on entity pages.** Marking up a company you
+neither own nor represent as a schema.org `Organization` asserts a relationship
+to that business that does not exist. The register entry pages, which describe
+Novus Data's own analysis, keep theirs.
+
+Reached from the chart's row headers, the register entry's exposure list, the
+home page's "most exposed" rows, and the footer. **Not in the header** — a sixth
+header item to reach a seventh page costs more than it earns, and a reader is
+already on the chart when the question occurs to them.
+
+### `/register.json`
+
+JSON Feed 1.1 of the register. This is the seam described in §14.2, and it is
+**the register rather than the briefings** because alerts do not fire on
+newsletters — they fire on a disruption opening, escalating or being
+re-reviewed.
+
+**Items are current state, not events.** There is no event log in this
+repository: a register entry is a file holding the assessment as it stands, not
+a history of how it got there. Emitting `opened` / `escalated` transitions would
+mean inventing events nobody recorded. So a watcher diffs instead — it keeps the
+last `date_modified` and `_novus.severity` it saw per `id` and fires when an id
+is new or either value moves. Every value it compares is one a human wrote and
+dated.
+
+`_novus.entities` carries the entity ids reached, which is what lets a watcher
+match a disruption against a reader's `watchlist.entityIds` (§6b) and link
+straight to `/entities/<id>`. That closes the loop between the three layers.
+
+The feed is advertised site-wide via `alternates.types` in the root layout, and
+it is statically generated (`dynamic = 'force-static'`) like everything else.
+
 ## 7. Dependencies
 
 Runtime: `gray-matter`, `clsx`, `@tailwindcss/typography`.
@@ -549,12 +614,12 @@ timestamps, and the archive has both by design:
 - The content layer is a typed boundary, so a second consumer — an app's API —
   reads issues through the same contract rather than reaching into files.
 
-**The one piece to build first: a machine-readable feed.** The site does not emit
-its own feed in v1 because Beehiiv is still the source of truth. That is the
-natural trigger source for notifications, and the app work starts there, not with
-a push service. `src/app/feed.json/route.ts` (or `feed.xml`) reading
-`listIssues()` is a small, self-contained addition and it needs no backend.
-Promote it above everything else in 14.3 once an app is actually being built.
+**The machine-readable feed — now built, and not of the issues.** This said to
+build `feed.json` from `listIssues()`. That was the wrong feed: alerts do not
+fire on newsletters. `src/app/register.json/route.ts` emits the **register**
+instead, which is the actual trigger source, and §6c records why its items are
+state rather than events. An issues feed remains a reasonable reading
+convenience and is still unbuilt; it is not a prerequisite for the app.
 
 **Where the app's state must NOT live.** Device tokens, per-reader preferences,
 delivery logs and read receipts are mutable, per-user, privacy-bearing data. This
@@ -609,3 +674,13 @@ Tracked in `HANDOFF.md`, which is the live list. In short: the author's name and
 verifiable bio facts, the contact address, the three Beehiiv URLs, the publishing
 cadence, the real logo file, and confirmation of the drafted topic list and
 methodology statement.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

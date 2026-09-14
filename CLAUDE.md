@@ -161,6 +161,7 @@ src/config/                Every fact the site states, and the navigation.
   nav.ts                     Header, footer and sitemap routes.
 src/lib/content/           The issue content layer. See section 6.
 src/lib/disruptions/       The register and exposure layer. See section 6a.
+src/lib/accounts/          The account contract. No credentials, no store. See 6b.
 src/lib/env.ts             Environment access and URL resolution.
 src/lib/format.ts          Dates, issue numbers, reading time.
 src/lib/og.ts              Font data and colours for generated images.
@@ -335,6 +336,38 @@ The matrix is capped at nine columns so it never needs a horizontal scroll
 container, which would clip the CSS hover cards. Below `lg` the matrix is
 replaced by a per-entity list — same data, read down instead of across.
 
+## 6b. The account layer
+
+`src/lib/accounts/` is a **contract with no implementation behind it**, built
+the same way as the other two layers so that wiring real accounts later is
+mechanical rather than a redesign. Nothing in the site imports it yet, and that
+is correct — `sign-in-panel.tsx` is still a shell that sends nothing anywhere.
+
+Four rules, written into `types.ts` and enforced where they can be:
+
+1. **There is no credential field, and there must never be one.** No
+   `password`, `passwordHash`, `salt`, `apiSecret`. An `Account` is a reference
+   to an identity that a provider owns; `id` is the opaque subject that provider
+   issues. There is structurally nowhere to put a secret, so nobody can
+   accidentally persist one. The in-memory implementation also throws at runtime
+   if an input object carries a credential-shaped key, because a value arriving
+   as JSON is `unknown` until something checks it.
+2. **No account record may be stored in this repository.** Account records are
+   personal data; git history is permanent and widely readable. The real
+   implementation belongs to a service with a database, per §14.2.
+3. **Do not write bespoke authentication.** Hashing, session rotation, reset
+   flows, rate limiting and breach response are a specialist job and the failure
+   mode is other people's accounts. Use an established identity provider.
+4. **Deletion ships with creation.** `deleteAccount` is in the interface from
+   the first version, and it removes the record rather than flagging it.
+
+`ACCOUNT_STORE` defaults to **`none`**, and `getAccountRepository()` then throws
+a message naming what is missing. That is deliberate: a store that silently
+accepted a signup and dropped it would be worse than having none.
+`ACCOUNT_STORE=memory` is development only and `sources/memory.ts` refuses to
+load in a production build, like both fixture sources. When real accounts
+arrive, delete `memory.ts` — do not extend it.
+
 ## 7. Dependencies
 
 Runtime: `gray-matter`, `clsx`, `@tailwindcss/typography`.
@@ -425,6 +458,7 @@ four answers here.**
 | `NEXT_PUBLIC_BEEHIIV_FEED_URL` | Footer RSS link for readers | No | Site |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Public contact address | **Yes, before launch** | Site |
 | `CONTENT_SOURCE` | `local` (default) or `fixtures` | No | Site |
+| `ACCOUNT_STORE` | `none` (default) or `memory` | No — **never set on Vercel** | Site |
 | `NOVUS_ALLOW_INCOMPLETE` | Allows a production build with unanswered inputs | No — **never set on Vercel** | Site |
 | `NOVUS_CONTENT_DIR` | Overrides the issue archive directory | No — review tooling only, **never set on Vercel** | Site |
 | `NOVUS_DISRUPTIONS_DIR` | Overrides the register directory | No — review tooling only, **never set on Vercel** | Site |

@@ -286,6 +286,37 @@
   }
 
 /* ---------------------------------------------------------------------------
+   Hero backdrop
+
+   Gridlines, because this is a site about measurement — not an ornament. One
+   repeating-linear-gradient plus a mask that fades it out before it reaches
+   the headline: no image to load, no layout cost, no JavaScript, and nothing
+   that moves. Purely decorative, so it is aria-hidden at the call site and
+   removed where decoration would fight legibility.
+   --------------------------------------------------------------------------- */
+
+.grid-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--border) 0,
+    var(--border) 1px,
+    transparent 1px,
+    transparent 5.5rem
+  );
+  /* Fades from the top-left, where the masthead sits, out to nothing well
+     before the body copy — so text always sits on flat --ink, never on a line.
+     The ellipse is sized in rem rather than per cent deliberately: a percentage
+     mask scales with the hero, which is roughly twice as tall on a phone, and
+     the lines would then run the whole way down behind the headline. */
+  -webkit-mask-image: radial-gradient(38rem 20rem at 6rem -4rem, #000 0%, transparent 72%);
+  mask-image: radial-gradient(38rem 20rem at 6rem -4rem, #000 0%, transparent 72%);
+}
+
+/* ---------------------------------------------------------------------------
    Exposure chart
 
    A CSS grid, not a charting library. Every cell is a real element, so it can
@@ -380,6 +411,9 @@
     );
   }
   .exposure-cell { forced-color-adjust: none; }
+
+  /* Decoration is the first thing to go when a reader has asked for contrast. */
+  .grid-field { display: none; }
 }
 
 /* Motion responds to user action only, and not at all when the reader has

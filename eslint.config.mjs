@@ -76,6 +76,11 @@ const eslintConfig = defineConfig([
               message:
                 "Import from '@/lib/disruptions' instead. The register's storage stays behind its public API.",
             },
+            {
+              group: ["@/lib/accounts/sources", "@/lib/accounts/sources/*"],
+              message:
+                "Import from '@/lib/accounts' instead. Which account store is in use is not a page's business.",
+            },
           ],
         },
       ],

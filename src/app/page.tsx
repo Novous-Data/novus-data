@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
@@ -42,6 +43,8 @@ export default async function HomePage() {
       <JsonLd data={publicationJsonLd()} />
 
       <Opening />
+
+      <RegisterPulse disruptions={disruptions} entityCount={matrix.rows.length} />
 
       <Mission />
 
@@ -260,12 +263,16 @@ function LeadIssue({ issue }: { issue: IssueSummary }) {
  */
 function Opening() {
   return (
-    <Container className="pt-14 sm:pt-20">
-      <div className="grid gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-16 [&>*]:min-w-0">
+    <Container className="relative isolate pt-14 sm:pt-20">
+      {/* Decorative gridlines. See .grid-field in globals.css — no image, no
+          motion, and it disappears under forced colours and prefers-contrast. */}
+      <div className="grid-field" aria-hidden="true" />
+
+      <div className="relative grid gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-16 [&>*]:min-w-0">
         <div>
           {/* A masthead line rather than a bare repeat of the header wordmark:
               the name earns its place here by carrying the descriptor. */}
-          <p className="flex flex-col gap-1 border-b border-hairline pb-4 sm:flex-row sm:items-baseline sm:gap-4">
+          <p className="flex flex-col gap-1 border-b-2 border-accent pb-4 sm:flex-row sm:items-baseline sm:gap-4">
             <span className="font-serif text-[1.375rem] font-semibold tracking-[-0.012em] text-fg">
               {publication.name}
             </span>
@@ -290,6 +297,84 @@ function Opening() {
           <SignInPanel />
         </div>
       </div>
+    </Container>
+  );
+}
+
+/**
+ * A count of what is actually in the register, directly under the hero.
+ *
+ * Every figure here is derived from real records at build time — the number of
+ * files in content/disruptions/, how many of them are active, how many distinct
+ * entities the exposure chart resolves, and the most recent review date across
+ * all of them. Nothing is rounded, projected or dressed up, and there are no
+ * counters that animate on scroll.
+ *
+ * **It renders nothing at all when the register is empty.** A row of zeroes
+ * would be an accurate but useless first impression, and per Rule 1 an empty
+ * page beats an invented one.
+ */
+function RegisterPulse({
+  disruptions,
+  entityCount,
+}: {
+  disruptions: DisruptionSummary[];
+  entityCount: number;
+}) {
+  if (disruptions.length === 0) return null;
+
+  const active = disruptions.filter((entry) => entry.status === 'active').length;
+  const lastReviewed = disruptions
+    .map((entry) => entry.updatedAt)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
+  const stats: { label: string; value: string; href?: string; date?: boolean }[] = [
+    {
+      label: disruptions.length === 1 ? 'Disruption tracked' : 'Disruptions tracked',
+      value: String(disruptions.length),
+      href: '/disruptions',
+    },
+    { label: 'Active now', value: String(active) },
+    {
+      label: entityCount === 1 ? 'Name on the chart' : 'Names on the chart',
+      value: String(entityCount),
+      href: '/exposure',
+    },
+  ];
+
+  // The date is set smaller than the counts on purpose: at the same size it is
+  // four times the width of a single digit and unbalances the row.
+  const reviewed = lastReviewed ? formatShortDate(lastReviewed) : null;
+  if (reviewed) stats.push({ label: 'Last reviewed', value: reviewed, date: true });
+
+  return (
+    <Container className="mt-12 sm:mt-16">
+      <dl className="grid grid-cols-2 gap-px border-y border-hairline bg-hairline sm:grid-cols-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="min-w-0 bg-ink px-1 py-5 sm:px-2">
+            <dt className="text-meta text-muted">
+              {stat.href ? (
+                <TextLink href={stat.href} className="text-meta">
+                  {stat.label}
+                </TextLink>
+              ) : (
+                stat.label
+              )}
+            </dt>
+            <dd
+              className={clsx(
+                'mt-2 font-serif font-semibold leading-none text-fg',
+                stat.date ? 'text-[1.125rem] leading-snug' : 'text-[1.75rem]',
+              )}
+              data-numeric
+            >
+              {stat.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </Container>
   );
 }
@@ -339,17 +424,26 @@ function WhatWeDo() {
         who it lands on, and the briefing explains what it means.
       </p>
 
+      {/* One link per pillar, wrapping the whole card: a larger target than a
+          trailing text link, and the rule at the top carries the hover so the
+          three columns read as a row rather than three loose paragraphs. */}
       <div className="mt-8 grid gap-x-14 md:grid-cols-3">
         {pillars.map((pillar) => (
-          <div key={pillar.href} className="border-t border-hairline py-6">
-            <h3 className="font-serif text-[1.1875rem] font-semibold text-fg">{pillar.title}</h3>
+          <Link
+            key={pillar.href}
+            href={pillar.href}
+            className="group flex flex-col border-t-2 border-hairline py-6 transition-colors hover:border-accent focus-visible:border-accent"
+          >
+            <h3 className="font-serif text-[1.1875rem] font-semibold text-fg transition-colors group-hover:text-link">
+              {pillar.title}
+            </h3>
             <p className="mt-2.5 text-[0.9375rem] text-muted">{pillar.body}</p>
-            <p className="mt-4">
-              <TextLink href={pillar.href} className="text-[0.9375rem]">
-                {pillar.cta}
-              </TextLink>
+            {/* mt-auto pins the three calls to action to a common baseline even
+                though the paragraphs above them are different lengths. */}
+            <p className="mt-auto pt-4 text-[0.9375rem] text-link underline decoration-link/35 underline-offset-4 transition-colors group-hover:decoration-link">
+              {pillar.cta}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
     </Container>

@@ -270,7 +270,11 @@ function yaml(value: string | null): string {
  * Returns the issues directory; the disruption source derives its own sibling
  * directory from it.
  */
-async function writeSampleArchive(): Promise<{ root: string; issuesDir: string }> {
+async function writeSampleArchive(): Promise<{
+  root: string;
+  issuesDir: string;
+  disruptionsDir: string;
+}> {
   const root = await mkdtemp(path.join(tmpdir(), 'novus-sample-'));
   const dir = path.join(root, 'issues');
   const disruptionsDir = path.join(root, 'disruptions');
@@ -359,7 +363,7 @@ async function writeSampleArchive(): Promise<{ root: string; issuesDir: string }
     );
   }
 
-  return { root, issuesDir: dir };
+  return { root, issuesDir: dir, disruptionsDir };
 }
 
 // --- emitting the preview ---------------------------------------------------
@@ -852,11 +856,11 @@ async function main(): Promise<void> {
   const live = await readSnapshot();
 
   console.log('\n[preview] pass 2 of 2 — the same site with sample issues\n');
-  const { root: sampleRoot, issuesDir } = await writeSampleArchive();
+  const { root: sampleRoot, issuesDir, disruptionsDir } = await writeSampleArchive();
   let sample: Awaited<ReturnType<typeof readSnapshot>>;
   try {
     await rm(path.join(ROOT, '.next'), { recursive: true, force: true });
-    runBuild({ NOVUS_CONTENT_DIR: issuesDir });
+    runBuild({ NOVUS_CONTENT_DIR: issuesDir, NOVUS_DISRUPTIONS_DIR: disruptionsDir });
     sample = await readSnapshot();
   } finally {
     await rm(sampleRoot, { recursive: true, force: true });

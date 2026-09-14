@@ -1,7 +1,9 @@
 import clsx from 'clsx';
 
-import type { DisruptionStatus } from '@/lib/disruptions';
-import { STATUS_LABELS } from '@/lib/disruptions';
+// Imported from the types module, not the layer index: ./types is pure data,
+// while the index pulls in the filesystem-backed source.
+import type { DisruptionStatus } from '@/lib/disruptions/types';
+import { STATUS_LABELS } from '@/lib/disruptions/types';
 
 const DOT: Record<DisruptionStatus, string> = {
   active: 'bg-status-active',

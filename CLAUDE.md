@@ -242,6 +242,25 @@ future change makes a field optional, the chart stops being defensible.
 An entry not reviewed within `STALE_AFTER_DAYS` (21) shows as stale on its own
 page rather than presenting itself as current.
 
+**When staleness is evaluated, and why the wording matters.** Pages are static,
+so "now" is the build time, not the moment someone reads the page. A day count
+rendered on the page would therefore freeze at build and could only ever
+*understate* an assessment's age — the dangerous direction. So the UI never
+prints a live-sounding day count: it prints the absolute review date, which is
+true forever, and phrases the warning against the build ("had not been reviewed
+when this page was built"). Keep it that way unless the page stops being static.
+
+**`listDisruptions()` returns summaries, not full entries.** The home page and
+`/disruptions` both render every entry; shipping each one's analysis body into
+those payloads would carry content nothing on the page displays. Use
+`getDisruption()` when you need the body.
+
+**Components import labels from `@/lib/disruptions/types`, not the layer index.**
+The index pulls in the filesystem-backed source, so importing a label constant
+from it drags `node:fs` into the module graph — which breaks the day a client
+component uses one of those components. `types.ts` is pure data and safe
+anywhere.
+
 ### Register file format
 
 `content/disruptions/NN-id.md`. The numeric prefix is a filing convenience; the
@@ -407,7 +426,8 @@ four answers here.**
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Public contact address | **Yes, before launch** | Site |
 | `CONTENT_SOURCE` | `local` (default) or `fixtures` | No | Site |
 | `NOVUS_ALLOW_INCOMPLETE` | Allows a production build with unanswered inputs | No — **never set on Vercel** | Site |
-| `NOVUS_CONTENT_DIR` | Overrides the archive directory | No — review tooling only, **never set on Vercel** | Site |
+| `NOVUS_CONTENT_DIR` | Overrides the issue archive directory | No — review tooling only, **never set on Vercel** | Site |
+| `NOVUS_DISRUPTIONS_DIR` | Overrides the register directory | No — review tooling only, **never set on Vercel** | Site |
 | `BEEHIIV_RSS_URL` | The feed to sync from | Only to run the sync | **Sync script only** — not needed on Vercel |
 
 ## 12. Commands
@@ -535,6 +555,19 @@ been running visibly and correctly for a while.
 A scheduled GitHub Action could run `sync-issues` automatically. A CSP can be
 added in report-only mode after cutover. Analytics, search and tag filtering are
 listed with their reasons in `HANDOFF.md`. None is coded.
+
+## 14a. The published standard of proof
+
+`/about#method` states, in public, exactly what an assessment must carry to
+appear on the exposure chart, what each confidence level means, how the severity
+scale is defined, and when an entry is treated as too old. `/about#corrections`
+states how mistakes are handled.
+
+This is not marketing copy. It is the checkable version of the claim the site
+makes about itself, and it is the first thing a sceptical analyst will look for.
+If the enforcement in `sources/local-files.ts` ever changes, **change this page
+in the same commit** — a published standard the code does not actually enforce
+is worse than no published standard.
 
 ## 15. Open questions and TODOs
 

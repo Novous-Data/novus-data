@@ -6,6 +6,14 @@ import { PageHeader } from '@/components/page-header';
 import { SubscribePanel } from '@/components/subscribe-panel';
 import { MailLink, TextLink } from '@/components/text-link';
 import { publication } from '@/config/publication';
+import {
+  CONFIDENCES,
+  CONFIDENCE_LABELS,
+  CONFIDENCE_NOTES,
+  SEVERITIES,
+  SEVERITY_LABELS,
+  STALE_AFTER_DAYS,
+} from '@/lib/disruptions/types';
 import { absoluteUrl, env } from '@/lib/env';
 
 export const metadata: Metadata = {
@@ -54,6 +62,70 @@ export default function AboutPage() {
             <p key={paragraph.slice(0, 40)}>{paragraph}</p>
           ))}
           {publication.cadence ? <p>Novus Data is published {publication.cadence}.</p> : null}
+
+          {/* The standard itself, stated rather than gestured at. A reader who
+              wants to know whether to trust the chart should be able to find
+              out exactly what it takes for something to appear on it. */}
+          <div className="border-t border-hairline pt-6">
+            <h3 className="text-[1.0625rem] font-medium text-fg">
+              What it takes to appear on the exposure chart
+            </h3>
+            <p className="mt-3">
+              Naming a company against a problem is a claim someone may act on, so every one of
+              them has to carry four things. An assessment missing any of them is not published —
+              the site drops it when the page is built, rather than leaving it to editorial
+              discretion.
+            </p>
+            {/* An unordered list on purpose: these are four requirements that
+                all apply at once, not four steps. Numbering a set implies a
+                sequence that is not there. */}
+            <ul className="mt-4 flex flex-col gap-3">
+              {[
+                ['A mechanism', 'The sentence explaining how the disruption reaches that company. “Affected” is not a finding.'],
+                ['A confidence level', 'How well established the assessment is, stated on the chart itself.'],
+                ['A date', 'When the assessment was last true, shown on every cell and every entry.'],
+                ['A source', 'At least one, with a publisher and a link you can follow.'],
+              ].map(([term, detail]) => (
+                <li key={term} className="border-l-2 border-accent pl-4">
+                  <span className="text-fg">{term}.</span> {detail}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="border-t border-hairline pt-6">
+            <h3 className="text-[1.0625rem] font-medium text-fg">What the confidence levels mean</h3>
+            <dl className="mt-4 flex flex-col gap-3">
+              {CONFIDENCES.map((confidence) => (
+                <div key={confidence} className="flex flex-col gap-1 sm:flex-row sm:gap-4">
+                  <dt className="min-w-[7rem] text-fg">{CONFIDENCE_LABELS[confidence]}</dt>
+                  <dd>{CONFIDENCE_NOTES[confidence]}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-4">
+              Severity is a three-step scale — {SEVERITIES.map((s) => SEVERITY_LABELS[s].toLowerCase()).join(', ')} — and no finer.
+              A more granular scale would imply a precision that reading public sources cannot
+              support.
+            </p>
+          </div>
+
+          <div className="border-t border-hairline pt-6">
+            <h3 className="text-[1.0625rem] font-medium text-fg">How old is too old</h3>
+            <p className="mt-3">
+              Every register entry carries the date it was last reviewed. An entry not reviewed
+              within <span data-numeric>{STALE_AFTER_DAYS}</span> days says so on its own page
+              rather than presenting itself as current. The review date is the figure to trust:
+              it is a fact about when the work was done, and it does not go out of date the way a
+              relative &ldquo;three days ago&rdquo; would.
+            </p>
+          </div>
+        </Section>
+
+        <Section heading="Corrections" id="corrections">
+          {publication.corrections.map((paragraph) => (
+            <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+          ))}
         </Section>
 
         <Section heading="Who writes it">

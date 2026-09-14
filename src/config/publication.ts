@@ -57,11 +57,6 @@ export interface Publication {
    */
   cadence: string | null;
   /**
-   * ISO date of the first issue, used only in the pre-launch state, and only
-   * when the archive is empty. Null means the site announces no date.
-   */
-  firstIssueDate: string | null;
-  /**
    * How an issue is produced. Rendered as consecutive paragraphs on /about.
    * This is a claim about working method, so it has to be true — edit it to
    * match what actually happens rather than leaving a flattering draft.
@@ -85,6 +80,11 @@ export interface Publication {
     /** Null until there is a date worth announcing. */
     availableFrom: string | null;
   };
+  /**
+   * How mistakes are handled. On a site that names companies this is not
+   * boilerplate — it is the thing that makes the rest of it credible.
+   */
+  corrections: string[];
   /** Shown in the footer and on /about. Not legal advice; a plain statement. */
   disclaimer: string;
 }
@@ -121,13 +121,11 @@ export const publication: Publication = {
   // Set it to e.g. 'weekly' once a cadence is actually being held to.
   cadence: null,
 
-  // Only used when content/issues/ is empty. Null means no date is announced.
-  firstIssueDate: null,
-
   methodology: [
     'Everything starts from primary sources wherever they exist: canal and port authority notices, customs and trade statistics, regulatory texts and official releases, and the filings and announcements of the companies involved. Trade press and carrier commentary are used to find stories, not to settle them.',
     'Every entry in the register carries the date it was last reviewed, and every company or sector named against a disruption carries three things: the mechanism by which the problem reaches it, how confident that assessment is, and at least one source you can follow. An assessment that cannot supply all three is not published — it is dropped by the site itself, not left to editorial discretion.',
     'The work is reading rather than modelling. Novus Data does not run a proprietary dataset and does not publish forecasts dressed as numbers. Where something is uncertain, it is marked as inferred or estimated rather than stated flatly.',
+    'The standard is deliberately awkward to meet. It is easy to write that a company is "exposed" to a problem; it is much harder to say by what mechanism, how well established that is, and when it was last checked. Requiring all of it means the chart fills slowly — and that anything on it is worth the space it takes.',
     'Novus Data publishes analysis and commentary. It is not investment advice, it is not a recommendation to buy or sell any security, and it is not a substitute for your own work.',
   ],
 
@@ -155,6 +153,12 @@ export const publication: Publication = {
     // No date is announced until one is real.
     availableFrom: null,
   },
+
+  corrections: [
+    'If something here is wrong, it gets corrected rather than quietly edited. A correction to a register entry is made on the entry itself, the review date is updated, and what changed is stated in the briefing that follows.',
+    'Assessments are withdrawn as readily as they are published. If the evidence behind an exposure stops holding, the exposure is removed from the chart — a claim is only as good as the source under it, and there is no benefit to defending one that has stopped being true.',
+    'Corrections are the most useful thing a reader can send, and they are read first.',
+  ],
 
   disclaimer:
     'Novus Data publishes analysis and commentary, not investment advice. Nothing here is a recommendation to buy or sell any security.',

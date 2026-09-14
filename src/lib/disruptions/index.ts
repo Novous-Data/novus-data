@@ -7,59 +7,46 @@
 
 import type {
   Disruption,
-  DisruptionStatus,
   DisruptionSummary,
   Entity,
   EntityExposure,
   Exposure,
   Severity,
 } from './types';
-import { SEVERITY_RANK } from './types';
-import { readDisruptions } from './sources/local-files';
+import { SEVERITY_RANK, STALE_AFTER_DAYS } from './types';
+import { readFromActiveSource } from './sources';
 
 export * from './types';
+export { getDisruptionSourceName } from './sources';
 
-/** Everything in the register, active first, then most recently reviewed. */
-export async function listDisruptions(): Promise<Disruption[]> {
-  return readDisruptions();
+/** Drop the body, so a list page never ships every entry's full analysis. */
+function toSummary(disruption: Disruption): DisruptionSummary {
+  const { contentHtml: _contentHtml, ...summary } = disruption;
+  return summary;
 }
 
-/** The ones still in play. Resolved entries stay in the register but not here. */
-export async function listOpenDisruptions(): Promise<Disruption[]> {
-  const all = await readDisruptions();
-  return all.filter((entry) => entry.status !== 'resolved');
+/**
+ * Everything in the register, active first, then most recently reviewed.
+ *
+ * Returns summaries, not full entries: the home page and /disruptions both
+ * render every entry, and shipping each one's sanitised analysis body into
+ * those payloads would grow the page with content nothing on it displays.
+ * Use getDisruption() when you need the body.
+ */
+export async function listDisruptions(): Promise<DisruptionSummary[]> {
+  return (await readFromActiveSource()).map(toSummary);
 }
 
 export async function getDisruption(id: string): Promise<Disruption | null> {
-  const all = await readDisruptions();
+  const all = await readFromActiveSource();
   return all.find((entry) => entry.id === id) ?? null;
 }
 
 export async function listDisruptionIds(): Promise<string[]> {
-  return (await readDisruptions()).map((entry) => entry.id);
+  return (await readFromActiveSource()).map((entry) => entry.id);
 }
 
-export async function countByStatus(): Promise<Record<DisruptionStatus, number>> {
-  const all = await readDisruptions();
-  const counts: Record<DisruptionStatus, number> = {
-    watch: 0,
-    active: 0,
-    easing: 0,
-    resolved: 0,
-  };
-  for (const entry of all) counts[entry.status] += 1;
-  return counts;
-}
-
-/**
- * An entry reviewed longer ago than this is shown as stale rather than current.
- *
- * The alternative — quietly presenting a month-old assessment as today's — is
- * the single fastest way for a site like this to mislead someone.
- */
-export const STALE_AFTER_DAYS = 21;
-
-export function daysSince(iso: string, now: Date = new Date()): number | null {
+function daysSince(iso: string, now: Date = new Date()): number | null {
   const then = new Date(iso);
   if (Number.isNaN(then.getTime())) return null;
   return Math.floor((now.getTime() - then.getTime()) / 86_400_000);
@@ -105,7 +92,7 @@ export async function buildExposureMatrix(options?: {
   includeResolved?: boolean;
 }): Promise<ExposureMatrix> {
   const includeResolved = options?.includeResolved ?? false;
-  const all = await readDisruptions();
+  const all = (await readFromActiveSource()).map(toSummary);
   const disruptions = includeResolved ? all : all.filter((entry) => entry.status !== 'resolved');
 
   const byEntity = new Map<
@@ -163,15 +150,4 @@ export async function buildExposureMatrix(options?: {
     entityCount: rows.length,
     exposureCount: flattened.length,
   };
-}
-
-/** Everything reaching one entity, for its section on the exposure page. */
-export async function getEntityExposure(entityId: string): Promise<{
-  entity: Entity;
-  items: Array<{ disruption: DisruptionSummary; exposure: Exposure }>;
-} | null> {
-  const matrix = await buildExposureMatrix({ includeResolved: true });
-  const items = matrix.all.filter((item) => item.exposure.entity.id === entityId);
-  if (items.length === 0) return null;
-  return { entity: items[0].exposure.entity, items };
 }

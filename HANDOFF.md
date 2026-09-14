@@ -220,6 +220,32 @@ against a throwaway archive of `[SAMPLE]` issues without ever writing them into
 the repository. It is not used by `dev`, `build` or any deployment, and it must
 not be set on Vercel.
 
+### 4.18 The standard of proof is published, not just claimed
+
+`/about#method` now states in public exactly what an assessment must carry to
+appear on the chart, what each confidence level means, how the severity scale is
+defined, and when an entry is treated as too old. `/about#corrections` states how
+mistakes are handled — including that assessments are withdrawn as readily as
+they are published.
+
+This is the single highest-value thing on the site after the chart itself. The
+claim "you can trust this" is worth nothing; the claim "here is precisely what we
+refuse to publish, and the code enforces it" is checkable. It is also the first
+thing a sceptical analyst looks for.
+
+**If the enforcement in `sources/local-files.ts` ever changes, change that page
+in the same commit.** A published standard the code does not enforce is worse
+than no published standard at all.
+
+### 4.19 Staleness is phrased against the build, not against "now"
+
+Pages are static, so a day count rendered on one freezes at build time and can
+only ever understate how old an assessment is — the dangerous direction for a
+site whose pitch is knowing when something was last true. The page therefore
+shows the absolute review date, which stays true forever, and phrases the warning
+as "had not been reviewed when this page was built". `/about` explains why in the
+reader's terms.
+
 ### 4.15 The home page leads with a sign-in that does nothing — safely
 
 You asked for the account experience to be the first thing on the page, to be
@@ -388,6 +414,53 @@ Footer navigation (19px), header navigation (41px), the 404 link list (20px), th
 the brief's 44×44 floor. All now `min-h-11`. Inline links inside prose are left
 alone, which is the correct exemption.
 
+### 5.8 Back-end defects found in a dedicated review pass
+
+Seven, found by surveying the data layers rather than by anything failing.
+
+**List pages shipped every register entry's article body.** `listDisruptions()`
+returned full entries, so the home page and `/disruptions` each carried the
+sanitised analysis HTML of every disruption — content neither page displays. It
+now returns summaries; `getDisruption()` is the way to the body. Verified: the
+body text appears 0 times on the list page and 1 time on the entry page.
+
+**Register entries had no social card.** Sharing a link to the site's primary
+content fell back to the generic site card, telling the recipient nothing about
+which disruption they had been sent. Added
+`/disruptions/[id]/opengraph-image.tsx`, carrying the title, the status, how
+many names are affected and the review date.
+
+**Register entries had no structured data.** The issue pages had `Article`
+JSON-LD; the register — the more important content — had none. Added, with
+`dateModified` set to the review date and the entry's required citations
+included, so a machine consumer can see how current an assessment is.
+
+**A bad `NEXT_PUBLIC_SITE_URL` crashed the build opaquely.** Pasting
+`novusdata.com` without a protocol — the obvious thing to type into a Vercel
+settings field — threw `Invalid URL` from inside Next's metadata handling, with
+nothing naming the variable. It now fails with the key, the value and the fix.
+
+**The register's directory was derived from the issues override.** It resolved
+as a sibling of `NOVUS_CONTENT_DIR`, so pointing the issues override anywhere
+silently moved the register too. It has its own `NOVUS_DISRUPTIONS_DIR` now, and
+the tooling sets both explicitly.
+
+**`CONTENT_SOURCE` meant different things to the two layers.** The issue layer
+had a source factory; the register read local files unconditionally, so its
+"never in production" fixtures guard never sat in the app's import graph and
+could not fire. Added the matching factory. Verified: `CONTENT_SOURCE=fixtures`
+now fails the build with both guards reporting.
+
+**Importing a label dragged the filesystem in.** `StatusBadge`, `SeverityLegend`
+and the chart imported label constants from the layer index, which pulls in the
+`node:fs`-backed source. Nothing is a client component today, so nothing broke —
+but the day one of them becomes one, it would have. They import from
+`types.ts` now, which is pure data.
+
+Also removed three exported functions and a config field that had lost their
+last consumer, and moved `STALE_AFTER_DAYS` to `types.ts` with a note on why the
+UI must not print a live-sounding day count.
+
 ### 5.7 The home page overflowed at 320px
 
 The subscribe and alerts panels sit in a two-column grid. A grid item defaults to
@@ -449,11 +522,11 @@ the archive. **These are measured numbers, not estimates.**
 
 | Page | Form factor | Performance | Accessibility | Best practices | SEO |
 |---|---|---|---|---|---|
-| `/` | Mobile | **97** | **100** | **100** | **100** |
+| `/` | Mobile | **99** | **100** | **100** | **100** |
 | `/` | Desktop | **100** | **100** | **100** | **100** |
-| `/exposure` | Mobile | **95** | **100** | **100** | **100** |
+| `/exposure` | Mobile | **97** | **100** | **100** | **100** |
 | `/exposure` | Desktop | **100** | **100** | **100** | **100** |
-| `/disruptions/<entry>` | Mobile | **97** | **100** | **100** | **100** |
+| `/disruptions/<entry>` | Mobile | **96** | **100** | **100** | **100** |
 | `/disruptions/<entry>` | Desktop | **100** | **100** | **100** | **100** |
 
 No failed audits in accessibility, best practices or SEO on any of them — the

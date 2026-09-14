@@ -211,3 +211,19 @@ export interface DisruptionDiagnostics {
   }>;
   warnings: string[];
 }
+
+/**
+ * An entry reviewed longer ago than this is shown as stale rather than current.
+ *
+ * The alternative — quietly presenting a month-old assessment as today's — is
+ * the single fastest way for a site like this to mislead someone.
+ *
+ * NOTE ON WHEN THIS IS EVALUATED. Pages are statically generated, so "now" is
+ * the build time, not the moment someone reads the page. That means a day
+ * count rendered here can only ever *understate* how old an assessment is —
+ * the dangerous direction. So the UI never prints a live-sounding day count:
+ * it prints the absolute review date, which is true forever, and phrases the
+ * warning relative to the build ("had not been reviewed when this page was
+ * built"). Keep it that way unless the page stops being static.
+ */
+export const STALE_AFTER_DAYS = 21;

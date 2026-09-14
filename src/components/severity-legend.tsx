@@ -1,4 +1,4 @@
-import { CONFIDENCE_LABELS, SEVERITIES, SEVERITY_LABELS } from '@/lib/disruptions';
+import { CONFIDENCE_LABELS, SEVERITIES, SEVERITY_LABELS } from '@/lib/disruptions/types';
 
 const SWATCH: Record<string, string> = {
   low: 'bg-sev-low',

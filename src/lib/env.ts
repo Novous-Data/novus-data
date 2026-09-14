@@ -33,7 +33,27 @@ function stripTrailingSlash(url: string): string {
  */
 function resolveSiteUrl(): string {
   const explicit = clean(process.env.NEXT_PUBLIC_SITE_URL);
-  if (explicit) return stripTrailingSlash(explicit);
+  if (explicit) {
+    // metadataBase does `new URL(siteUrl)`. A value without a protocol — the
+    // obvious thing to paste into a Vercel settings field — throws "Invalid
+    // URL" from deep inside Next's metadata handling, with nothing naming the
+    // variable. Fail here instead, saying which key is wrong and why.
+    let parsed: URL;
+    try {
+      parsed = new URL(explicit);
+    } catch {
+      throw new Error(
+        `NEXT_PUBLIC_SITE_URL is not a valid absolute URL: "${explicit}". ` +
+          'It needs the protocol, e.g. https://novusdata.com — not novusdata.com.',
+      );
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      throw new Error(
+        `NEXT_PUBLIC_SITE_URL must be http or https, got "${parsed.protocol}" in "${explicit}".`,
+      );
+    }
+    return stripTrailingSlash(explicit);
+  }
 
   // Vercel sets VERCEL_URL to a bare host with no protocol.
   const vercel = clean(process.env.VERCEL_URL);

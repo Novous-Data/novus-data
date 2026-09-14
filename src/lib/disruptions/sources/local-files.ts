@@ -34,9 +34,17 @@ import {
   SEVERITIES,
 } from '../types';
 
-/** See the note on ISSUES_DIRECTORY — the override is review tooling only. */
-export const DISRUPTIONS_DIRECTORY = process.env.NOVUS_CONTENT_DIR
-  ? path.resolve(process.env.NOVUS_CONTENT_DIR, '..', 'disruptions')
+/**
+ * Normally content/disruptions/ in this repository.
+ *
+ * NOVUS_DISRUPTIONS_DIR is its own variable rather than something derived from
+ * NOVUS_CONTENT_DIR. An earlier version resolved this as a sibling of the
+ * issues directory, which meant pointing the issues override anywhere moved the
+ * register too — a surprise waiting to happen. Review tooling sets both
+ * explicitly; neither should ever be set on Vercel.
+ */
+export const DISRUPTIONS_DIRECTORY = process.env.NOVUS_DISRUPTIONS_DIR
+  ? path.resolve(process.env.NOVUS_DISRUPTIONS_DIR)
   : path.join(process.cwd(), 'content', 'disruptions');
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

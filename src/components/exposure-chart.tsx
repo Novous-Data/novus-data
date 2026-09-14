@@ -3,8 +3,11 @@ import Link from 'next/link';
 
 import { SeverityLegend } from '@/components/severity-legend';
 import { StatusBadge } from '@/components/status-badge';
-import type { DisruptionSummary, EntityExposure, ExposureMatrix } from '@/lib/disruptions';
-import { CONFIDENCE_LABELS, SEVERITY_LABELS } from '@/lib/disruptions';
+import type { ExposureMatrix } from '@/lib/disruptions';
+// Types and labels come from ./types, which is pure data. The layer index
+// pulls in the filesystem-backed source, which a component has no need of.
+import type { DisruptionSummary, EntityExposure } from '@/lib/disruptions/types';
+import { CONFIDENCE_LABELS, SEVERITY_LABELS } from '@/lib/disruptions/types';
 import { formatShortDate } from '@/lib/format';
 
 /**

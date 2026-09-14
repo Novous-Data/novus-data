@@ -105,13 +105,6 @@ export const INPUT_LEDGER: InputRecord[] = [
     requiredForLaunch: false,
   },
   {
-    key: 'publication.firstIssueDate',
-    provenance: 'unanswered',
-    usedOn: ['/ (pre-launch state only)'],
-    note: 'Null. The pre-launch hero announces no date. Ignored entirely once the archive has issues.',
-    requiredForLaunch: false,
-  },
-  {
     key: 'publication.author.name',
     provenance: 'unanswered',
     usedOn: ['/about', 'JSON-LD author', 'issue bylines'],

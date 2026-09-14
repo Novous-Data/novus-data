@@ -37,7 +37,9 @@ export default async function ExposurePage() {
             </strong>{' '}
             The site refuses to render an assessment that does not state the mechanism, how
             confident it is, the date it was last true, and at least one source you can follow.
-            That is enforced in code, not by editorial habit —{' '}
+            That is enforced in code, not by editorial habit. The full standard — what each
+            confidence level means, how the severity scale is defined, and when an assessment is
+            treated as too old — is written out under{' '}
             <TextLink href="/about#method">how this is produced</TextLink>.
           </p>
           <p className="mt-4 text-meta text-muted">

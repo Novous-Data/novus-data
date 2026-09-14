@@ -12,7 +12,7 @@ import { SubscribePanel } from '@/components/subscribe-panel';
 import { TextLink } from '@/components/text-link';
 import { coverageTopics } from '@/config/coverage';
 import { publication } from '@/config/publication';
-import type { Disruption, EntityExposure } from '@/lib/disruptions';
+import type { DisruptionSummary, EntityExposure } from '@/lib/disruptions';
 import { CATEGORY_LABELS, SEVERITY_LABELS, buildExposureMatrix, listDisruptions } from '@/lib/disruptions';
 import type { IssueSummary } from '@/lib/content';
 import { listIssues } from '@/lib/content';
@@ -192,7 +192,7 @@ export default async function HomePage() {
  * page leads with its biggest story. It refreshes itself from the register with
  * no hand-edit.
  */
-function LeadDisruption({ disruption }: { disruption: Disruption }) {
+function LeadDisruption({ disruption }: { disruption: DisruptionSummary }) {
   const updated = formatLongDate(disruption.updatedAt);
 
   return (

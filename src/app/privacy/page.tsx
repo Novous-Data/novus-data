@@ -42,6 +42,20 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section heading="The sign-in form">
+          <p>
+            There is a sign-in panel on the home page. It does nothing yet: there are no accounts,
+            it has no server behind it, and it makes no network request at all. Anything typed
+            into it stays in your browser and is discarded when you leave the page — it is never
+            sent, never stored and never logged.
+          </p>
+          <p>
+            It exists so the signed-in experience can be designed before it is built. When
+            accounts are real, this page will be rewritten in the same release to describe exactly
+            what is held and why — not afterwards.
+          </p>
+        </Section>
+
         <Section heading="Subscribing">
           <p>
             Subscribing happens on Beehiiv, not here. When you subscribe, your email address goes

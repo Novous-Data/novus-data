@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { Container } from '@/components/container';
+import { JsonLd } from '@/components/json-ld';
 import { ProseBody } from '@/components/prose-body';
 import { StatusBadge } from '@/components/status-badge';
 import { ExternalLink, TextLink } from '@/components/text-link';
@@ -11,13 +12,14 @@ import {
   CONFIDENCE_LABELS,
   CONFIDENCE_NOTES,
   SEVERITY_LABELS,
-  daysSince,
+  STALE_AFTER_DAYS,
   getDisruption,
   isStale,
   listDisruptionIds,
 } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
 import { formatLongDate, formatShortDate } from '@/lib/format';
+import { disruptionJsonLd } from '@/lib/structured-data';
 
 export async function generateStaticParams() {
   const ids = await listDisruptionIds();
@@ -52,10 +54,13 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
   const started = formatLongDate(disruption.startedAt);
   const updated = formatLongDate(disruption.updatedAt);
   const stale = isStale(disruption.updatedAt);
-  const age = daysSince(disruption.updatedAt);
 
   return (
     <article>
+      <JsonLd
+        data={disruptionJsonLd(disruption, absoluteUrl(`/disruptions/${disruption.id}`))}
+      />
+
       <Container width="reading" className="pt-12 sm:pt-20">
         <p className="text-meta text-muted">
           <TextLink href="/disruptions" className="no-underline hover:underline">
@@ -98,11 +103,17 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
         </dl>
 
         {/* An assessment that has not been looked at recently says so, rather
-            than presenting itself as current. */}
-        {stale && age !== null ? (
+            than presenting itself as current.
+
+            Phrased against the build rather than against "now" on purpose: the
+            page is static, so a day count rendered here would freeze at build
+            time and could only ever understate the age. The absolute review
+            date above is the figure that stays true. */}
+        {stale ? (
           <p className="mt-6 border-l-2 border-status-active pl-4 text-meta text-muted">
-            This entry was last reviewed <span data-numeric>{age}</span> days ago. Conditions may
-            have moved since.
+            This entry had not been reviewed for over{' '}
+            <span data-numeric>{STALE_AFTER_DAYS}</span> days when this page was built, and may
+            have aged further since. Trust the review date above, not the freshness of the page.
           </p>
         ) : null}
       </Container>

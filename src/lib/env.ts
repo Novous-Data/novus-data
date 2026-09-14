@@ -83,7 +83,51 @@ export const env = {
 
   /** True only in `next dev`. Gates the /debug routes. */
   isDevelopment: process.env.NODE_ENV === 'development',
+
+  /* ---------------------------------------------------------------------
+     Accounts.
+
+     The anon key is PUBLIC by design — it is meant to ship to browsers, and
+     what protects the data is the row-level security policy on every table,
+     not the secrecy of this string. The service role key is the opposite and
+     is read in `src/lib/supabase/admin.ts`, never here, so that it cannot be
+     reached from anything that also holds NEXT_PUBLIC_ values.
+     --------------------------------------------------------------------- */
+
+  /** Supabase project URL. Null means accounts are not configured. */
+  supabaseUrl: clean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+
+  /** Publishable anon key. Safe in the browser; RLS is the actual guard. */
+  supabaseAnonKey: clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
 } as const;
+
+/**
+ * Whether a real account store is wired up.
+ *
+ * Every account-bearing surface checks this and degrades to the pre-launch
+ * copy when it is false, so the site builds and deploys perfectly well with
+ * no Supabase project at all — which is how it ships today.
+ */
+export function accountsConfigured(): boolean {
+  return (
+    process.env.ACCOUNT_STORE === 'supabase' &&
+    env.supabaseUrl !== null &&
+    env.supabaseAnonKey !== null
+  );
+}
+
+/** Throws with a message naming the fix. Called by the Supabase clients. */
+export function requireSupabaseEnv(): { url: string; anonKey: string } {
+  const { supabaseUrl, supabaseAnonKey } = env;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'ACCOUNT_STORE=supabase needs NEXT_PUBLIC_SUPABASE_URL and ' +
+        'NEXT_PUBLIC_SUPABASE_ANON_KEY. Both are in your Supabase project settings, ' +
+        'under Project Settings → API. See DEPLOY.md Part 4.',
+    );
+  }
+  return { url: supabaseUrl, anonKey: supabaseAnonKey };
+}
 
 /** Absolute URL for a site-relative path, e.g. canonical and OG image URLs. */
 export function absoluteUrl(path: string): string {

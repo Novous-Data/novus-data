@@ -4,7 +4,7 @@ import { Container } from '@/components/container';
 import { PageHeader } from '@/components/page-header';
 import { ExternalLink, TextLink } from '@/components/text-link';
 import { publication } from '@/config/publication';
-import { absoluteUrl, env } from '@/lib/env';
+import { absoluteUrl, accountsConfigured, env } from '@/lib/env';
 
 export const metadata: Metadata = {
   title: 'Privacy',
@@ -21,6 +21,11 @@ export const metadata: Metadata = {
  * accurate the moment that change ships. See HANDOFF.md.
  */
 export default function PrivacyPage() {
+  // The page describes what this deployment actually does. With no account
+  // store configured there is genuinely nothing held, and saying otherwise
+  // would be its own kind of inaccuracy.
+  const accounts = accountsConfigured();
+
   return (
     <>
       <PageHeader
@@ -31,10 +36,19 @@ export default function PrivacyPage() {
       <Container width="reading" className="mt-12 flex flex-col gap-10">
         <Section heading="This site">
           <p>
-            The pages of this site are static files. They set no cookies, run no analytics, embed
-            no tracking pixels and load no third-party scripts. Nothing you do while reading is
-            recorded by Novus Data.
+            The pages you read — the register, the exposure chart, the company and sector pages
+            and the briefing archive — are static files. They run no analytics, embed no tracking
+            pixels and load no third-party scripts. Nothing you do while reading is recorded by
+            Novus Data.
           </p>
+          {accounts ? (
+            <p>
+              One cookie exists, and only after you sign in: a session cookie set by Supabase, the
+              service that handles sign-in. It is what keeps you signed in between pages. It is
+              not used to track reading, it is not shared, and signing out removes it. If you
+              never sign in, the site sets no cookie at all.
+            </p>
+          ) : null}
           <p>
             The site is hosted on Vercel, which keeps standard server logs of requests, including
             IP addresses, in the ordinary course of serving a website. Novus Data does not read
@@ -42,19 +56,71 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section heading="The sign-in form">
-          <p>
-            There is a sign-in panel on the home page. It does nothing yet: there are no accounts,
-            it has no server behind it, and it makes no network request at all. Anything typed
-            into it stays in your browser and is discarded when you leave the page — it is never
-            sent, never stored and never logged.
-          </p>
-          <p>
-            It exists so the signed-in experience can be designed before it is built. When
-            accounts are real, this page will be rewritten in the same release to describe exactly
-            what is held and why — not afterwards.
-          </p>
-        </Section>
+        {accounts ? (
+          <Section heading="If you create an account">
+            <p>
+              Accounts are optional. Everything on this site is free to read without one, and
+              nothing is withheld from readers who do not have one.
+            </p>
+            <p>
+              <strong className="font-medium text-fg">There is no password.</strong> Signing in
+              works by emailed link: you enter an address, we email a one-time link, and clicking
+              it signs you in. No password is ever chosen, typed, transmitted or stored — so there
+              is no password here to be stolen or reused.
+            </p>
+            <p>What is held, in full:</p>
+            <ul className="flex list-disc flex-col gap-2 pl-5">
+              <li>
+                <strong className="font-medium text-fg">Your email address</strong>, because
+                signing in and any future alert has to reach you somewhere.
+              </li>
+              <li>
+                <strong className="font-medium text-fg">The companies, sectors and categories
+                you follow</strong>, because that is the point of having an account.
+              </li>
+              <li>
+                <strong className="font-medium text-fg">Your alert preferences</strong> — whether
+                alerts are on, how severe a problem has to be, and which channels.
+              </li>
+              <li>
+                <strong className="font-medium text-fg">The date you joined.</strong>
+              </li>
+            </ul>
+            <p>
+              That is the whole list. No name is required. No IP address, device, browser or
+              reading history is attached to your account. What you follow is not used to profile
+              you, is not sold, and is not shared with anyone.
+            </p>
+            <p>
+              This data lives in a Supabase database, which provides the sign-in and the storage.
+              Supabase can technically reach the data it stores, as any database provider can.
+            </p>
+            <p>
+              <ExternalLink href="https://supabase.com/privacy">
+                Supabase&rsquo;s privacy policy
+              </ExternalLink>
+            </p>
+            <p>
+              <strong className="font-medium text-fg">Deleting is immediate and complete.</strong>{' '}
+              There is a delete button on your account page. It removes your address, what you
+              follow and your preferences at once. Nothing is soft-deleted, archived or kept in a
+              form that could be restored, and you do not have to email anyone to ask.
+            </p>
+          </Section>
+        ) : (
+          <Section heading="The sign-in form">
+            <p>
+              There is a sign-in panel on the home page. It does nothing on this deployment: no
+              account store is configured, it makes no network request, and anything typed into it
+              stays in your browser and is discarded when you leave the page.
+            </p>
+            <p>
+              It exists so the signed-in experience can be designed before it is switched on. When
+              accounts are live, this page describes exactly what is held and why — in the same
+              release, not afterwards.
+            </p>
+          </Section>
+        )}
 
         <Section heading="Subscribing">
           <p>
@@ -88,7 +154,9 @@ export default function PrivacyPage() {
         <Section heading="Changes">
           <p>
             If this site ever adds analytics, an embedded form or anything else that collects
-            information, this page will be updated before that change goes live.
+            information, this page will be updated before that change goes live. That rule already
+            applied once: this section was rewritten in the same release that made accounts
+            possible, rather than after it.
           </p>
           <p>
             Questions about any of this can go to{' '}

@@ -161,12 +161,16 @@ src/config/                Every fact the site states, and the navigation.
   nav.ts                     Header, footer and sitemap routes.
 src/lib/content/           The issue content layer. See section 6.
 src/lib/disruptions/       The register and exposure layer. See section 6a.
-src/lib/accounts/          The account contract. No credentials, no store. See 6b.
+src/lib/accounts/          The account contract and its Supabase store. See 6b.
+src/lib/supabase/          Supabase clients. admin.ts is SERVER ONLY. See 6b.
 src/lib/env.ts             Environment access and URL resolution.
 src/lib/format.ts          Dates, issue numbers, reading time.
 src/lib/og.ts              Font data and colours for generated images.
 src/lib/structured-data.ts JSON-LD builders.
 src/components/            Presentational components. One client component.
+src/app/account/           The signed-in page and its server actions. Dynamic.
+src/app/auth/              Magic-link callback and sign-out. Dynamic.
+src/proxy.ts               Session refresh. NOT middleware.ts — renamed in Next 16.
 src/app/entities/          Company and sector pages, derived from the register. See 6c.
 src/app/register.json/     JSON Feed of the register — the alerting seam. See 6c.
 src/app/                   Routes, metadata routes, icons, error boundaries.
@@ -367,8 +371,45 @@ Four rules, written into `types.ts` and enforced where they can be:
 a message naming what is missing. That is deliberate: a store that silently
 accepted a signup and dropped it would be worse than having none.
 `ACCOUNT_STORE=memory` is development only and `sources/memory.ts` refuses to
-load in a production build, like both fixture sources. When real accounts
-arrive, delete `memory.ts` — do not extend it.
+load in a production build, like both fixture sources.
+
+### The Supabase implementation
+
+`ACCOUNT_STORE=supabase` is the real store. Identity lives in Supabase's
+`auth.users`; four tables hold everything else. Schema, policies and setup are
+in **DEPLOY.md Part 4**.
+
+**Sign-in is a magic link, and there is no password anywhere in the system.**
+Not in the types, not in the database, not in the form. A password that does
+not exist cannot be leaked, reused or mishandled, and it removes reset flows,
+strength rules and breach response from the project entirely. `sign-in-panel.tsx`
+therefore has no password input — adding one back would be a regression.
+
+**Row-level security is the actual guard, not the code being careful.** Every
+table has a policy restricting rows to `auth.uid()`. This is why the anon key
+is safe to ship to browsers: it can only ever reach the signed-in reader's own
+rows. Two consequences worth knowing:
+
+- Under RLS, *not found* and *not permitted* are indistinguishable. That is
+  correct — it means one reader cannot probe for another's account.
+- `findByEmail()` only ever resolves the signed-in reader's own address. There
+  is deliberately no way to ask this system whether an arbitrary address has an
+  account, because that is an enumeration hole.
+
+**`SUPABASE_SERVICE_ROLE_KEY` bypasses every policy.** It is used for exactly
+one thing — deleting from `auth.users`, which the anon key cannot do. The
+realistic way it leaks is not theft but somebody prefixing it with
+`NEXT_PUBLIC_` to silence an undefined variable, which inlines it into the
+browser bundle. `src/lib/supabase/admin.ts` **throws at module load** if it
+sees such a variable, and again if it is ever reached from the browser.
+
+**Session refresh lives in `src/proxy.ts`, not `middleware.ts`** — Next 16
+renamed the convention and every Supabase guide still shows the old name. It
+does nothing but rotate the token; authorisation is `getUser()` in the route
+that needs it, which revalidates against Supabase rather than trusting a
+cookie.
+
+When accounts are genuinely live, delete `memory.ts` — do not extend it.
 
 ## 6c. Entity pages and the register feed
 
@@ -444,7 +485,14 @@ build output to say so.
 
 ## 7. Dependencies
 
-Runtime: `gray-matter`, `clsx`, `@tailwindcss/typography`.
+Runtime: `gray-matter`, `clsx`, `@tailwindcss/typography`, and — only because
+accounts were authorised (§13) — `@supabase/supabase-js` and `@supabase/ssr`.
+
+The Supabase packages were added under Rule 4 with the author's explicit
+instruction to build sign-in. They are the *only* reason a database client
+appears in a project that otherwise forbids one, and they are loaded through
+dynamic `import()` at every call site, so a build with `ACCOUNT_STORE` unset
+never pulls them into its graph.
 
 **There is no charting library and there should not be one.** The exposure chart
 is a `<table>` of styled cells, which is why each cell can be a link, hold
@@ -454,9 +502,9 @@ JavaScript at all.
 Dev (sync script and review tooling only): `fast-xml-parser`, `sanitize-html`,
 `@types/sanitize-html`, `tsx`.
 
-Forbidden without asking: any UI kit, animation library, state library, CMS or
-database client, `moment`/`date-fns` (use `Intl.DateTimeFormat`), analytics
-package, test framework, MDX tooling, or icon library.
+Forbidden without asking: any UI kit, animation library, state library, CMS,
+any *further* database client, `moment`/`date-fns` (use `Intl.DateTimeFormat`),
+analytics package, test framework, MDX tooling, or icon library.
 
 ## 8. The publishing workflow
 
@@ -532,7 +580,10 @@ four answers here.**
 | `NEXT_PUBLIC_BEEHIIV_FEED_URL` | Footer RSS link for readers | No | Site |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Public contact address | **Yes, before launch** | Site |
 | `CONTENT_SOURCE` | `local` (default) or `fixtures` | No | Site |
-| `ACCOUNT_STORE` | `none` (default) or `memory` | No — **never set on Vercel** | Site |
+| `ACCOUNT_STORE` | `none` (default), `memory` (dev) or `supabase` | No — unset means no accounts | Site |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Only with `ACCOUNT_STORE=supabase` | Site |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key. Public by design — RLS is the guard | Only with `ACCOUNT_STORE=supabase` | Site |
+| `SUPABASE_SERVICE_ROLE_KEY` | Deletes from `auth.users`. **Bypasses all RLS — never `NEXT_PUBLIC_`** | Only to delete accounts | **Server only** |
 | `NOVUS_ALLOW_INCOMPLETE` | Allows a production build with unanswered inputs | No — **never set on Vercel** | Site |
 | `NOVUS_CONTENT_DIR` | Overrides the issue archive directory | No — review tooling only, **never set on Vercel** | Site |
 | `NOVUS_DISRUPTIONS_DIR` | Overrides the register directory | No — review tooling only, **never set on Vercel** | Site |
@@ -552,21 +603,47 @@ npm run preview       build the single-file review preview
 ## 13. Out of scope for this repository
 
 Do not build, scaffold or stub: gated content; payments or paid
-tiers; a database, CMS or admin interface; self-hosted email or subscriber
+tiers; a CMS or admin interface; self-hosted email or subscriber
 management; **live market-data APIs or price feeds**; search, tag filtering or
-comments; analytics or tracking; a test framework; a custom email capture form or
-any backend endpoint; MDX tooling; a scheduled sync workflow; a mobile app, a
+comments; analytics or tracking; a test framework; a custom email capture form;
+MDX tooling; a scheduled sync workflow; a mobile app, a
 native client or push notifications; a dark/light mode toggle; a Content Security
 Policy.
 
-**The sign-in shell.** `src/components/sign-in-panel.tsx` renders an account
-panel on the home page. **There is no authentication behind it**, and it is built
-so it cannot mislead anyone: no form action, no network request, the password is
-never held in React state or stored, and the panel says accounts are not open
-both before and after a submit attempt. It exists so the signed-in experience can
-be designed before it is wired up. When real auth arrives, replace the submit
-handler and delete the notice — do not leave a form that looks like it works and
-does not.
+### Amended by the author: accounts, and the backend they need
+
+This section used to forbid "a database... or any backend endpoint" outright,
+and the site was purely static. The author asked for sign-in to be built, so
+that is now **narrowly** permitted, on these terms:
+
+- **The reading site stays static.** The register, the exposure chart, the
+  entity pages, the briefings, the home page and the feed are all still
+  prerendered and ship no session-dependent markup. Only `/account` and
+  `/auth/*` are dynamic, and they are dynamic because they await `cookies()`.
+  **If a static page ever starts reading the session, that is a regression** —
+  the home page's signed-in state is resolved client-side after mount
+  specifically to avoid it.
+- **No data is stored in this repository.** Supabase holds the rows. §6b rule 2
+  is unchanged and is not negotiable.
+- **The alerting service is still out of scope here.** The watcher that polls
+  `/register.json`, decides who to notify and sends is a separate service, for
+  the reason in §14.2: it is the component that has to stay up, and merging it
+  into the publication makes every notification change a deploy of the website.
+
+What this amendment does **not** license: gated content (nothing on this site is
+withheld from signed-out readers), payments, an admin interface, or storing
+anything about a reader beyond what `/privacy` enumerates.
+
+**`/privacy` was rewritten in the same change**, as §14.2 required — not
+afterwards. It now lists exactly what an account holds, and it describes the
+un-configured deployment accurately too.
+
+**The sign-in panel.** `src/components/sign-in-panel.tsx` is now real when
+`ACCOUNT_STORE=supabase`, and keeps its honest pre-launch behaviour otherwise —
+it sends nothing and says so, before and after a submit attempt, so a
+deployment without a Supabase project still cannot mislead anyone. The password
+field is **gone in both states**, because sign-in is a magic link and no
+password exists to collect.
 
 **Superseded:** an earlier version of this file said "no dashboards or charts,
 this is not a data product yet". That is no longer true — the register and the

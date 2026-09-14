@@ -215,6 +215,21 @@ export function assertLaunchReady(): void {
   if (process.env.NODE_ENV !== 'production') return;
   if (process.env.NOVUS_ALLOW_INCOMPLETE === '1') return;
 
+  // Build time only.
+  //
+  // This used to be unnecessary: every route was static, so the module was
+  // only ever evaluated while prerendering. Adding /account and /auth/* made
+  // some routes dynamic, and a dynamic route re-evaluates the root layout —
+  // and therefore this guard — on EVERY REQUEST. A preview built with
+  // NOVUS_ALLOW_INCOMPLETE=1 and then served without it answered static pages
+  // happily and returned 500 for the dynamic ones, which is a confusing way to
+  // discover a missing environment variable.
+  //
+  // The intent was always to refuse a BUILD, which is the moment the missing
+  // fact can still be fixed. A served request is far too late, and failing
+  // there breaks a deployment rather than preventing one.
+  if (process.env.NEXT_PHASE !== 'phase-production-build') return;
+
   const missing = missingLaunchInputs();
   if (missing.length === 0) return;
 

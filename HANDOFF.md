@@ -169,6 +169,48 @@ against a reader's watchlist and link straight to that entity's page. Register �
 feed → watchlist → entity page is now a closed loop, with the account layer the
 only part still unimplemented.
 
+### 4.22 Accounts were built, and §13 was amended rather than broken
+
+The author asked for sign-in across three messages. §13 forbade "a database...
+or any backend endpoint" and Rule 4 forbids installing a database client, so
+this could not be done quietly — the rule is amended in place, with its limits
+written down, the way Rule 2 was.
+
+The limits that matter: the reading site is still static (only `/account` and
+`/auth/*` are dynamic, out of 22 routes); no reader data is in this repository;
+and the alerting service is still out of scope here for the §14.2 reason.
+
+Three decisions inside it:
+
+- **Magic links, no password anywhere.** Not in the types, the database, or the
+  form. A password that does not exist cannot leak or be reused, and it removes
+  reset flows, strength rules and breach response from the project entirely.
+  The old shell's password input was deleted, not wired up.
+- **Row-level security is the guard, not careful code.** Every table restricts
+  rows to `auth.uid()`. That is why the anon key is safe in the browser. It
+  also means *not found* and *not permitted* are indistinguishable, which is
+  correct: it stops one reader probing for another's account.
+- **`/privacy` was rewritten in the same commit**, as §14.2 demanded. It
+  enumerates exactly what an account holds and stays accurate on a deployment
+  with no account store, because it branches on the real configuration.
+
+### 4.23 The launch guard had to become build-only
+
+`assertLaunchReady()` runs at module load in the root layout. While every route
+was static that only ever happened during prerendering. Adding dynamic routes
+changed it silently: a dynamic route re-evaluates the layout **per request**, so
+a preview built with `NOVUS_ALLOW_INCOMPLETE=1` and served without it answered
+static pages happily and returned 500 on `/account` — a confusing way to
+discover a missing variable, and a broken deployment rather than a prevented
+one.
+
+Now gated on `NEXT_PHASE === 'phase-production-build'`, which is what the
+docstring always claimed it did. Verified both ways: a build with missing
+inputs still fails with the list, and the served dynamic routes no longer throw.
+
+Found by serving the built site rather than by reading the diff. It would not
+have shown up in any static check.
+
 ## 4. Judgement calls I had to make
 
 Ordered roughly by how much they would cost to reverse.

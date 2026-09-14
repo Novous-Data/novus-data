@@ -17,7 +17,7 @@ import type { DisruptionSummary, EntityExposure } from '@/lib/disruptions';
 import { CATEGORY_LABELS, SEVERITY_LABELS, buildExposureMatrix, listDisruptions } from '@/lib/disruptions';
 import type { IssueSummary } from '@/lib/content';
 import { listIssues } from '@/lib/content';
-import { absoluteUrl } from '@/lib/env';
+import { absoluteUrl, accountsConfigured } from '@/lib/env';
 import { formatIssueLabel, formatLongDate, formatShortDate } from '@/lib/format';
 import { publicationJsonLd } from '@/lib/structured-data';
 
@@ -294,7 +294,7 @@ function Opening() {
         </div>
 
         <div className="lg:pt-14">
-          <SignInPanel />
+          <SignInPanel enabled={accountsConfigured()} />
         </div>
       </div>
     </Container>

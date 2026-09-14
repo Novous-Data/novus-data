@@ -191,3 +191,174 @@ Then confirm, with **no other edits**:
 
 If any of those needed a hand-edit, that is a bug in the site, not a chore.
 Tell me and I will fix it.
+
+---
+
+## Part 4 — Turning on accounts (Supabase)
+
+Optional and separate. The site deploys and runs perfectly well with no account
+store: leave `ACCOUNT_STORE` unset and the sign-in panel keeps its pre-launch
+behaviour, sending nothing anywhere.
+
+**Do this in order.** Steps 1–3 are yours — they need a Supabase account, and
+account access is out of scope for any agent working on this repo (Rule 7).
+
+### 1. Create the project
+
+1. Sign up at supabase.com and create a project. The free tier is enough.
+2. Choose a region close to your readers.
+3. Save the database password somewhere safe. You will not need it for this
+   site, but you cannot see it again.
+
+> **Free projects pause after about a week with no traffic.** Pre-launch, this
+> *will* happen to you and the site will report that sign-in failed. Unpausing
+> is one click in the dashboard. Don't spend an hour debugging code first.
+
+### 2. Turn on magic links, and turn off passwords
+
+In **Authentication → Providers → Email**:
+
+- Enable **Email**.
+- **Disable "Confirm password"** / password sign-in. This site has no password
+  field and no reset flow; leaving password auth enabled would create a way in
+  that the interface does not support.
+- Leave **"Confirm email"** on.
+
+In **Authentication → URL Configuration**:
+
+- **Site URL**: your deployed origin, e.g. `https://novusdata.com`.
+- **Redirect URLs**: add `https://<your-domain>/auth/callback` and, for local
+  work, `http://localhost:3000/auth/callback`.
+
+A magic link that redirects anywhere not on that list is rejected. That is the
+protection against somebody crafting a link that signs a reader in and bounces
+them to another site.
+
+### 3. Create the schema
+
+**SQL Editor → New query**, paste all of this, run it once.
+
+```sql
+-- Preferences attached to an identity. auth.users owns the identity itself;
+-- nothing here is or contains a credential.
+create table public.profiles (
+  id           uuid primary key references auth.users on delete cascade,
+  display_name text,
+  created_at   timestamptz not null default now()
+);
+
+create table public.watchlist_entities (
+  user_id   uuid not null references auth.users on delete cascade,
+  entity_id text not null,
+  primary key (user_id, entity_id)
+);
+
+create table public.watchlist_categories (
+  user_id  uuid not null references auth.users on delete cascade,
+  category text not null,
+  primary key (user_id, category)
+);
+
+create table public.alert_preferences (
+  user_id          uuid primary key references auth.users on delete cascade,
+  enabled          boolean not null default false,
+  channels         text[]  not null default '{}',
+  minimum_severity text    not null default 'moderate',
+  only_watchlist   boolean not null default true
+);
+
+-- ---------------------------------------------------------------------------
+-- Row-level security. THIS is what protects the data — not the secrecy of the
+-- anon key, which is meant to be public. Without these policies the anon key
+-- would read every row in the database.
+-- ---------------------------------------------------------------------------
+alter table public.profiles             enable row level security;
+alter table public.watchlist_entities   enable row level security;
+alter table public.watchlist_categories enable row level security;
+alter table public.alert_preferences    enable row level security;
+
+create policy "own profile" on public.profiles
+  for all using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy "own entities" on public.watchlist_entities
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own categories" on public.watchlist_categories
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own preferences" on public.alert_preferences
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- Create the rows at signup. A trigger rather than app code: if the reader
+-- closes the tab mid-callback, app code would never run and you would collect
+-- auth.users rows with no profile.
+--
+-- Keep this function TRIVIAL. If it throws, signup fails completely and nobody
+-- can create an account — which is why both inserts swallow conflicts.
+-- ---------------------------------------------------------------------------
+create function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  insert into public.profiles (id) values (new.id) on conflict do nothing;
+  insert into public.alert_preferences (user_id) values (new.id) on conflict do nothing;
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+```
+
+`security definer set search_path = ''` is the documented hardening — without
+it, a `security definer` function can be hijacked by manipulating the search
+path.
+
+### 4. Set the environment variables
+
+From **Project Settings → API**. Locally, into `.env.local` (git-ignored, never
+committed). On Vercel, into **Settings → Environment Variables**.
+
+| Key | Where to find it | Exposure |
+|---|---|---|
+| `ACCOUNT_STORE` | type `supabase` | — |
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL | Public |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon / publishable key | **Public by design** |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role key | **Secret. Server only.** |
+
+> **The one that can destroy this project.** `SUPABASE_SERVICE_ROLE_KEY`
+> bypasses every policy you just wrote. If it ever acquires a `NEXT_PUBLIC_`
+> prefix it is inlined into the browser bundle and every reader's data is
+> public. The code throws at startup if it sees `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`,
+> but that guard is a backstop, not permission to be careless. On Vercel, set it
+> for Production and Preview only — and if you ever suspect it leaked, rotate it
+> in the dashboard immediately and assume the old one is compromised.
+
+### 5. Check it works
+
+```
+npm run build && npm run start
+```
+
+Then, in a browser:
+
+1. Home page → enter your address → "Email me a link".
+2. Open the email, click the link. You should land on `/account`.
+3. Tick a category, save, reload — it should persist.
+4. Sign out. `/account` should now redirect you away.
+5. Sign back in, type `DELETE`, delete the account. Confirm in the Supabase
+   dashboard (**Authentication → Users**) that the row is gone, and that
+   `profiles` no longer holds it either — that is `on delete cascade` working.
+
+Do step 5 at least once before launch. Deletion is the hardest thing to test
+after you have real readers, and the easiest to get quietly wrong.
+
+### 6. Roll back
+
+Unset `ACCOUNT_STORE` and redeploy. The site returns to its pre-launch state
+with no accounts, no cookie and no database calls. Nothing else has to change,
+which is the point of keeping the reading site static.

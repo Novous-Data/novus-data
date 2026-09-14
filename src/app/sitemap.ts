@@ -14,7 +14,12 @@ import { toDate } from '@/lib/format';
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [issues, disruptions] = await Promise.all([listIssues(), listDisruptions()]);
 
-  const staticRoutes: MetadataRoute.Sitemap = ['/', ...footerNav.map((item) => item.href)]
+  // The Set is what keeps this correct now that the navigation itself carries a
+  // Home entry: '/' is listed first so the home page leads the sitemap whether
+  // or not the nav happens to include it, and never twice.
+  const staticRoutes: MetadataRoute.Sitemap = [
+    ...new Set(['/', ...footerNav.map((item) => item.href)]),
+  ]
     // /debug is development-only and 404s in production, so it is never listed.
     .filter((href) => !href.startsWith('/debug'))
     .map((href) => ({

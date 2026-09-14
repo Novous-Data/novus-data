@@ -12,8 +12,16 @@ export interface NavItem {
   label: string;
 }
 
-/** Shown in the header and the mobile menu. */
+/**
+ * Shown in the header and the mobile menu.
+ *
+ * Home leads and is named explicitly. The wordmark also links to `/`, which is
+ * the web's oldest convention, but a convention is not an affordance: a reader
+ * who is three pages deep should not have to know it. Both routes home now
+ * exist, and the labelled one costs a single nav item.
+ */
 export const primaryNav: NavItem[] = [
+  { href: '/', label: 'Home' },
   { href: '/disruptions', label: 'Disruptions' },
   { href: '/exposure', label: 'Exposure' },
   { href: '/briefings', label: 'Briefings' },

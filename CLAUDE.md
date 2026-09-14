@@ -430,8 +430,17 @@ dated.
 match a disruption against a reader's `watchlist.entityIds` (§6b) and link
 straight to `/entities/<id>`. That closes the loop between the three layers.
 
-The feed is advertised site-wide via `alternates.types` in the root layout, and
-it is statically generated (`dynamic = 'force-static'`) like everything else.
+It is statically generated (`dynamic = 'force-static'`) like everything else.
+
+**Feed discovery is a `<link>` in the root layout's tree, not
+`metadata.alternates.types` — and that is not a style preference.** Declaring it
+as metadata looked correct and rendered nothing: Next merges metadata per
+top-level field, so any page that sets its own `alternates` replaces the
+layout's object wholesale and takes `types` with it. Every page here sets
+`canonical`, so the feed link never appeared on a single route. Declared as an
+element instead, React hoists it into `<head>` everywhere. **Do not "tidy" it
+back into metadata** — it fails silently, on every page, with nothing in the
+build output to say so.
 
 ## 7. Dependencies
 

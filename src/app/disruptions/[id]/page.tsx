@@ -62,7 +62,7 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
         data={disruptionJsonLd(disruption, absoluteUrl(`/disruptions/${disruption.id}`))}
       />
 
-      <Container width="reading" className="pt-12 sm:pt-20">
+      <Container width="reading" className="pt-10 sm:pt-14">
         <p className="text-meta text-muted">
           <TextLink href="/disruptions" className="no-underline hover:underline">
             Disruptions
@@ -71,7 +71,7 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
 
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
           <StatusBadge status={disruption.status} />
-          <span className="text-meta text-muted">{CATEGORY_LABELS[disruption.category]}</span>
+          <span className="kicker kicker-muted">{CATEGORY_LABELS[disruption.category]}</span>
         </div>
 
         <h1 className="mt-4 font-serif text-title font-semibold text-fg">{disruption.title}</h1>

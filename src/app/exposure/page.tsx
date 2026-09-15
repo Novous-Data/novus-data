@@ -53,7 +53,7 @@ export default async function ExposurePage() {
         </div>
       </Container>
 
-      <Container className="mt-12">
+      <Container className="mt-6">
         <ExposureChart matrix={matrix} />
       </Container>
 

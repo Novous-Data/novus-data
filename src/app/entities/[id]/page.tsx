@@ -77,7 +77,7 @@ export default async function EntityPage(props: PageProps<'/entities/[id]'>) {
 
   return (
     <article>
-      <Container width="reading" className="pt-12 sm:pt-20">
+      <Container width="reading" className="pt-10 sm:pt-14">
         <p className="text-meta text-muted">
           <TextLink href="/entities" className="no-underline hover:underline">
             Companies and sectors
@@ -217,7 +217,7 @@ function ClaimEntry({ claim }: { claim: EntityClaim }) {
     <li id={`disruption-${disruption.id}`} className="border-t border-hairline py-6">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <StatusBadge status={disruption.status} />
-        <span className="text-meta text-muted">{CATEGORY_LABELS[disruption.category]}</span>
+        <span className="kicker kicker-muted">{CATEGORY_LABELS[disruption.category]}</span>
       </div>
 
       {/* inline-flex + min-h-11: a heading that is also the block's primary

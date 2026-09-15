@@ -25,12 +25,17 @@ export function PageHeader({
   width?: 'page' | 'reading';
 }) {
   return (
-    <Container width={width} className="pt-14 sm:pt-20">
-      {eyebrow ? <p className="mb-4 text-meta text-muted">{eyebrow}</p> : null}
-      <h1 className="max-w-[20ch] font-serif text-title font-semibold text-fg">{title}</h1>
+    <Container width={width} className="pt-10 sm:pt-14">
+      {eyebrow ? <p className="kicker kicker-muted mb-3">{eyebrow}</p> : null}
+      <h1 className="max-w-[22ch] font-serif text-title font-semibold text-fg">{title}</h1>
       {lede ? (
-        <div className="mt-5 max-w-reading text-subhead text-muted">{lede}</div>
+        <div className="mt-3 max-w-reading text-subhead text-muted">{lede}</div>
       ) : null}
+      {/* A rule under the masthead. The earlier note said a rule beneath every
+          page title is decoration — that holds for a web page, but a
+          publication's masthead is exactly where a rule carries meaning: it
+          closes the title block and opens the content. */}
+      <div className="mt-6 border-b border-rule" />
     </Container>
   );
 }

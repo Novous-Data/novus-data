@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { publication } from '@/config/publication';
 
 /**
- * The wordmark is typographic: Source Serif 4, semibold, tightened tracking.
+ * The wordmark is typographic: Newsreader, semibold, tightened tracking.
  *
  * No logo file was supplied, and the existing Novus Data logo must not be
  * redrawn or approximated from memory. When the real file arrives it replaces

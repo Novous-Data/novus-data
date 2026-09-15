@@ -87,31 +87,44 @@
 }
 
 @theme {
-  /* Typefaces. Source Serif 4 carries headings and issue titles; Inter carries
-     everything read as interface. Both are loaded by next/font in layout.tsx. */
-  --font-serif: var(--font-source-serif), Iowan Old Style, Georgia, Times New Roman, serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  /* Typefaces.
+     Newsreader carries everything editorial — headlines, ledes, register
+     summaries, issue bodies. Libre Franklin, a Franklin Gothic descendant and
+     the classic American newspaper sans, carries interface: navigation,
+     labels, metadata, buttons.
 
-  /* Type scale. Display sizes use clamp() so they respond continuously rather
-     than jumping at breakpoints. Tracking tightens as size increases. */
-  --text-display: clamp(2.375rem, 1.45rem + 3.9vw, 4.125rem);
-  --text-display--line-height: 1.04;
-  --text-display--letter-spacing: -0.023em;
+     That division is the point. On a news page the serif is what you READ and
+     the sans is what you OPERATE, and a publication that sets its body copy in
+     a UI sans reads as a web app about finance rather than a financial
+     publication. */
+  --font-serif: var(--font-serif-face), Iowan Old Style, Georgia, Times New Roman, serif;
+  --font-sans: var(--font-sans-face), ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
 
-  --text-title: clamp(1.875rem, 1.35rem + 2.3vw, 2.75rem);
-  --text-title--line-height: 1.1;
-  --text-title--letter-spacing: -0.018em;
+  /* Type scale.
+     Pulled down deliberately. The old top end (4.125rem display, 2.75rem
+     title) is landing-page scale — it makes an index page shout, and it is one
+     of the loudest tells of a generated design. A broadsheet reserves its
+     largest size for the lead story and sets everything else close to the
+     text. Tracking is looser than before because Newsreader is drawn more
+     openly than the previous face and over-tightened at the old values. */
+  --text-display: clamp(2.125rem, 1.5rem + 2.6vw, 3.25rem);
+  --text-display--line-height: 1.06;
+  --text-display--letter-spacing: -0.014em;
 
-  --text-heading: clamp(1.375rem, 1.2rem + 0.75vw, 1.6875rem);
-  --text-heading--line-height: 1.22;
-  --text-heading--letter-spacing: -0.012em;
+  --text-title: clamp(1.6875rem, 1.35rem + 1.5vw, 2.125rem);
+  --text-title--line-height: 1.14;
+  --text-title--letter-spacing: -0.011em;
 
-  --text-subhead: 1.1875rem;
-  --text-subhead--line-height: 1.5;
-  --text-subhead--letter-spacing: -0.006em;
+  --text-heading: clamp(1.25rem, 1.15rem + 0.45vw, 1.4375rem);
+  --text-heading--line-height: 1.26;
+  --text-heading--letter-spacing: -0.007em;
+
+  --text-subhead: 1.125rem;
+  --text-subhead--line-height: 1.52;
+  --text-subhead--letter-spacing: 0;
 
   --text-body: 1.0625rem;
-  --text-body--line-height: 1.65;
+  --text-body--line-height: 1.6;
 
   /* The issue-page reading size, per the brand spec: 1.125rem / 1.75. */
   --text-reading: 1.125rem;
@@ -160,9 +173,33 @@
     color: var(--text);
   }
 
-  /* Dates and issue numbers align into true columns. */
+  /* Editorial text is set in the serif; interface text is not.
+     `p` and `li` are what a reader reads, so they take the serif by default.
+     Anything that is a control, a label or a piece of metadata opts back out
+     through .text-meta or by sitting inside nav/button, below. */
+  p,
+  li,
+  blockquote,
+  figcaption,
+  dd {
+    font-family: var(--font-serif);
+  }
+
+  nav p,
+  nav li,
+  button,
+  label,
+  th,
+  .text-meta,
+  [data-ui] {
+    font-family: var(--font-sans);
+  }
+
+  /* Dates, counts and issue numbers align into true columns. Metadata is a
+     column of figures on a page like this, not running text. */
   time,
-  [data-numeric] {
+  [data-numeric],
+  .text-meta {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
   }
@@ -284,6 +321,41 @@
     max-width: 100%;
     overflow-x: auto;
   }
+
+/* ---------------------------------------------------------------------------
+   Newspaper furniture
+
+   Two devices a financial publication uses constantly and a generated layout
+   almost never does: the kicker and the section rule.
+
+   The kicker is the small letterspaced label above a headline that says what
+   KIND of thing follows — the category, the section, the status. It does the
+   work a coloured pill does on a dashboard, but it belongs to print and it
+   reads as editorial rather than as a UI component.
+
+   The section rule is a heavier line above a heading that opens a band of the
+   page. A hairline divides items; this divides sections. Having both is what
+   gives a broadsheet its structure.
+   --------------------------------------------------------------------------- */
+
+.kicker {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  line-height: 1.3;
+}
+
+.kicker-muted {
+  color: var(--text-muted);
+}
+
+.section-rule {
+  border-top: 2px solid var(--border-strong);
+  padding-top: 0.875rem;
+}
 
 /* ---------------------------------------------------------------------------
    Hero backdrop

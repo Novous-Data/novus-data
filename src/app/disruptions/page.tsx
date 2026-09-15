@@ -26,7 +26,7 @@ export default async function DisruptionsPage() {
         lede="The register: what is going wrong in physical trade right now, and how far along each problem is."
       />
 
-      <Container className="mt-12">
+      <Container className="mt-4">
         {disruptions.length === 0 ? (
           <EmptyRegister />
         ) : (
@@ -39,33 +39,38 @@ export default async function DisruptionsPage() {
                 <li key={disruption.id} className="border-t border-hairline">
                   <Link
                     href={`/disruptions/${disruption.id}`}
-                    className="group grid gap-x-8 gap-y-3 px-2 py-6 transition-colors hover:bg-surface sm:grid-cols-[9rem_1fr] sm:px-3"
+                    className="group grid gap-x-8 gap-y-2 px-2 py-4 transition-colors hover:bg-surface sm:grid-cols-[8.75rem_1fr] sm:px-3"
                   >
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 sm:block">
+                    {/* Status and category sit in a narrow rail, the way a
+                        broadsheet runs its section label beside the story
+                        rather than above it. */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:block">
                       <StatusBadge status={disruption.status} />
-                      <span className="block text-meta text-muted sm:mt-2">
+                      <span className="kicker kicker-muted block sm:mt-2">
                         {CATEGORY_LABELS[disruption.category]}
                       </span>
                     </div>
 
                     <div>
-                      <h2 className="font-serif text-[1.3125rem] font-semibold leading-snug text-fg transition-colors group-hover:text-link sm:text-[1.375rem]">
+                      <h2 className="font-serif text-[1.1875rem] font-semibold leading-[1.25] text-fg transition-colors group-hover:text-link sm:text-[1.25rem]">
                         {disruption.title}
                       </h2>
-                      <p className="mt-2 max-w-[62ch] text-[0.9375rem] text-muted">
+                      <p className="mt-1.5 max-w-[64ch] text-[0.9375rem] leading-[1.5] text-muted">
                         {disruption.summary}
                       </p>
-                      <p className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-meta text-muted">
+                      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-meta text-muted">
                         {updated ? (
                           <span>
                             Reviewed <time dateTime={disruption.updatedAt}>{updated}</time>
                             {stale ? ' — not reviewed recently' : ''}
                           </span>
                         ) : null}
+                        <span aria-hidden="true" className="text-accent">·</span>
                         <span data-numeric>
                           {disruption.exposures.length}{' '}
                           {disruption.exposures.length === 1 ? 'name affected' : 'names affected'}
                         </span>
+                        <span aria-hidden="true" className="text-accent">·</span>
                         <span data-numeric>
                           {disruption.sources.length}{' '}
                           {disruption.sources.length === 1 ? 'source' : 'sources'}

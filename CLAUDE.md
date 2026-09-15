@@ -547,6 +547,56 @@ issue pages included. Long-form legibility is handled by type, not by inverting
 to a light theme mid-site: body at `1.125rem` / `1.75` in `--text` (17:1), measure
 capped at 66ch. A light article page inside a dark site fragments the brand.
 
+### Typography — amended by the author
+
+The palette above is unchanged. The **typefaces and the type scale were
+replaced** on the author's instruction: the site was reading as generated
+rather than as a publication, and the brief is a classic financial paper.
+
+| Role | Was | Now |
+|---|---|---|
+| Editorial — headlines, ledes, summaries, issue bodies | Source Serif 4 | **Newsreader** |
+| Interface — navigation, labels, metadata, buttons | Inter | **Libre Franklin** |
+
+Three things about this, all of which are load-bearing:
+
+1. **The serif/sans split is a division of labour, not decoration.** On a news
+   page the serif is what you *read* and the sans is what you *operate*. So
+   `p`, `li`, `blockquote`, `figcaption` and `dd` take the serif in
+   `@layer base`; navigation, buttons, labels, table headers and `.text-meta`
+   take the sans back. **A publication that sets its body copy in a UI sans
+   reads as a web app about finance rather than as a financial publication** —
+   that single choice was the loudest tell.
+2. **Inter is the AI-default sans.** It is the face a generated page reaches
+   for. Reintroducing it undoes the point of this change.
+3. **The scale was pulled down, not just re-lettered.** The old top end
+   (`4.125rem` display, `2.75rem` title) is landing-page scale; it made an
+   index page shout. A broadsheet reserves its largest size for the lead story
+   and sets everything else close to the text. Display now tops out at
+   `3.25rem` and title at `2.125rem`, with looser tracking because Newsreader
+   is drawn more openly than the old face and over-tightened at the old values.
+
+**Density is part of the same change.** Section rhythm went from
+`mt-20 sm:mt-28` to `mt-12 sm:mt-16` and register rows from `py-6` to `py-4`,
+which fits roughly half again as much on a screen. Generous whitespace is the
+other loud tell; a financial paper is dense because its readers are scanning.
+
+**Two pieces of newspaper furniture** are defined in `globals.css` and should
+be used rather than reinvented:
+
+- `.kicker` — the small letterspaced uppercase label above a headline that says
+  what *kind* of thing follows. It does a coloured pill's job but belongs to
+  print. Use `.kicker-muted` where it should recede. **It is editorial
+  furniture, not a general small-text style** — do not apply it to form labels
+  or inline metadata.
+- `.section-rule` — a 2px rule that opens a band of the page. Hairlines divide
+  items; this divides sections. Having both is what gives a broadsheet its
+  structure.
+
+`PageHeader` now closes with a rule. The earlier note that "a rule under every
+page title is decoration" holds for a web page, but a masthead is exactly where
+a rule carries meaning: it closes the title block and opens the content.
+
 Tailwind utility names map onto these: `bg-ink`, `bg-surface`, `bg-surface-2`,
 `text-fg`, `text-muted`, `text-link`, `border-hairline`, `border-rule`,
 `border-accent`.

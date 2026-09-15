@@ -17,7 +17,7 @@ export default function AppleIcon() {
           justifyContent: 'center',
           backgroundColor: ogColors.ink,
           color: ogColors.text,
-          fontFamily: 'Source Serif 4',
+          fontFamily: 'Newsreader',
           fontSize: 116,
           fontWeight: 600,
           letterSpacing: '-0.03em',

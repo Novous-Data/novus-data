@@ -171,7 +171,7 @@ export const INPUT_LEDGER: InputRecord[] = [
     key: 'logo file',
     provenance: 'unanswered',
     usedOn: ['header wordmark', 'icons', 'social cards'],
-    note: 'Not supplied, so the wordmark is set typographically in Source Serif 4 and the icons are generated from the same treatment. The real logo should replace this — see HANDOFF.md.',
+    note: 'Not supplied, so the wordmark is set typographically in Newsreader and the icons are generated from the same treatment. The real logo should replace this — see HANDOFF.md.',
     requiredForLaunch: false,
   },
 ];

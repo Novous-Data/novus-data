@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Source_Serif_4 } from 'next/font/google';
+import { Libre_Franklin, Newsreader } from 'next/font/google';
 
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
@@ -11,16 +11,20 @@ import { env } from '@/lib/env';
 
 import './globals.css';
 
-const sourceSerif = Source_Serif_4({
+const newsreader = Newsreader({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-source-serif',
+  variable: '--font-serif-face',
+  // Newsreader is optically sized. Letting it range means headline sizes get
+  // the tighter display cut and body sizes get the more open text cut, which
+  // is what a newspaper does with a real type family.
+  axes: ['opsz'],
 });
 
-const inter = Inter({
+const libreFranklin = Libre_Franklin({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-sans-face',
 });
 
 export const metadata: Metadata = {
@@ -53,7 +57,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={`${sourceSerif.variable} ${inter.variable} h-full`}>
+    <html lang="en" className={`${newsreader.variable} ${libreFranklin.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-ink text-fg">
         {/* Feed discovery, declared as an element rather than through
             `metadata.alternates.types`.

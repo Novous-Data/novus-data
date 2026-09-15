@@ -47,7 +47,7 @@ export default async function DisruptionOpengraphImage({
           justifyContent: 'space-between',
           backgroundColor: ogColors.ink,
           padding: '64px 80px',
-          fontFamily: 'Source Serif 4',
+          fontFamily: 'Newsreader',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>

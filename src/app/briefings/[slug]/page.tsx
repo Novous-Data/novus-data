@@ -87,7 +87,7 @@ export default async function IssuePage(props: PageProps<'/briefings/[slug]'>) {
     <article>
       <JsonLd data={issueJsonLd(issue, canonicalFor(issue))} />
 
-      <Container width="reading" className="pt-12 sm:pt-20">
+      <Container width="reading" className="pt-10 sm:pt-14">
         <p className="text-meta text-muted">
           <TextLink href="/briefings" className="no-underline hover:underline">
             Briefings

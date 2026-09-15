@@ -22,7 +22,7 @@ export default function SubscribePage() {
         lede={`${publication.description} Each issue arrives by email.`}
       />
 
-      <Container width="reading" className="mt-12">
+      <Container width="reading" className="mt-6">
         <SubscribePanel heading="Subscribe by email" />
 
         <div className="mt-12 flex flex-col gap-4 text-muted">

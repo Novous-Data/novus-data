@@ -23,7 +23,7 @@ export default function CoveragePage() {
         lede="What Novus Data follows, why each of these matters, and what a briefing actually tells you about it."
       />
 
-      <Container width="reading" className="mt-12">
+      <Container width="reading" className="mt-6">
         {/* A contents list, because seven topics is more than fits on a screen.
             The numbers are positions in a list, not decoration. */}
         <nav aria-label="Topics on this page" className="border-t border-hairline pt-5">

@@ -7,7 +7,7 @@ import path from 'node:path';
  * The TTFs are committed rather than fetched, for three reasons: the image
  * generator needs TTF or WOFF and next/font serves WOFF2; a build should not
  * depend on a third-party request succeeding; and the files are small because
- * they are the Latin subset. Source Serif 4 is an SIL Open Font License face,
+ * they are the Latin subset. Newsreader is an SIL Open Font License face,
  * so redistributing it inside this repository is permitted.
  */
 const FONT_DIR = path.join(process.cwd(), 'src', 'assets', 'fonts');
@@ -18,8 +18,14 @@ function read(file: string): Buffer {
 
 export function serifFonts() {
   return [
-    { name: 'Source Serif 4', data: read('SourceSerif4-SemiBold.ttf'), weight: 600 as const, style: 'normal' as const },
-    { name: 'Source Serif 4', data: read('SourceSerif4-Bold.ttf'), weight: 700 as const, style: 'normal' as const },
+    // Newsreader publishes no static instances, and Satori cannot read a
+    // variable font — it throws on the fvar table. These two files were cut
+    // from the variable source with fontTools at wght 600/700 and opsz pinned
+    // to 60, the display end of the optical range, because they only ever
+    // render cards and icons at large sizes. Regenerate them the same way if
+    // the face is ever updated.
+    { name: 'Newsreader', data: read('Newsreader-SemiBold.ttf'), weight: 600 as const, style: 'normal' as const },
+    { name: 'Newsreader', data: read('Newsreader-Bold.ttf'), weight: 700 as const, style: 'normal' as const },
   ];
 }
 

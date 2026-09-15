@@ -105,7 +105,7 @@ export default function AlertsPage() {
         </section>
       </Container>
 
-      <Container width="reading" className="mt-12">
+      <Container width="reading" className="mt-6">
         <SubscribePanel heading="Get the briefing while alerts are built" />
       </Container>
     </>

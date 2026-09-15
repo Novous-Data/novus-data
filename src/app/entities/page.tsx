@@ -36,7 +36,7 @@ export default async function EntitiesPage() {
 
   return (
     <>
-      <Container className="pt-12 sm:pt-20">
+      <Container className="pt-10 sm:pt-14">
         <h1 className="font-serif text-title font-semibold text-fg">{title}</h1>
         <p className="mt-5 max-w-measure text-subhead text-muted">{description}</p>
         <p className="mt-4 max-w-measure text-muted">

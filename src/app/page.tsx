@@ -61,7 +61,7 @@ export default async function HomePage() {
       ) : null}
 
       {rest.length > 0 ? (
-        <Container className="mt-20 sm:mt-28">
+        <Container className="mt-12 sm:mt-16">
           <SectionHeading id="open">Also open</SectionHeading>
           <ul className="mt-6 border-b border-hairline">
             {rest.slice(0, 5).map((disruption) => (
@@ -90,7 +90,7 @@ export default async function HomePage() {
       ) : null}
 
       {matrix.rows.length > 0 ? (
-        <Container className="mt-20 sm:mt-28">
+        <Container className="mt-12 sm:mt-16">
           <SectionHeading id="exposure">Most exposed</SectionHeading>
           <p className="mt-3 max-w-measure text-muted">
             Companies and sectors that the open register currently reaches. Every assessment
@@ -108,7 +108,7 @@ export default async function HomePage() {
       ) : null}
 
       {latestIssue && lead ? (
-        <Container className="mt-20 sm:mt-28">
+        <Container className="mt-12 sm:mt-16">
           <SectionHeading id="briefing">From {publication.newsletter.name}</SectionHeading>
           <p className="mt-3 max-w-measure text-muted">{publication.newsletter.description}</p>
           <div className="mt-6 border-t border-hairline pt-6">
@@ -140,7 +140,7 @@ export default async function HomePage() {
         </Container>
       ) : null}
 
-      <Container className="mt-20 sm:mt-28">
+      <Container className="mt-12 sm:mt-16">
         <SectionHeading id="coverage">What Novus Data watches</SectionHeading>
         <dl className="mt-6 grid gap-x-14 md:grid-cols-2">
           {coverageTopics.map((topic) => (
@@ -155,7 +155,7 @@ export default async function HomePage() {
         </p>
       </Container>
 
-      <Container className="mt-20 sm:mt-28">
+      <Container className="mt-12 sm:mt-16">
         {/* min-w-0 on the children: a grid item defaults to min-width:auto and
             will not shrink below its longest unbreakable word otherwise. */}
         <div className="grid gap-8 md:grid-cols-2 [&>*]:min-w-0">
@@ -199,7 +199,7 @@ function LeadDisruption({ disruption }: { disruption: DisruptionSummary }) {
   const updated = formatLongDate(disruption.updatedAt);
 
   return (
-    <Container className="mt-20 sm:mt-28">
+    <Container className="mt-12 sm:mt-16">
       <SectionHeading id="latest">Leading the register</SectionHeading>
       <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-meta text-muted">
         <StatusBadge status={disruption.status} />
@@ -234,7 +234,7 @@ function LeadIssue({ issue }: { issue: IssueSummary }) {
   const date = formatLongDate(issue.publishedAt);
 
   return (
-    <Container className="mt-20 sm:mt-28">
+    <Container className="mt-12 sm:mt-16">
       <SectionHeading id="latest">Latest briefing</SectionHeading>
       <p className="mt-6 text-meta text-muted">
         {date ? <time dateTime={issue.publishedAt}>{date}</time> : null}
@@ -263,7 +263,7 @@ function LeadIssue({ issue }: { issue: IssueSummary }) {
  */
 function Opening() {
   return (
-    <Container className="relative isolate pt-14 sm:pt-20">
+    <Container className="relative isolate pt-10 sm:pt-14">
       {/* Decorative gridlines. See .grid-field in globals.css — no image, no
           motion, and it disappears under forced colours and prefers-contrast. */}
       <div className="grid-field" aria-hidden="true" />
@@ -384,9 +384,9 @@ function RegisterPulse({
 
 function Mission() {
   return (
-    <Container className="mt-20 sm:mt-28">
-      <div className="max-w-reading border-t border-hairline pt-8">
-        <p className="text-meta text-muted">Our mission</p>
+    <Container className="mt-12 sm:mt-16">
+      <div className="max-w-reading section-rule">
+        <p className="kicker kicker-muted">Our mission</p>
         <p className="mt-4 font-serif text-title font-semibold text-fg">{publication.mission}</p>
       </div>
     </Container>
@@ -420,7 +420,7 @@ function WhatWeDo() {
   ];
 
   return (
-    <Container className="mt-20 sm:mt-28">
+    <Container className="mt-12 sm:mt-16">
       <SectionHeading id="what-we-do">What we do at Novus Data</SectionHeading>
       <p className="mt-4 max-w-measure text-muted">
         Three things, and they feed each other. The register records the problem, the chart says
@@ -459,11 +459,11 @@ function WhatWeDo() {
  */
 function TheApp() {
   return (
-    <Container className="mt-20 sm:mt-28">
+    <Container className="mt-12 sm:mt-16">
       <div className="border border-hairline bg-surface p-7 sm:p-10">
         <div className="grid gap-8 md:grid-cols-[1.4fr_1fr] md:gap-14 [&>*]:min-w-0">
           <div>
-            <p className="text-meta text-muted">In development</p>
+            <p className="kicker">In development</p>
             <h2 className="mt-3 font-serif text-heading font-semibold text-fg">
               {publication.alerts.name}
             </h2>
@@ -494,7 +494,7 @@ function TheApp() {
 /** Two audiences, two different reasons. Stated separately because they differ. */
 function WhoItIsFor() {
   return (
-    <Container className="mt-20 sm:mt-28">
+    <Container className="mt-12 sm:mt-16">
       <SectionHeading id="who-for">Why it is worth your time</SectionHeading>
 
       <div className="mt-8 grid gap-x-16 gap-y-10 md:grid-cols-2 [&>*]:min-w-0">

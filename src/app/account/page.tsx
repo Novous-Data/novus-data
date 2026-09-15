@@ -47,7 +47,7 @@ export default async function AccountPage() {
 
   return (
     <>
-      <Container width="reading" className="pt-12 sm:pt-20">
+      <Container width="reading" className="pt-10 sm:pt-14">
         <h1 className="font-serif text-title font-semibold text-fg">Your account</h1>
         <p className="mt-4 break-words text-meta text-muted">
           {account.email}
@@ -67,7 +67,7 @@ export default async function AccountPage() {
         <form action={updateWatchlistAction} className="mt-6">
           <fieldset className="border-t border-hairline pt-5">
             <legend className="sr-only">Categories</legend>
-            <p className="text-meta text-muted">Kinds of disruption</p>
+            <p className="kicker kicker-muted">Kinds of disruption</p>
             <div className="mt-3 grid gap-x-8 sm:grid-cols-2">
               {DISRUPTION_CATEGORIES.map((category) => (
                 <label
@@ -89,7 +89,7 @@ export default async function AccountPage() {
 
           <fieldset className="mt-8 border-t border-hairline pt-5">
             <legend className="sr-only">Companies and sectors</legend>
-            <p className="text-meta text-muted">Companies and sectors</p>
+            <p className="kicker kicker-muted">Companies and sectors</p>
             {entities.length === 0 ? (
               <p className="mt-3 max-w-measure text-muted">
                 Nothing is on the exposure chart yet, so there is no name to follow. Names appear

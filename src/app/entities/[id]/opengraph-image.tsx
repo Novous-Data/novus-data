@@ -56,7 +56,7 @@ export default async function EntityOpengraphImage({
           justifyContent: 'space-between',
           backgroundColor: ogColors.ink,
           padding: '64px 80px',
-          fontFamily: 'Source Serif 4',
+          fontFamily: 'Newsreader',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>

@@ -211,6 +211,38 @@ inputs still fails with the list, and the served dynamic routes no longer throw.
 Found by serving the built site rather than by reading the diff. It would not
 have shown up in any static check.
 
+### 4.24 The typography was reset for a financial publication
+
+The author's read was that the site looked generated rather than published, and
+asked for something closer to a classic financial paper, keeping the palette.
+§9 said the reading surface was settled; it is amended in place rather than
+quietly contradicted, the way Rule 2 and §13 were.
+
+The palette did not change at all. What changed:
+
+- **Newsreader for editorial, Libre Franklin for interface.** The split is the
+  substance, not the names: on a news page the serif is what you read and the
+  sans is what you operate, so `p`/`li`/`blockquote` take the serif in
+  `@layer base` and controls take the sans back. Setting body copy in a UI sans
+  was the loudest single tell.
+- **Inter was specifically the problem.** It is the face a generated page
+  reaches for.
+- **The scale came down**, not just across — 4.125rem display to 3.25rem. The
+  old ceiling is landing-page scale and made index pages shout.
+- **Density**, which is the other tell. Roughly a third out of the vertical
+  rhythm; the register fits six entries where four fitted.
+- **`.kicker` and `.section-rule`** added as real newspaper furniture.
+
+**The generated images had to follow or shared links would have lied.** Social
+cards, the favicon and the apple icon render through Satori from committed TTFs
+and were still Source Serif, so every shared link would have shown a face the
+site no longer uses. See §4.5 for how the replacement statics were produced.
+
+**A stale line survived the first pass**: the CLAUDE.md directory map still
+described the committed TTFs as Source Serif after they had been replaced.
+Caught on the next review rather than by the build, because a comment cannot
+fail a typecheck.
+
 ## 4. Judgement calls I had to make
 
 Ordered roughly by how much they would cost to reverse.
@@ -254,19 +286,27 @@ ignore it. Delete it or move it whenever you like; nothing depends on it.
 
 The brand palette is described in the brief as derived from an existing Novus Data
 logo, but the file was not supplied. The brief forbids redrawing or approximating
-it, so I did neither. The wordmark is set in Source Serif 4 (`src/components/wordmark.tsx`)
+it, so I did neither. The wordmark is set in Newsreader (`src/components/wordmark.tsx`)
 and `icon.tsx` / `apple-icon.tsx` generate the icons from the same treatment.
 
 **When you supply the real logo:** replace `wordmark.tsx`, and replace the two
 icon routes with the file. That is the whole change.
 
-### 4.5 Source Serif 4 TTFs are committed to the repository
+### 4.5 Font TTFs are committed to the repository
 
-`src/assets/fonts/` holds two 53 KB TTFs. The image generator behind the icons and
+`src/assets/fonts/` holds two TTFs. The image generator behind the icons and
 social cards needs TTF or WOFF, and `next/font` serves WOFF2, so the font data has
 to come from somewhere. Committing it also means social card generation does not
-depend on a third-party request succeeding mid-build. Source Serif 4 is SIL Open
-Font License, so redistribution inside the repository is permitted.
+depend on a third-party request succeeding mid-build. Both the original Source
+Serif 4 and the current Newsreader are SIL Open Font License, so redistribution
+inside the repository is permitted.
+
+**Updated when the typography changed (§4.24).** The face is now Newsreader, and
+these two files are not shipped by Google — Newsreader publishes no static
+instances, and Satori throws on a variable font's `fvar` table. They were cut
+from the variable source with fontTools at wght 600/700, opsz pinned to 60. The
+method is recorded at the top of `src/lib/og.ts`; regenerate them the same way if
+the face is ever updated.
 
 ### 4.6 Cover images bypass `next/image`
 

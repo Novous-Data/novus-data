@@ -174,7 +174,8 @@ src/proxy.ts               Session refresh. NOT middleware.ts — renamed in Nex
 src/app/entities/          Company and sector pages, derived from the register. See 6c.
 src/app/register.json/     JSON Feed of the register — the alerting seam. See 6c.
 src/app/                   Routes, metadata routes, icons, error boundaries.
-src/assets/fonts/          Source Serif 4 TTFs, for icon and social card rendering.
+src/assets/fonts/          Newsreader TTFs, for icon and social card rendering.
+                           Static cuts from the variable source — see src/lib/og.ts.
 ```
 
 ## 6. Content architecture

@@ -1,0 +1,502 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ===========================================================================
+   Novus Data — brand tokens
+
+   The palette is derived from the existing Novus Data logo and is settled.
+   Do not reinterpret it during a polish pass.
+
+   Contrast, measured against --ink (#070C20):
+
+     --text        #F4F6FA   ~17.0:1   body text
+     --text-muted  #9395A0    ~6.5:1   metadata, secondary text
+     --accent-text #7B92BE    ~6.2:1   links, focus rings, interactive text
+     --accent      #4C618A    ~3.1:1   STRUCTURAL ONLY — fails AA for text
+
+   --accent is a border, a fill and a non-text mark. It is never the colour of
+   anything a reader reads or clicks. Use --accent-text for that.
+   =========================================================================== */
+
+:root {
+  --ink: #070c20;
+  --surface: #0e1529;
+  --surface-2: #161f38;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: #222d4a;
+  --text: #f4f6fa;
+  --text-muted: #9395a0;
+  --accent: #4c618a;
+  --accent-text: #7b92be;
+
+  /* ---------------------------------------------------------------------
+     Exposure chart — severity ramp.
+
+     Severity is magnitude, so the encoding is a SEQUENTIAL single-hue ramp,
+     not a categorical palette and not a traffic-light. On a dark surface the
+     ramp runs dark → light as severity rises, because the lightest step must
+     be the one that reads as "most".
+
+     Validated as an ordinal ramp against --ink: monotone lightness, adjacent
+     lightness gaps above the floor, hue spread 3°, and the darkest step at
+     3.06:1 — clear of the 3:1 required of a non-text mark. The middle step is
+     --accent-text itself, which ties the chart to the rest of the system.
+
+       low      #44608F   3.06:1
+       moderate #7B92BE   6.19:1
+       high     #B4C8EA  11.45:1
+
+     Severity is never carried by colour alone: every cell also states its
+     level in visually-hidden text, the legend is always present, and a full
+     table view sits below the chart.
+     --------------------------------------------------------------------- */
+  --sev-low: #44608f;
+  --sev-moderate: #7b92be;
+  --sev-high: #b4c8ea;
+
+  /* Disruption status. Always rendered with its label beside it — a dot alone
+     never carries the state. Amber is the one warm value in the system and is
+     reserved for "active"; it is not available as a chart series. */
+  --status-active: #e0a73e;
+  --status-easing: #7b92be;
+  --status-watch: #9395a0;
+  --status-resolved: #6e7280;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  /* Colours. Utility names are chosen so the intent reads at the call site:
+     bg-ink, bg-surface, text-fg, text-muted, text-link, border-hairline. */
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-hairline: var(--border);
+  --color-rule: var(--border-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-link: var(--accent-text);
+  --color-sev-low: var(--sev-low);
+  --color-sev-moderate: var(--sev-moderate);
+  --color-sev-high: var(--sev-high);
+  --color-status-active: var(--status-active);
+  --color-status-easing: var(--status-easing);
+  --color-status-watch: var(--status-watch);
+  --color-status-resolved: var(--status-resolved);
+}
+
+@theme {
+  /* Typefaces.
+     Newsreader carries everything editorial — headlines, ledes, register
+     summaries, issue bodies. Libre Franklin, a Franklin Gothic descendant and
+     the classic American newspaper sans, carries interface: navigation,
+     labels, metadata, buttons.
+
+     That division is the point. On a news page the serif is what you READ and
+     the sans is what you OPERATE, and a publication that sets its body copy in
+     a UI sans reads as a web app about finance rather than a financial
+     publication. */
+  --font-serif: var(--font-serif-face), Iowan Old Style, Georgia, Times New Roman, serif;
+  --font-sans: var(--font-sans-face), ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+
+  /* Type scale.
+     Pulled down deliberately. The old top end (4.125rem display, 2.75rem
+     title) is landing-page scale — it makes an index page shout, and it is one
+     of the loudest tells of a generated design. A broadsheet reserves its
+     largest size for the lead story and sets everything else close to the
+     text. Tracking is looser than before because Newsreader is drawn more
+     openly than the previous face and over-tightened at the old values. */
+  --text-display: clamp(2.125rem, 1.5rem + 2.6vw, 3.25rem);
+  --text-display--line-height: 1.06;
+  --text-display--letter-spacing: -0.014em;
+
+  --text-title: clamp(1.6875rem, 1.35rem + 1.5vw, 2.125rem);
+  --text-title--line-height: 1.14;
+  --text-title--letter-spacing: -0.011em;
+
+  --text-heading: clamp(1.25rem, 1.15rem + 0.45vw, 1.4375rem);
+  --text-heading--line-height: 1.26;
+  --text-heading--letter-spacing: -0.007em;
+
+  --text-subhead: 1.125rem;
+  --text-subhead--line-height: 1.52;
+  --text-subhead--letter-spacing: 0;
+
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.6;
+
+  /* The issue-page reading size, per the brand spec: 1.125rem / 1.75. */
+  --text-reading: 1.125rem;
+  --text-reading--line-height: 1.75;
+
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.45;
+  --text-meta--letter-spacing: 0.012em;
+
+  /* Widths. `page` is the outer measure, `reading` the prose column, and
+     `measure` the hard 66-character cap on long-form body text. */
+  --container-page: 68rem;
+  /* Wide enough that --container-measure below is what actually caps the
+     reading column. At 44rem the container bound first and body copy came out
+     at ~56 characters, short of the 66 the brand spec calls for. */
+  --container-reading: 52rem;
+  --container-measure: 66ch;
+}
+
+@layer base {
+  html {
+    /* Anchor links land below the sticky header instead of under it. */
+    scroll-padding-top: 2rem;
+  }
+
+  body {
+    background-color: var(--ink);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* One visible focus treatment for the whole site. Any component that hides
+     it must provide its own, but nothing currently does. */
+  :focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* Editorial text is set in the serif; interface text is not.
+     `p` and `li` are what a reader reads, so they take the serif by default.
+     Anything that is a control, a label or a piece of metadata opts back out
+     through .text-meta or by sitting inside nav/button, below. */
+  p,
+  li,
+  blockquote,
+  figcaption,
+  dd {
+    font-family: var(--font-serif);
+  }
+
+  nav p,
+  nav li,
+  button,
+  label,
+  th,
+  .text-meta,
+  [data-ui] {
+    font-family: var(--font-sans);
+  }
+
+  /* Dates, counts and issue numbers align into true columns. Metadata is a
+     column of figures on a page like this, not running text. */
+  time,
+  [data-numeric],
+  .text-meta {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* A long unbroken string in an issue title must not force a scrollbar. */
+  h1,
+  h2,
+  h3,
+  p,
+  li,
+  figcaption {
+    overflow-wrap: break-word;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Prose styling for sanitised issue HTML, tuned to the brand tokens. Applied
+   as `prose prose-novus` on the issue body container.
+
+   Deliberately NOT inside @layer components. The typography plugin registers
+   `.prose` in Tailwind's utilities layer, which the cascade resolves after
+   components — so a layered override here would lose to the plugin's own
+   defaults and the issue body would render in gray-700 on navy. Unlayered
+   rules beat layered ones, which is what makes these win.
+   --------------------------------------------------------------------------- */
+  .prose-novus {
+    --tw-prose-body: var(--text);
+    --tw-prose-headings: var(--text);
+    --tw-prose-lead: var(--text-muted);
+    --tw-prose-links: var(--accent-text);
+    --tw-prose-bold: var(--text);
+    --tw-prose-counters: var(--text-muted);
+    --tw-prose-bullets: var(--accent);
+    --tw-prose-hr: var(--border);
+    --tw-prose-quotes: var(--text);
+    --tw-prose-quote-borders: var(--accent);
+    --tw-prose-captions: var(--text-muted);
+    --tw-prose-code: var(--text);
+    --tw-prose-pre-code: var(--text);
+    --tw-prose-pre-bg: var(--surface);
+    --tw-prose-th-borders: var(--border-strong);
+    --tw-prose-td-borders: var(--border);
+
+    font-size: var(--text-reading);
+    line-height: 1.75;
+    max-width: var(--container-measure);
+  }
+
+  .prose-novus :is(h2, h3, h4) {
+    font-family: var(--font-serif);
+    letter-spacing: -0.012em;
+  }
+
+  .prose-novus h2 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    margin-top: 2.75em;
+    margin-bottom: 0.75em;
+  }
+
+  .prose-novus h3 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    margin-top: 2em;
+    margin-bottom: 0.6em;
+  }
+
+  .prose-novus p {
+    margin-top: 0;
+    margin-bottom: 1.45em;
+  }
+
+  .prose-novus a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: color-mix(in srgb, var(--accent-text) 45%, transparent);
+    transition: text-decoration-color 120ms ease;
+  }
+
+  .prose-novus a:hover {
+    text-decoration-color: var(--accent-text);
+  }
+
+  .prose-novus blockquote {
+    font-style: normal;
+    border-left-width: 2px;
+    padding-left: 1.25em;
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+  }
+
+  .prose-novus blockquote p:first-of-type::before,
+  .prose-novus blockquote p:last-of-type::after {
+    content: "";
+  }
+
+  .prose-novus :is(img, figure) {
+    border-radius: 2px;
+  }
+
+  .prose-novus figcaption {
+    font-family: var(--font-sans);
+    font-size: var(--text-meta);
+    line-height: 1.45;
+  }
+
+  .prose-novus table {
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prose-novus :is(code, pre) {
+    font-size: 0.875em;
+  }
+
+  /* Issue bodies can contain wide tables. Let the table scroll, not the page. */
+  .prose-novus table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+/* ---------------------------------------------------------------------------
+   Newspaper furniture
+
+   Two devices a financial publication uses constantly and a generated layout
+   almost never does: the kicker and the section rule.
+
+   The kicker is the small letterspaced label above a headline that says what
+   KIND of thing follows — the category, the section, the status. It does the
+   work a coloured pill does on a dashboard, but it belongs to print and it
+   reads as editorial rather than as a UI component.
+
+   The section rule is a heavier line above a heading that opens a band of the
+   page. A hairline divides items; this divides sections. Having both is what
+   gives a broadsheet its structure.
+   --------------------------------------------------------------------------- */
+
+.kicker {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  line-height: 1.3;
+}
+
+.kicker-muted {
+  color: var(--text-muted);
+}
+
+.section-rule {
+  border-top: 2px solid var(--border-strong);
+  padding-top: 0.875rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Hero backdrop
+
+   Gridlines, because this is a site about measurement — not an ornament. One
+   repeating-linear-gradient plus a mask that fades it out before it reaches
+   the headline: no image to load, no layout cost, no JavaScript, and nothing
+   that moves. Purely decorative, so it is aria-hidden at the call site and
+   removed where decoration would fight legibility.
+   --------------------------------------------------------------------------- */
+
+.grid-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--border) 0,
+    var(--border) 1px,
+    transparent 1px,
+    transparent 5.5rem
+  );
+  /* Fades from the top-left, where the masthead sits, out to nothing well
+     before the body copy — so text always sits on flat --ink, never on a line.
+     The ellipse is sized in rem rather than per cent deliberately: a percentage
+     mask scales with the hero, which is roughly twice as tall on a phone, and
+     the lines would then run the whole way down behind the headline. */
+  -webkit-mask-image: radial-gradient(38rem 20rem at 6rem -4rem, #000 0%, transparent 72%);
+  mask-image: radial-gradient(38rem 20rem at 6rem -4rem, #000 0%, transparent 72%);
+}
+
+/* ---------------------------------------------------------------------------
+   Exposure chart
+
+   A CSS grid, not a charting library. Every cell is a real element, so it can
+   be a link, hold visually-hidden text and take keyboard focus — which a
+   canvas chart cannot.
+   --------------------------------------------------------------------------- */
+
+.exposure-cell {
+  position: relative;
+  display: block;
+  min-height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+/* Confidence is a second, non-colour channel: a solid edge for something
+   reported, a dashed edge for something inferred or estimated. The label is
+   always in the cell's hidden text and in the hover card as well. */
+.exposure-cell[data-confidence="reported"] {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.exposure-cell[data-confidence="inferred"],
+.exposure-cell[data-confidence="estimated"] {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+.exposure-cell[data-severity="low"] { background-color: var(--sev-low); }
+.exposure-cell[data-severity="moderate"] { background-color: var(--sev-moderate); }
+.exposure-cell[data-severity="high"] { background-color: var(--sev-high); }
+
+/* No assessment is an absence, not a zero. It reads as empty ground. */
+.exposure-cell[data-severity="none"] {
+  background-color: transparent;
+  border: 1px solid var(--border);
+}
+
+.exposure-cell:hover,
+.exposure-cell:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+
+/* The hover card. CSS only — no script runs on this page. */
+.exposure-card {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max(17rem, 100%);
+  padding: 0.75rem 0.875rem;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+
+.exposure-cell:hover .exposure-card,
+.exposure-cell:focus-visible .exposure-card {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Cards on the last columns would otherwise run off the right edge. */
+.exposure-col-late .exposure-card {
+  left: auto;
+  right: 0;
+}
+
+/* Where colour is unavailable or unreliable — forced colours, a high-contrast
+   preference, or print — severity falls back to a texture channel at 45° and
+   its 135° mirror, which is what the ramp cannot do on its own. */
+@media (forced-colors: active), (prefers-contrast: more), print {
+  .exposure-cell[data-severity="moderate"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent 0 3px,
+      color-mix(in srgb, var(--ink) 45%, transparent) 3px 6px
+    );
+  }
+  .exposure-cell[data-severity="high"] {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 2px,
+      color-mix(in srgb, var(--ink) 55%, transparent) 2px 4px
+    );
+  }
+  .exposure-cell { forced-color-adjust: none; }
+
+  /* Decoration is the first thing to go when a reader has asked for contrast. */
+  .grid-field { display: none; }
+}
+
+/* Motion responds to user action only, and not at all when the reader has
+   asked for less of it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -68,7 +68,26 @@ function Matrix({
   rows: EntityExposure[];
 }) {
   return (
-    <table className="w-full border-collapse">
+    /*
+     * The table is `w-full` but capped at roughly one column-width per
+     * disruption.
+     *
+     * Without the cap, `table-layout: auto` divides all remaining width
+     * between however many columns exist — so at two disruptions each cell is
+     * ~360px wide and the chart reads as a bar chart, with a severity fill so
+     * large it dominates the page. That is not an edge case: it is the state
+     * the register is in for its first months, which is exactly when the
+     * chart is being judged.
+     *
+     * Capping the table instead of the cells keeps `table-layout: auto`, so
+     * the column headers still size to their titles. Once there are enough
+     * columns the cap exceeds the container and `w-full` takes over again,
+     * which is the behaviour the nine-column ceiling was designed around.
+     */
+    <table
+      className="w-full border-collapse"
+      style={{ maxWidth: `calc(16rem + ${columns.length} * 11rem)` }}
+    >
       <caption className="sr-only">
         Exposure of tracked companies and sectors to open supply chain disruptions. Each cell
         gives the severity and the confidence of the assessment.
@@ -86,7 +105,7 @@ function Matrix({
             >
               <Link
                 href={`/disruptions/${disruption.id}`}
-                className="group block"
+                className="group block min-h-11"
                 title={disruption.title}
               >
                 <span

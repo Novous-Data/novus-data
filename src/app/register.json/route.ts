@@ -34,6 +34,15 @@ import { absoluteUrl } from '@/lib/env';
  * of lines in the service, it needs no state here, and every value it compares
  * is one a human actually wrote and dated.
  *
+ * ---------------------------------------------------------------------------
+ * EVERY FIELD HERE IS ONE A HUMAN WROTE
+ *
+ * Nothing in this feed is derived beyond `severity`, which is a real maximum
+ * across the open exposures rather than a blend — the same rule the entity
+ * pages hold to. There is deliberately no composite score, no trend and no
+ * count-based ranking, because a number that travels without its page is read
+ * with far less care than one that sits next to its sources.
+ *
  * `id` is the disruption's permanent id — the same string that is its URL. It
  * is stable across rebuilds and renames, so it is usable as a notification key
  * exactly as §14.2 requires of `slug`.
@@ -50,6 +59,20 @@ interface NovusExtension {
   severity: Severity | null;
   /** Entity ids reached, so a watcher can match against a reader's watchlist. */
   entities: string[];
+  /**
+   * Those same ids mapped to display names.
+   *
+   * `entities` stays a plain id array because matching a watchlist is the
+   * common case and an array of strings is the cheapest thing to intersect.
+   * But a notification has to name something a person recognises, and a client
+   * with ids alone has two bad options: title-case the slug, which gets
+   * "Bhp Group" wrong the first time it matters, or fetch one entity page per
+   * id on every poll.
+   *
+   * A map rather than a second array so it cannot fall out of order with
+   * `entities`, and so a consumer that does not need names can ignore one key.
+   */
+  entityNames: Record<string, string>;
   /** The review date, repeated in plain ISO for consumers that ignore dates. */
   reviewedAt: string;
   startedAt: string;
@@ -90,6 +113,9 @@ export async function GET() {
         category: disruption.category,
         severity: worstSeverity(disruption),
         entities: disruption.exposures.map((exposure) => exposure.entity.id),
+        entityNames: Object.fromEntries(
+          disruption.exposures.map((exposure) => [exposure.entity.id, exposure.entity.name]),
+        ),
         reviewedAt: disruption.updatedAt,
         startedAt: disruption.startedAt,
         stale_after_days: STALE_AFTER_DAYS,

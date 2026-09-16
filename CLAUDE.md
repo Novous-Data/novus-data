@@ -347,6 +347,16 @@ The matrix is capped at nine columns so it never needs a horizontal scroll
 container, which would clip the CSS hover cards. Below `lg` the matrix is
 replaced by a per-entity list — same data, read down instead of across.
 
+**The table is also capped in width, at roughly one column-width per
+disruption**, and that is not cosmetic. `table-layout: auto` divides all
+remaining width between however many columns exist, so at two disruptions each
+cell was ~360px wide and the chart read as a bar chart, with a severity fill
+large enough to dominate the page. That is not an edge case — it is the state
+the register is in for its first months, which is exactly when the chart is
+being judged. Capping the table rather than the cells keeps `table-layout:
+auto`, so headers still size to their titles, and once there are enough columns
+the cap exceeds the container and `w-full` takes over again.
+
 ## 6b. The account layer
 
 `src/lib/accounts/` is a **contract with no implementation behind it**, built
@@ -475,6 +485,22 @@ dated.
 `_novus.entities` carries the entity ids reached, which is what lets a watcher
 match a disruption against a reader's `watchlist.entityIds` (§6b) and link
 straight to `/entities/<id>`. That closes the loop between the three layers.
+
+**`_novus.entityNames` maps those same ids to display names**, and it exists
+because building the alerts prototype made the gap obvious. `entities` stays a
+plain id array — matching a watchlist is the common case and an array of
+strings is the cheapest thing to intersect — but a notification has to name
+something a person recognises, and a client holding ids alone has two bad
+options: title-case the slug, which gets "Bhp Group" wrong the first time it
+matters, or fetch one entity page per id on every poll. It is a map rather than
+a parallel array so it cannot fall out of order with `entities`, and so a
+consumer that does not need names can ignore one key.
+
+Nothing else in the feed is derived. `severity` is a real maximum across the
+open exposures rather than a blend, matching the entity pages; there is no
+composite score, no trend and no count-based ranking, because a number that
+travels without its page is read with far less care than one sitting next to
+its sources.
 
 It is statically generated (`dynamic = 'force-static'`) like everything else.
 

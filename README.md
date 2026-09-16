@@ -32,8 +32,16 @@ npm run dev              # http://localhost:3000
 
 ## Commands
 
+**Start with `npm run doctor`.** It reports where the project stands and the one
+thing to do next, and it reads the same ledger the production build refuses on,
+so it cannot contradict the build.
+
 | Command | What it does |
 |---|---|
+| `npm run doctor` | Where the project stands and the next action. `-- --next` for one line |
+| `npm run new-disruption` | Interactive scaffolder for a register entry. Validates every field against what the loader enforces, so nothing is silently dropped |
+| `npm run review` | The weekly register review as a worklist, soonest-to-go-stale first. `-- --due` for only what is due |
+| `npm run check` | `typecheck` + `lint` + `doctor`. Run before committing |
 | `npm run dev` | Development server |
 | `npm run build` | Production build. **Fails if a launch-critical input is still missing** — see below |
 | `npm run start` | Serve a production build locally |
@@ -41,6 +49,9 @@ npm run dev              # http://localhost:3000
 | `npm run lint` | ESLint |
 | `npm run sync-issues` | Pull new issues from the Beehiiv feed into `content/issues/` |
 | `npm run preview` | Build a single-file review preview at `preview/novus-data-preview.html` |
+
+New to the codebase, or back after a while? **`START-HERE.md`** is a task index:
+"I want to change X" → the file to open.
 
 ## Environment variables
 

@@ -154,6 +154,10 @@ content/issues/            The issue archive of record. One .md per issue.
 content/disruptions/       The disruption register. One .md per problem.
 scripts/sync-issues.ts     Pulls new issues from Beehiiv RSS. The ONLY Beehiiv code.
 scripts/build-preview.ts   Review tooling. Folds the built site into one HTML file.
+scripts/doctor.ts          State of the project + the next action. Reads INPUT_LEDGER.
+scripts/new-disruption.ts  Register scaffolder. Mirrors the loader's validation.
+scripts/review-register.ts The review worklist, by how close each entry is to stale.
+scripts/lib/cli.ts         Shared colour, prompting and .env.local reading.
 src/config/                Every fact the site states, and the navigation.
   publication.ts             The facts. Pure data, no side effects, safe anywhere.
   input-ledger.ts            Where each fact came from + the launch guard. SERVER ONLY.
@@ -643,13 +647,28 @@ four answers here.**
 ## 12. Commands
 
 ```
-npm run dev           development server
-npm run build         production build (strict — fails on unanswered inputs)
-npm run typecheck     tsc --noEmit
-npm run lint          eslint
-npm run sync-issues   pull new issues from Beehiiv
-npm run preview       build the single-file review preview
+npm run doctor           where the project stands + the next action (--next, --strict)
+npm run new-disruption   scaffold a register entry (--template for a blank file)
+npm run review           the register review worklist (--due for what is due)
+npm run check            typecheck + lint + doctor
+npm run dev              development server
+npm run build            production build (strict — fails on unanswered inputs)
+npm run typecheck        tsc --noEmit
+npm run lint             eslint
+npm run sync-issues      pull new issues from Beehiiv
+npm run preview          build the single-file review preview
 ```
+
+The first three are author tooling, added because the information they surface
+already existed but needed a dev server and a browser to read. **`doctor` reads
+the same `INPUT_LEDGER` the build refuses on**, so the two cannot drift.
+
+**`new-disruption` duplicates the loader's validation on purpose**, because the
+register's strictness fails *silently on the page* — an exposure missing one of
+its four required fields simply does not render. If
+`src/lib/disruptions/sources/local-files.ts` ever changes what it enforces,
+change `scripts/new-disruption.ts` in the same commit. A scaffolder that writes
+files the loader rejects is worse than no scaffolder.
 
 ## 13. Out of scope for this repository
 
@@ -804,6 +823,22 @@ makes about itself, and it is the first thing a sceptical analyst will look for.
 If the enforcement in `sources/local-files.ts` ever changes, **change this page
 in the same commit** — a published standard the code does not actually enforce
 is worse than no published standard.
+
+### The scripts may import from `src/`, and the reverse is still forbidden
+
+`no-restricted-imports` stops `src/` reaching into `scripts/`, because that
+would give the website a runtime dependency on a build tool. The other direction
+is fine and is how `doctor` and `review` stay honest: they read the real ledger
+and the real register loader rather than a second copy of the rules. `tsx`
+resolves the `@/*` alias from `tsconfig.json`, so scripts import exactly the way
+the site does.
+
+Two mechanical notes for anyone editing them. `tsx` compiles these files as
+CommonJS, so **there is no top-level await** — each script wraps its work in
+`main()`. And `.env.local` must be loaded *before* any module that captures an
+environment variable at load time (`DISRUPTIONS_DIRECTORY` does), which is why
+the site modules are pulled in with dynamic `import()` inside `main()` rather
+than static imports that would hoist above the call.
 
 ## 15. Open questions and TODOs
 

@@ -43,6 +43,7 @@ so it cannot contradict the build.
 | `npm run review` | The weekly register review as a worklist, soonest-to-go-stale first. `-- --due` for only what is due |
 | `npm run check` | `typecheck` + `lint` + `doctor`. Run before committing |
 | `npm run dev` | Development server |
+| `npm run dev:demo` | Development server against the sample archive and register — 16 placeholder issues and 6 placeholder disruptions, so every page has something on it |
 | `npm run build` | Production build. **Fails if a launch-critical input is still missing** — see below |
 | `npm run start` | Serve a production build locally |
 | `npm run typecheck` | `tsc --noEmit` |

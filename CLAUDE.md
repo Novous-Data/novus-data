@@ -96,7 +96,15 @@ Two fenced exceptions, both `[SAMPLE]`-prefixed, both unreachable without
 `CONTENT_SOURCE=fixtures`, and both throwing at module load if a production
 build touches them:
 
-- `src/lib/content/sources/fixtures.ts` — placeholder issues.
+- `src/lib/content/sources/fixtures.ts` — placeholder issues. **Sixteen of
+  them, deliberately awkward rather than tidy**, because most of the archive's
+  behaviour only appears above a threshold: `/briefings` groups by year only
+  above `GROUP_ARCHIVE_ABOVE` (12), so with three fixtures that layout was
+  unreachable. The set keeps a null `issueNumber`, an unparseable
+  `publishedAt`, a title that wraps twice, an issue with no excerpt and one
+  with no body. Keep at least one of each if you edit it — they are what make
+  the layer's rules visible instead of theoretical. `npm run dev:demo` runs
+  against them.
 - `src/lib/disruptions/sources/fixtures.ts` — placeholder register entries.
   **Every company in it is invented.** Attaching a made-up exposure to a real
   listed company would read as a sourced claim about a real business, which is
@@ -678,6 +686,7 @@ npm run new-disruption   scaffold a register entry (--template for a blank file)
 npm run review           the register review worklist (--due for what is due)
 npm run check            typecheck + lint + doctor
 npm run dev              development server
+npm run dev:demo         development server against the sample archive and register
 npm run build            production build (strict — fails on unanswered inputs)
 npm run typecheck        tsc --noEmit
 npm run lint             eslint

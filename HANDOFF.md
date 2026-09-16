@@ -766,6 +766,11 @@ exposures — proves the whole machine and tells you immediately whether the
 authoring format is workable in practice. Do this before writing another line of
 code.
 
+**Use `npm run new-disruption`.** It prompts every required field and validates
+each answer against the rules `sources/local-files.ts` enforces, so you cannot
+write a file that silently fails to render. `npm run doctor` then reports
+anything that was refused, without needing a dev server.
+
 Expect the first one to be slow. Finding a mechanism you can actually source for
 a named company is the hard part, and that difficulty is the point: it is what
 the chart is promising the reader.
@@ -780,10 +785,16 @@ sector-heavy, add companies only where a filing or a statement supports it, and
 let the confidence column carry the difference. A chart that is mostly
 `estimated` is not worth publishing.
 
-**4. Emit a machine-readable feed.** Still the first piece of app work, and the
-register makes it more valuable than before: a feed of register changes is
-exactly what an alerts service needs to watch. `/feed.json` reading
-`listDisruptions()` and `listIssues()` is small and needs no backend.
+**4. ~~Emit a machine-readable feed.~~ Done — and it is the register, not the
+issues.** `/register.json` ships today as JSON Feed 1.1, statically generated.
+It is a feed of the *register* rather than of `listIssues()`, because alerts
+fire on a disruption opening, escalating or being re-reviewed, not on a
+newsletter going out. Items carry current state rather than events, because
+this repository has no event log to emit and inventing transitions would be a
+fabrication. `_novus.entityNames` was added later so a notification can name a
+company rather than a slug. See CLAUDE.md §6c. An *issues* feed remains a
+reasonable reading convenience and is still unbuilt; it is not a prerequisite
+for anything.
 
 **5. Then the alerts app — and keep its state out of this repository.** Device
 tokens, per-reader preferences and delivery logs are mutable, per-user and
@@ -807,7 +818,37 @@ the site displays a live number it inherits an obligation to be right about it,
 and showing last week's rate as though it were today's would undo more
 credibility than the whole site builds.
 
-**7. Smaller things:** a CI workflow (the repo has none — nothing currently
-catches a lint or type regression before a deploy); a CSP in report-only mode
+**7. Smaller things:** a CI workflow (the repo still has none, so nothing
+catches a lint or type regression before a deploy — `npm run check` is the
+local equivalent and should be run before every push); a CSP in report-only mode
 after cutover; analytics only if `/privacy` is updated in the same change; search
 or filtering on the register once it passes roughly thirty entries.
+
+---
+
+## 11. Documents that live outside this repository
+
+Four working documents were produced alongside the code and published as
+artifacts. They are recorded here because this repository is the durable
+record and a chat transcript is not — if the links are lost, so is the
+reasoning behind several decisions in CLAUDE.md.
+
+| Document | What it is |
+|---|---|
+| [Launch runbook](https://claude.ai/artifact/UpGBsRguDZkoBiiijQHQ3X) | Forty-one steps in dependency order from the repository as it stands to a site on its own domain. Tracks progress in the browser. |
+| [Novus Data Alerts](https://claude.ai/artifact/Hv12FX3VGddn45vG3CRVRU) | A working prototype of the notifications app plus the full specification: the watcher's diff rules, the privacy consequences, the architecture, and the preconditions for starting it. |
+| [Roadmap](https://claude.ai/artifact/2MyTzTcS6w6JZ36qpLtncX) | Twenty-two candidate features rated for growth and revenue, the constraints that decide what is possible, and six things not to build. |
+| [Signed-in dashboard](https://claude.ai/artifact/KzpPbKo9prFYY9TMJTk699) | The mockup of the reader's signed-in view. |
+
+**Three decisions recorded there rather than here**, because they are product
+rather than code, and each one is load-bearing:
+
+1. **The alerts app is email first, and the client comes later if at all.** The
+   watcher plus email is the whole product; an app is packaging. It tests
+   demand at no running cost, needs no app store and no 18+ developer account,
+   and captures the addresses every revenue option depends on.
+2. **Nothing on the roadmap should start before the register has entries.**
+   Every item on it multiplies something that is currently zero.
+3. **Six features are listed as deliberately not to be built**, the first being
+   a composite risk score. It will keep occurring to whoever works on this,
+   and it would destroy the site's entire argument — see CLAUDE.md §6c rule 1.

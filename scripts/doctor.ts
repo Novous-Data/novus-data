@@ -17,6 +17,13 @@
  * from what the build enforces. If `doctor` reports no blockers, `npm run build`
  * will not refuse for that reason.
  *
+ * **Its output never contains a secret, and that is a deliberate property to
+ * keep.** It prints environment variable *names* and whether each is set — never
+ * a value. A report like this is exactly the thing someone pastes into a chat
+ * when asking for help, and `SUPABASE_SERVICE_ROLE_KEY` bypasses every
+ * row-level security policy. If a future edit is tempted to print a value to
+ * make an error clearer, print the name and the length instead.
+ *
  * NOTE ON THE DYNAMIC IMPORTS. `.env.local` has to be read before any module
  * that captures an environment variable at load time — `DISRUPTIONS_DIRECTORY`
  * does exactly that. Static imports hoist above the call, so the site modules

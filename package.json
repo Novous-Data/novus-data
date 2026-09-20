@@ -1,0 +1,47 @@
+{
+  "name": "novus-data",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:demo": "CONTENT_SOURCE=fixtures next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "sync-issues": "tsx scripts/sync-issues.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "review": "tsx scripts/review-register.ts",
+    "new-disruption": "tsx scripts/new-disruption.ts",
+    "check": "npm run typecheck && npm run lint && npm run doctor",
+    "build:preview": "NOVUS_ALLOW_INCOMPLETE=1 next build",
+    "preview": "tsx scripts/build-preview.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "@tailwindcss/typography": "^0.5.20",
+    "clsx": "^2.1.1",
+    "gray-matter": "^4.0.3",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "fast-xml-parser": "^5.11.1",
+    "sanitize-html": "^2.17.7",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -5,7 +5,12 @@ import { NeedsInput } from '@/components/needs-input';
 import { PageHeader } from '@/components/page-header';
 import { SubscribePanel } from '@/components/subscribe-panel';
 import { MailLink, TextLink } from '@/components/text-link';
-import { publication } from '@/config/publication';
+import {
+  formatAuthorNames,
+  hasCoAuthors,
+  namedAuthors,
+  publication,
+} from '@/config/publication';
 import {
   CONFIDENCES,
   CONFIDENCE_LABELS,
@@ -129,21 +134,35 @@ export default function AboutPage() {
         </Section>
 
         <Section heading="Who writes it">
-          {publication.author.name ? (
+          {formatAuthorNames() ? (
             <>
               <p>
-                Novus Data is written by {publication.author.name}. I research and write every
-                issue.
+                Novus Data is written by {formatAuthorNames()}.{' '}
+                {hasCoAuthors()
+                  ? 'Every entry in the register says which of us recorded it, and the review date is when that person last checked it.'
+                  : 'I research and write every issue.'}
               </p>
-              {publication.author.credentials.length > 0 ? (
-                <ul className="flex list-none flex-col gap-2 border-t border-hairline pt-5">
-                  {publication.author.credentials.map((fact) => (
-                    <li key={fact} className="text-muted">
-                      {fact}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+              {/* One block per author, so a credential is attached to the person
+                  it belongs to rather than pooled into an anonymous list. */}
+              {namedAuthors().map((author) =>
+                author.credentials.length > 0 ? (
+                  <div
+                    key={author.id}
+                    className="flex flex-col gap-2 border-t border-hairline pt-5"
+                  >
+                    {hasCoAuthors() ? (
+                      <p className="text-meta font-medium text-fg">{author.name}</p>
+                    ) : null}
+                    <ul className="flex list-none flex-col gap-2">
+                      {author.credentials.map((fact) => (
+                        <li key={fact} className="text-muted">
+                          {fact}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null,
+              )}
             </>
           ) : (
             <p>

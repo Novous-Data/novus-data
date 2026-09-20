@@ -12,7 +12,7 @@ import { SignInPanel } from '@/components/sign-in-panel';
 import { SubscribePanel } from '@/components/subscribe-panel';
 import { TextLink } from '@/components/text-link';
 import { coverageTopics } from '@/config/coverage';
-import { publication } from '@/config/publication';
+import { formatAuthorNames, publication } from '@/config/publication';
 import type { DisruptionSummary, EntityExposure } from '@/lib/disruptions';
 import { CATEGORY_LABELS, SEVERITY_LABELS, buildExposureMatrix, listDisruptions } from '@/lib/disruptions';
 import type { IssueSummary } from '@/lib/content';
@@ -176,8 +176,8 @@ export default async function HomePage() {
 
       <Container className="mt-16">
         <p className="max-w-[56ch] text-muted">
-          {publication.author.name ? (
-            <>Novus Data is written by {publication.author.name}. </>
+          {formatAuthorNames() ? (
+            <>Novus Data is written by {formatAuthorNames()}. </>
           ) : (
             <>
               Novus Data is written by <NeedsInput label="author name" />.{' '}

@@ -1,4 +1,4 @@
-import { publication } from '@/config/publication';
+import { authorById, editor, hasCoAuthors, publication } from '@/config/publication';
 import type { DisruptionSummary, Severity } from '@/lib/disruptions';
 import { SEVERITY_RANK, STALE_AFTER_DAYS, listDisruptions } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
@@ -73,6 +73,13 @@ interface NovusExtension {
    * `entities`, and so a consumer that does not need names can ignore one key.
    */
   entityNames: Record<string, string>;
+  /**
+   * The display name of whoever recorded this assessment, or null on a
+   * one-author publication where a per-entry byline would just repeat the
+   * masthead. A notification that says who made a call is materially more
+   * useful than one that does not, and it costs one string.
+   */
+  recordedBy: string | null;
   /** The review date, repeated in plain ISO for consumers that ignore dates. */
   reviewedAt: string;
   startedAt: string;
@@ -116,6 +123,9 @@ export async function GET() {
         entityNames: Object.fromEntries(
           disruption.exposures.map((exposure) => [exposure.entity.id, exposure.entity.name]),
         ),
+        recordedBy: hasCoAuthors()
+          ? ((authorById(disruption.author) ?? (editor().name ? editor() : null))?.name ?? null)
+          : null,
         reviewedAt: disruption.updatedAt,
         startedAt: disruption.startedAt,
         stale_after_days: STALE_AFTER_DAYS,

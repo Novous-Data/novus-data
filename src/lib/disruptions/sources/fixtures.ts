@@ -97,6 +97,7 @@ export const fixtureDisruptions: Disruption[] = [
     updatedAt: '2026-09-09',
     summary:
       '[SAMPLE] Placeholder entry describing a chokepoint constraint, used to check the register and the exposure chart. It describes nothing real.',
+    author: null,
     sources: [source('Advisory to shipping', 'Canal authority', 'advisory')],
     exposures: [
       {
@@ -140,6 +141,7 @@ export const fixtureDisruptions: Disruption[] = [
     updatedAt: '2026-09-08',
     summary:
       '[SAMPLE] Placeholder entry describing berth queues and inland clearance at a gateway port.',
+    author: null,
     sources: [source('Weekly terminal statistics', 'Port authority', 'port-stats')],
     exposures: [
       {
@@ -183,6 +185,7 @@ export const fixtureDisruptions: Disruption[] = [
     updatedAt: '2026-09-02',
     summary:
       '[SAMPLE] Placeholder entry describing a licensing requirement on a concentrated processed input.',
+    author: null,
     sources: [source('Ministry notice', 'Trade ministry', 'notice')],
     exposures: [
       {
@@ -224,6 +227,7 @@ export const fixtureDisruptions: Disruption[] = [
     startedAt: '2026-05-11',
     updatedAt: '2026-09-01',
     summary: '[SAMPLE] Placeholder entry describing a widening spread between marine fuel grades.',
+    author: null,
     sources: [source('Bunker price assessment', 'Price reporting agency', 'bunker')],
     exposures: [
       {
@@ -257,6 +261,7 @@ export const fixtureDisruptions: Disruption[] = [
     updatedAt: '2026-08-29',
     summary:
       '[SAMPLE] Placeholder entry describing a ballot that has not yet produced a stoppage. Included to show the watch state.',
+    author: null,
     sources: [source('Union ballot announcement', 'Transport union', 'ballot')],
     exposures: [
       {
@@ -290,6 +295,7 @@ export const fixtureDisruptions: Disruption[] = [
     updatedAt: '2026-06-30',
     summary:
       '[SAMPLE] Placeholder entry kept in the register after resolution, because the record matters.',
+    author: null,
     sources: [source('Seasonal restriction notice', 'Waterway authority', 'drought')],
     exposures: [
       {

@@ -2,7 +2,9 @@
 
 You want to change something. This tells you which file, in one hop.
 
-`CLAUDE.md` is the rulebook and explains *why* things are the way they are.
+`CONTRIBUTING.md` is how the two of us work together without the standard
+drifting. `CLAUDE.md` is the rulebook and explains *why* things are the way
+they are.
 `HANDOFF.md` is the open-questions list. `DEPLOY.md` is the deployment steps.
 **This file is the index** — it assumes you know what you want and just need the
 path.
@@ -35,7 +37,7 @@ cannot tell you something the build disagrees with.
 | The sentence in Google results and shared links | `src/config/publication.ts` → `description` |
 | Who the site says it is for | `src/config/publication.ts` → `primaryReader`, `secondaryReaders` |
 | **The published standard of proof** at `/about#method` | `src/config/publication.ts` → `methodology` |
-| Your name and any credentials | `src/config/publication.ts` → `author` |
+| The masthead — names and credentials | `src/config/publication.ts` → `authors` |
 | The seven tracked topics | `src/config/coverage.ts` |
 | The corrections policy | `src/config/publication.ts` → `corrections` |
 | The briefing's or the app's name | `src/config/publication.ts` → `newsletter`, `alerts` |

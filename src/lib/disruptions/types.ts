@@ -174,6 +174,18 @@ export interface DisruptionSummary {
   updatedAt: string;
   /** One or two sentences. Plain, no figures that are not in the sources. */
   summary: string;
+  /**
+   * Which author made this assessment — an `id` from `publication.authors`,
+   * or null to fall back to the editor.
+   *
+   * On a one-person publication this is noise and stays null. It stops being
+   * noise the moment a second person writes an entry: "who made this call"
+   * becomes unanswerable from a site-wide byline, and being answerable is the
+   * whole claim this register makes. An unknown id is warned about and
+   * nulled rather than rendered, because inventing an attribution is worse
+   * than falling back to the masthead.
+   */
+  author: string | null;
   sources: Source[];
   exposures: Exposure[];
 }

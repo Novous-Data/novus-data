@@ -7,7 +7,7 @@
  * by machines that will repeat whatever it is told.
  */
 
-import { publication } from '@/config/publication';
+import { authorById, editor, namedAuthors, publication } from '@/config/publication';
 import type { Issue } from '@/lib/content';
 import type { Disruption } from '@/lib/disruptions/types';
 import { absoluteUrl, env } from '@/lib/env';
@@ -27,7 +27,11 @@ export function publicationJsonLd(): Json {
     description: publication.description,
     url: absoluteUrl('/'),
     email: env.contactEmail ?? undefined,
-    founder: publication.author.name ? { '@type': 'Person', name: publication.author.name } : undefined,
+    // Everyone on the masthead, so the organisation's own markup matches the
+    // byline a reader sees rather than naming only the first person.
+    founder: namedAuthors().length > 0
+      ? namedAuthors().map((author) => ({ '@type': 'Person', name: author.name }))
+      : undefined,
     sameAs: [env.beehiivHomeUrl].filter((value): value is string => Boolean(value)),
   });
 }
@@ -45,8 +49,8 @@ export function issueJsonLd(issue: Issue, canonicalUrl: string): Json {
     description: issue.excerpt ?? undefined,
     datePublished: publishedTime,
     mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
-    author: publication.author.name
-      ? { '@type': 'Person', name: publication.author.name }
+    author: namedAuthors().length > 0
+      ? namedAuthors().map((author) => ({ '@type': 'Person', name: author.name }))
       : undefined,
     publisher: { '@type': 'Organization', name: publication.name },
     image: issue.coverImageUrl ?? undefined,
@@ -81,9 +85,12 @@ export function disruptionJsonLd(disruption: Disruption, canonicalUrl: string): 
     datePublished: iso(disruption.startedAt) ?? iso(disruption.updatedAt),
     dateModified: iso(disruption.updatedAt),
     mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
-    author: publication.author.name
-      ? { '@type': 'Person', name: publication.author.name }
-      : undefined,
+    // The person who made THIS assessment, not a site-wide byline. Falls back
+    // to the editor, who stands behind anything the publication prints.
+    author: (() => {
+      const recordedBy = authorById(disruption.author) ?? (editor().name ? editor() : null);
+      return recordedBy ? { '@type': 'Person', name: recordedBy.name } : undefined;
+    })(),
     publisher: { '@type': 'Organization', name: publication.name },
     // Only the entry's own citations, which are required to exist at all.
     citation: disruption.sources.map((source) => ({

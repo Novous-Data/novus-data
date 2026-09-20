@@ -105,14 +105,14 @@ export const INPUT_LEDGER: InputRecord[] = [
     requiredForLaunch: false,
   },
   {
-    key: 'publication.author.name',
+    key: 'publication.authors',
     provenance: 'unanswered',
-    usedOn: ['/about', 'JSON-LD author', 'issue bylines'],
-    note: 'Not supplied. A production build fails while this is null, because an about page with no author defeats the point of the site.',
+    usedOn: ['/about', '/', 'JSON-LD author', 'issue and register bylines'],
+    note: 'The masthead. The FIRST entry is the editor and a production build fails while that name is null, because an about page with no author defeats the point of the site. Append a second entry to add a co-author — each needs a permanent `id` that register entries point at.',
     requiredForLaunch: true,
   },
   {
-    key: 'publication.author.credentials',
+    key: 'publication.authors[].credentials',
     provenance: 'unanswered',
     usedOn: ['/about'],
     note: 'Empty. /about states what is verifiable and nothing more. Add only facts that are true and checkable today.',
@@ -182,7 +182,7 @@ export function missingLaunchInputs(): InputRecord[] {
 
   for (const record of INPUT_LEDGER) {
     if (!record.requiredForLaunch) continue;
-    if (record.key === 'publication.author.name' && publication.author.name) continue;
+    if (record.key === 'publication.authors' && publication.authors[0]?.name) continue;
     if (
       record.key === 'NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL' &&
       process.env.NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL

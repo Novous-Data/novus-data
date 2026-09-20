@@ -16,6 +16,7 @@ import path from 'node:path';
 
 import matter from 'gray-matter';
 
+import { publication } from '@/config/publication';
 import type {
   Confidence,
   Disruption,
@@ -265,6 +266,21 @@ function parseDisruptionFile(file: string, raw: string, warnings: string[]): Dis
   // blanks a chart column.
   const shortLabel = (text(data.shortLabel) ?? id.replace(/-/g, '').slice(0, 3)).toUpperCase();
 
+  // Attribution. An id that is not on the masthead is a typo or a stale
+  // reference; warn and fall back rather than rendering a name nobody owns.
+  const rawAuthor = text(data.author);
+  let author: string | null = null;
+  if (rawAuthor) {
+    if (publication.authors.some((person) => person.id === rawAuthor)) {
+      author = rawAuthor;
+    } else {
+      warn(
+        warnings,
+        `${file}: "author" is "${rawAuthor}", which is not an id in publication.authors. The entry falls back to the editor's byline.`,
+      );
+    }
+  }
+
   const contentHtml = body.trim();
 
   return {
@@ -276,6 +292,7 @@ function parseDisruptionFile(file: string, raw: string, warnings: string[]): Dis
     startedAt: isoDate(data.startedAt) ?? '',
     updatedAt,
     summary,
+    author,
     sources,
     exposures: parseExposures(data.exposures, file, warnings),
     contentHtml: contentHtml.length > 0 ? contentHtml : null,

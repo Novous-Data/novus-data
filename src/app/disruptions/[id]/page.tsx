@@ -5,6 +5,7 @@ import { Container } from '@/components/container';
 import { JsonLd } from '@/components/json-ld';
 import { ProseBody } from '@/components/prose-body';
 import { SourceList } from '@/components/source-list';
+import { authorById, editor, hasCoAuthors } from '@/config/publication';
 import { StatusBadge } from '@/components/status-badge';
 import { TextLink } from '@/components/text-link';
 import type { Exposure } from '@/lib/disruptions';
@@ -56,6 +57,13 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
   const updated = formatLongDate(disruption.updatedAt);
   const stale = isStale(disruption.updatedAt);
 
+  // The person who made this assessment. Falls back to the editor, who stands
+  // behind anything the publication prints, and renders nothing at all while
+  // there is only one author — see the comment at the <dl> below.
+  const recordedBy = hasCoAuthors()
+    ? (authorById(disruption.author) ?? (editor().name ? editor() : null))
+    : null;
+
   return (
     <article>
       <JsonLd
@@ -101,6 +109,16 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
               {disruption.exposures.length}
             </dd>
           </div>
+          {/* Only shown once there is more than one person on the masthead.
+              On a one-author publication it would repeat the site-wide byline
+              on every entry, which is noise; with two it is the answer to
+              "who made this call", which is the whole point of the register. */}
+          {recordedBy ? (
+            <div>
+              <dt className="text-muted">Recorded by</dt>
+              <dd className="mt-0.5 text-fg">{recordedBy.name}</dd>
+            </div>
+          ) : null}
         </dl>
 
         {/* An assessment that has not been looked at recently says so, rather

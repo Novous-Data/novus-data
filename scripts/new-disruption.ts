@@ -94,6 +94,8 @@ interface ExposureInput {
 
 interface DisruptionInput {
   id: string;
+  /** An `id` from publication.authors, or null when nobody is named yet. */
+  author: string | null;
   title: string;
   shortLabel: string;
   status: (typeof STATUSES)[number];
@@ -318,6 +320,7 @@ function render(entry: DisruptionInput): string {
     `startedAt: ${yamlString(entry.startedAt)}`,
     `updatedAt: ${yamlString(entry.updatedAt)}`,
     `summary: ${yamlString(entry.summary)}`,
+    ...(entry.author ? [`author: ${yamlString(entry.author)}`] : []),
     'sources:',
     renderSources(entry.sources, '  '),
   ];
@@ -361,6 +364,10 @@ category: "chokepoint"           # chokepoint | port | policy | input | energy |
 startedAt: "${today()}"
 updatedAt: "${today()}"          # the review date. Required, and re-set it every review.
 summary: "One or two plain sentences."
+
+# Who made this assessment — an id from publication.authors. Delete the line
+# on a one-author publication; it falls back to the editor either way.
+# author: "editor"
 
 # At least one, or the whole entry is skipped.
 sources:
@@ -482,6 +489,35 @@ async function main(): Promise<void> {
       validate: (value) => (value.length < 30 ? 'Too short — write a real sentence.' : null),
     });
 
+    // Attribution. Only asked once there is more than one person on the
+    // masthead — with one author the answer is always the same and the prompt
+    // is pure friction. With two, an unattributed entry is the thing the
+    // register cannot afford, so it is asked before the sources.
+    const { namedAuthors } = await import('@/config/publication');
+    const roster = namedAuthors();
+    let author: string | null = null;
+
+    if (roster.length > 1) {
+      blank();
+      console.log(colour.dim('  Who made this assessment? It is shown on the entry and in the feed.'));
+      for (const person of roster) {
+        console.log(colour.dim(`    ${person.id.padEnd(14)} ${person.name}`));
+      }
+      author = await ask(rl, 'Author id', {
+        fallback: roster[0].id,
+        validate: (value) =>
+          roster.some((person) => person.id === value)
+            ? null
+            : `Must be one of: ${roster.map((person) => person.id).join(', ')}`,
+      });
+    } else if (roster.length === 1) {
+      // Recorded anyway, so that adding a second author later does not leave
+      // the earlier entries looking anonymous next to the attributed ones.
+      author = roster[0].id;
+    } else {
+      warn('No author is named in publication.authors yet — this entry will carry no byline.');
+    }
+
     heading('Sources for the disruption itself');
     console.log(colour.dim('  With none of these the whole entry is skipped.'));
     const sources = await askSources(rl, 'this disruption', 1);
@@ -508,6 +544,7 @@ async function main(): Promise<void> {
 
     const entry: DisruptionInput = {
       id,
+      author,
       title,
       shortLabel,
       status,

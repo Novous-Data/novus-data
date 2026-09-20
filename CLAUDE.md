@@ -123,8 +123,19 @@ year that has not happened, or any phrasing that implies staff or an institution
 that does not exist. "We" as the voice of the company is fine; "we" as a crowd of
 people is not.
 
-Editorial pages — `/about`, register entries, briefings — stay in first-person
-singular or the publication name, because those carry the byline.
+Editorial pages — `/about`, register entries, briefings — carry the byline, so
+they speak as the people who wrote them: first-person singular with one author,
+and naming who recorded what once there is more than one. **Two real, named
+people is not an implied organisation** — the amendment's limit is inventing
+staff, not having them.
+
+`publication.authors` is the masthead and the first entry is the editor: the
+byline of record, the name the build refuses to run without, and the fallback
+on any register entry that names nobody. `src/config/publication.ts` exports
+`editor()`, `namedAuthors()`, `hasCoAuthors()`, `authorById()` and
+`formatAuthorNames()` so every surface answers "who wrote this" identically.
+An author entry whose `name` is null is a placeholder, never rendered as a
+person.
 
 ### Rule 3 — No third-party assets
 
@@ -158,6 +169,7 @@ step needs account access, write instructions in `DEPLOY.md` instead.
 ## 5. Directory map
 
 ```
+CONTRIBUTING.md            How two people work on this without breaking the standard.
 content/issues/            The issue archive of record. One .md per issue.
 content/disruptions/       The disruption register. One .md per problem.
 scripts/sync-issues.ts     Pulls new issues from Beehiiv RSS. The ONLY Beehiiv code.
@@ -296,6 +308,7 @@ category: "chokepoint"              # see DISRUPTION_CATEGORIES
 startedAt: "2026-08-01"
 updatedAt: "2026-09-10"             # the review date. Required.
 summary: "One or two plain sentences."
+author: "editor"                    # an id from publication.authors, or omit
 sources:
   - title: "Advisory to Shipping No. 31-2026"
     url: "https://pancanal.com/..."
@@ -321,8 +334,21 @@ exposures:
 <p>Optional sanitised analysis body.</p>
 ```
 
-`/debug/content` lists every warning the register raised — i.e. every claim the
-site refused to publish. Check it after editing.
+**`author` is how the register stays traceable with more than one writer.** It
+holds an `id` from `publication.authors`; an id not on the masthead is warned
+about and nulled rather than rendered, because inventing an attribution is
+worse than falling back to the editor. The entry page shows **Recorded by** and
+the feed carries `_novus.recordedBy` only once `hasCoAuthors()` is true — with
+one author a per-entry byline just repeats the masthead on every page.
+
+Add the second author *before* the first co-written entry. Retro-fitting
+attribution to files that never carried it means guessing who wrote what.
+
+`/debug/content` and `npm run doctor` list every warning the register raised.
+Note that the warnings array mixes two things — claims the site **refused**
+(an exposure missing one of its four fields) and values it **corrected** (an
+unknown author id falling back) — so neither surface may describe all of them
+as refusals. Each line says which it was.
 
 ### The chart's colour encoding
 

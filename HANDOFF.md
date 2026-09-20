@@ -839,6 +839,7 @@ reasoning behind several decisions in CLAUDE.md.
 | [Novus Data Alerts](https://claude.ai/artifact/Hv12FX3VGddn45vG3CRVRU) | A working prototype of the notifications app plus the full specification: the watcher's diff rules, the privacy consequences, the architecture, and the preconditions for starting it. |
 | [Roadmap](https://claude.ai/artifact/2MyTzTcS6w6JZ36qpLtncX) | Twenty-two candidate features rated for growth and revenue, the constraints that decide what is possible, and six things not to build. |
 | [Signed-in dashboard](https://claude.ai/artifact/KzpPbKo9prFYY9TMJTk699) | The mockup of the reader's signed-in view. |
+| [Handover](https://claude.ai/artifact/J5emiYSmKv2GBSzVyiVgWD) | Bringing a co-author onto the project: what only the owner can click, and an index of the other four. |
 
 **Three decisions recorded there rather than here**, because they are product
 rather than code, and each one is load-bearing:
@@ -852,3 +853,10 @@ rather than code, and each one is load-bearing:
 3. **Six features are listed as deliberately not to be built**, the first being
    a composite risk score. It will keep occurring to whoever works on this,
    and it would destroy the site's entire argument — see CLAUDE.md §6c rule 1.
+
+**On working with two people**, `CONTRIBUTING.md` is the file that matters and
+it is in this repository rather than an artifact, deliberately: a standard that
+lives in a chat transcript is not a standard. The one thing it asks for that
+cannot be enforced in code is that the editor has final say on what publishes —
+the register's credibility comes from one consistent judgement about what clears
+the bar, and that is the only narrow thing. Everything else is open.

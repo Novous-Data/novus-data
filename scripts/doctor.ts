@@ -54,8 +54,8 @@ interface NextAction {
 
 /** Where to fix each launch-critical input, in words rather than a key name. */
 const FIX_LOCATION: Record<string, string> = {
-  'publication.author.name':
-    'src/config/publication.ts — the `author` block. Your name exactly as it should appear in print.',
+  'publication.authors':
+    'src/config/publication.ts — the `authors` array. The first entry is the editor; give it your name exactly as it should appear in print.',
   NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL:
     '.env.local (and the Vercel dashboard) — your Beehiiv subscribe page URL.',
   NEXT_PUBLIC_CONTACT_EMAIL:
@@ -136,7 +136,10 @@ async function main(): Promise<void> {
 
     if (register.warnings.length > 0) {
       blank();
-      warn(`${plural(register.warnings.length, 'claim')} refused and not published`);
+      warn(
+        `${plural(register.warnings.length, 'warning')} from the register — each line says ` +
+          'exactly what was dropped or corrected',
+      );
       for (const message of register.warnings) detail(message);
     } else if (register.entries.length > 0) {
       ok('No refused claims — every exposure carries mechanism, confidence, date and source.');
@@ -150,7 +153,7 @@ async function main(): Promise<void> {
     });
   } else if (register.warnings.length > 0) {
     actions.push({
-      summary: `Fix ${plural(register.warnings.length, 'refused claim')} — they are silently not rendering.`,
+      summary: `Resolve ${plural(register.warnings.length, 'register warning')} — each is something the site refused or corrected.`,
       detail: register.warnings.map((message) => `  ${message}`).join('\n'),
     });
   } else if (staleEntries.length > 0) {
@@ -214,9 +217,9 @@ async function main(): Promise<void> {
       note: 'Null, so subscribe blocks claim no schedule. Set it once one is genuinely being kept.',
     },
     {
-      label: 'publication.author.credentials',
-      set: publication.author.credentials.length > 0,
-      note: 'Empty, so /about states nothing beyond your name. Add only facts true and checkable today.',
+      label: 'publication.authors[].credentials',
+      set: publication.authors.some((author) => author.credentials.length > 0),
+      note: 'Empty, so /about states nothing beyond the names. Add only facts true and checkable today.',
     },
   ];
 

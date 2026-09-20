@@ -22,6 +22,15 @@
  */
 
 export interface AuthorProfile {
+  /**
+   * The stable key a register entry's `author` field points at. Lowercase,
+   * URL-safe, and **permanent once any entry references it** — changing it
+   * silently detaches every assessment that person made.
+   *
+   * It is never rendered. It exists so a file can name a person without
+   * embedding a spelling that might later change.
+   */
+  id: string;
   /** Name exactly as it should appear in print. */
   name: string | null;
   /**
@@ -62,10 +71,23 @@ export interface Publication {
    * match what actually happens rather than leaving a flattering draft.
    */
   methodology: string[];
-  author: AuthorProfile;
   /**
-   * Whether the site may mention the author's age, school, grade or student
-   * status. This is the author's decision, not the site's. Default false.
+   * The masthead, in masthead order.
+   *
+   * **The first entry is the editor**: the byline of record, the name a
+   * production build refuses to run without, and the fallback author on any
+   * register entry that does not name one. Everyone else is a contributor.
+   *
+   * This is an array rather than a single author because the site's whole
+   * argument is that a claim can be traced to whoever made it. With more than
+   * one person writing, a single site-wide byline stops being true — see the
+   * per-entry `author` field in the register (CLAUDE.md §6a).
+   */
+  authors: AuthorProfile[];
+  /**
+   * Whether the site may mention an author's age, school, grade or student
+   * status. This is each author's own decision, not the site's. Default false,
+   * and it applies to everyone on the masthead.
    */
   discloseStudentStatus: boolean;
   /** The email briefing. One part of the site, not the whole of it. */
@@ -129,13 +151,21 @@ export const publication: Publication = {
     'Novus Data publishes analysis and commentary. It is not investment advice, it is not a recommendation to buy or sell any security, and it is not a substitute for your own work.',
   ],
 
-  author: {
-    // NOT SUPPLIED. A production build refuses to run while this is null —
-    // see assertLaunchReady() below. Fill it in before deploying.
-    name: null,
-    // Only statements that are true and checkable today belong here.
-    credentials: [],
-  },
+  authors: [
+    {
+      // The editor. NOT SUPPLIED: a production build refuses to run while
+      // this name is null — see assertLaunchReady() in ./input-ledger.ts.
+      id: 'editor',
+      name: null,
+      // Only statements that are true and checkable today belong here.
+      credentials: [],
+    },
+    // Add a second author by appending another entry. Give them a permanent
+    // `id`, and from then on register entries can carry `author: "<their id>"`
+    // so each assessment says who made it. Do that BEFORE the first entry
+    // either of you writes, not after — retro-fitting attribution to files
+    // that never carried it means guessing.
+  ],
 
   // Default is false and stays false unless the author says otherwise.
   // See the build brief, section 12.2: this is a strategic decision that
@@ -163,3 +193,59 @@ export const publication: Publication = {
   disclaimer:
     'Novus Data publishes analysis and commentary, not investment advice. Nothing here is a recommendation to buy or sell any security.',
 };
+
+// --- the masthead, read back -------------------------------------------------
+//
+// These are pure functions over `publication.authors`. They live here rather
+// than in a component so that every surface — /about, the home page, JSON-LD,
+// the register, the scaffolder — answers "who wrote this" the same way.
+
+/** The byline of record. The build refuses to run while this one has no name. */
+export function editor(): AuthorProfile {
+  return publication.authors[0];
+}
+
+/**
+ * Everyone on the masthead whose name is actually known.
+ *
+ * An author entry with a null name is a placeholder, not a person, and nothing
+ * on the site may render one as though it were — Rule 1 applies to people too.
+ */
+export function namedAuthors(): AuthorProfile[] {
+  return publication.authors.filter((author) => Boolean(author.name));
+}
+
+/** True once there is more than one real person on the masthead. */
+export function hasCoAuthors(): boolean {
+  return namedAuthors().length > 1;
+}
+
+/**
+ * Look up an author by the id a register entry carries.
+ *
+ * Returns null for an unknown id rather than inventing a person. Callers fall
+ * back to the editor, which is the honest default: the publication stands
+ * behind anything it publishes regardless of who drafted it.
+ */
+export function authorById(id: string | null | undefined): AuthorProfile | null {
+  if (!id) return null;
+  return publication.authors.find((author) => author.id === id && author.name) ?? null;
+}
+
+/**
+ * Names as a reader would say them: "A", "A and B", "A, B and C".
+ *
+ * Null when nobody on the masthead is named, so the caller can render its own
+ * "not supplied yet" state instead of an empty string that looks like a bug.
+ */
+export function formatAuthorNames(authors: AuthorProfile[] = namedAuthors()): string | null {
+  const names = authors
+    .map((author) => author.name)
+    .filter((name): name is string => Boolean(name));
+
+  if (names.length === 0) return null;
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}

@@ -452,6 +452,16 @@ realistic way it leaks is not theft but somebody prefixing it with
 browser bundle. `src/lib/supabase/admin.ts` **throws at module load** if it
 sees such a variable, and again if it is ever reached from the browser.
 
+That check alone is not enough on its own, because `admin.ts` is reached only
+through a dynamic `import()` in `getAccountRepository()` — so a production build
+never evaluates it, and the prefix mistake produces a green build that only
+fails later, on the first request to an account route. `input-ledger.ts` carries
+the same check, and that file *is* imported by the root layout, so the build
+refuses at the moment the key can still be rotated before anything is served.
+It is deliberately **not** gated on `NOVUS_ALLOW_INCOMPLETE`: that flag means
+"facts I have not supplied yet", which is legitimate; a credential in the
+browser bundle never is.
+
 **Session refresh lives in `src/proxy.ts`, not `middleware.ts`** — Next 16
 renamed the convention and every Supabase guide still shows the old name. It
 does nothing but rotate the token; authorisation is `getUser()` in the route

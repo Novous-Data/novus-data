@@ -249,4 +249,54 @@ export function assertLaunchReady(): void {
   );
 }
 
+/**
+ * Refuses to build or serve while the Supabase service role key carries the
+ * NEXT_PUBLIC_ prefix.
+ *
+ * `src/lib/supabase/admin.ts` already throws on this at module load, and that
+ * check is correct — but admin.ts is reached only through a dynamic import in
+ * `getAccountRepository()`, which runs when an account is deleted and at no
+ * other time. A production build therefore never evaluates it, so the mistake
+ * that guard describes produces a completely green build and surfaces later,
+ * at runtime, on whichever request first touches an account route.
+ *
+ * The key does not actually leak in that state, because nothing client-reachable
+ * references the variable and Next only inlines NEXT_PUBLIC_ literals it finds
+ * in client code. But "did not leak" is a property of the current import graph,
+ * not a guarantee, and a deployer reading the guard in admin.ts would
+ * reasonably believe a green build had already ruled this out.
+ *
+ * This file is imported by the root layout, so it is evaluated during the
+ * build and on the dev server. Checking here makes the refusal happen at the
+ * moment the key can still be rotated before anyone has served it.
+ *
+ * Deliberately NOT gated on NOVUS_ALLOW_INCOMPLETE. That flag means "this site
+ * is missing facts I have not supplied yet", which is a legitimate state. A
+ * credential published to the browser is never a legitimate state, and a
+ * preview build is still a build someone can deploy.
+ */
+export function assertNoPublicServiceRoleKey(): void {
+  // Checked by literal name: Next only inlines literals, so this must not be
+  // built up from a variable or it will not be replaced at all.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) return;
+
+  throw new Error(
+    [
+      '',
+      'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY is set.',
+      '',
+      'The service role key must NEVER carry the NEXT_PUBLIC_ prefix. That prefix',
+      'inlines the value into the browser bundle, and this key bypasses row-level',
+      'security — so publishing it makes every reader row readable and writable by',
+      'anyone who opens the site.',
+      '',
+      'Rename it to SUPABASE_SERVICE_ROLE_KEY, and rotate the key in the Supabase',
+      'dashboard: the old one must be assumed compromised.',
+      '',
+    ].join('\n'),
+  );
+}
+
+assertNoPublicServiceRoleKey();
+
 assertLaunchReady();

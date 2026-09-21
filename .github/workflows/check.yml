@@ -13,11 +13,13 @@
 # its warnings in the log; only a typecheck or lint failure fails the job.
 name: check
 
+# `pull_request` covers every branch that opens a PR; `push` is scoped to the
+# default branch so a commit on a PR branch does not fire both and run twice.
 on:
   pull_request:
   push:
-    branches-ignore:
-      - 'gh-pages'
+    branches:
+      - claude/practical-einstein-tzfg55
 
 # A new push supersedes an in-flight run on the same ref.
 concurrency:

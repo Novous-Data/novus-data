@@ -9,6 +9,37 @@ is about how we work together.
 
 ---
 
+## If you are joining this project
+
+Twenty minutes, in this order. Do not skip step 3 — the site is worth looking at
+before you read about it.
+
+```bash
+git clone <this repo> && cd novus-data
+npm install
+npm run doctor      # the state of the project, and the one thing to do next
+npm run dev:demo    # the site against sample issues and a sample register
+```
+
+1. **`npm run doctor`** reads the same ledger the production build refuses on, so
+   it cannot tell you anything the build disagrees with. Whatever it names as the
+   next action is genuinely the next action.
+2. **Read `CLAUDE.md` §2 and §4** — the two standing constraints and the six
+   rules. Those are the whole standard. The rest of that file is reference you
+   can look up when you need it.
+3. **`npm run dev:demo`** runs against sixteen deliberately awkward sample issues
+   and a sample register, because the real content is still thin and most of the
+   site's behaviour only appears once there is something in it. Everything you
+   see there is `[SAMPLE]`-prefixed and cannot reach production.
+4. **Add yourself to the masthead.** `src/config/publication.ts` → `authors`.
+   Pick a permanent `id` — every register entry you write will reference it, and
+   changing it later silently detaches every assessment you made. Open it as a
+   pull request rather than pushing it.
+5. **Write a register entry.** `npm run new-disruption` prompts every required
+   field and validates each answer against the same rules the loader enforces.
+
+---
+
 ## The one rule everything else follows from
 
 > **An assessment that cannot be checked does not render.**
@@ -104,6 +135,41 @@ roadmap — argue for it and make the change.
 - Branch, push, open a pull request, and let the other person look at it.
 - For register entries specifically: the PR should let the reviewer follow every
   source without leaving the diff. If they can't check it, neither can a reader.
+
+---
+
+## Two people, two Claude sessions
+
+We each run our own Claude Code session. There is no shared one, and there is no
+way to make one: a conversation belongs to a single account, a shared transcript
+is read-only and does not update live, and a Project cannot be shared with
+another user at all. **Do not work around that by sharing a login** — an account
+carries its owner's connected mail, files and notes, not just this repository.
+
+That matters less than it sounds, because everything a session needs to know is
+in this repository rather than in a chat. `CLAUDE.md`, `START-HERE.md` and this
+file load automatically when Claude Code opens the repo, so a session started by
+either of us begins from the same standard.
+
+One working rule follows from it:
+
+> **A decision that exists only in a Claude conversation does not exist.**
+
+Chats are not shared, not searchable by the other person, and not around in six
+months. So when something gets decided, it lands in a file:
+
+| A decision about | Goes in |
+|---|---|
+| Why the code is shaped the way it is | `CLAUDE.md` |
+| How we work, and what is settled | this file |
+| What is still unanswered | `HANDOFF.md` |
+| Where to change a specific thing | `START-HERE.md` |
+| A specific change | the pull request that makes it |
+
+**The shared thread is GitHub, not Claude.** Issues for what needs doing, pull
+request review comments for arguing about a change. Those two surfaces do double
+duty: they are where we talk, and they are the only part of the conversation the
+other person's Claude can actually read.
 
 ---
 

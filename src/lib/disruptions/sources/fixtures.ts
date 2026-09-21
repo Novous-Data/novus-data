@@ -6,6 +6,8 @@
  *
  *   1. Every title, entity and source is prefixed or domained `[SAMPLE]` /
  *      `example.invalid`, so a fixture reaching a screenshot is unmistakable.
+ *      Tickers cannot carry a prefix and stay shaped like tickers, so they use
+ *      the exchanges' reserved test symbols instead — see ENTITIES below.
  *   2. **Every company here is invented.** Attaching a made-up exposure to a
  *      real, named, listed company would be precisely the harm the whole
  *      strictness of this layer exists to prevent — it would read as a
@@ -34,33 +36,46 @@ function source(title: string, publisher: string, slug: string) {
   };
 }
 
+/**
+ * Tickers are NASDAQ's reserved test symbols (the `Z**ZT` family), not invented
+ * ones. An invented four-letter ticker is not safely fictional the way an
+ * invented company name is: the namespace is small, exchanges keep assigning
+ * from it, and a plausible-looking string will eventually collide with a real
+ * issuer. This set previously used `MDT` and `CLDR` — Medtronic's live NYSE
+ * ticker and Cloudera's before it delisted. The `[SAMPLE]` name prefix meant
+ * nobody was actually misled, but a file whose entire job is to be
+ * unmistakably fake should not carry a real company's identifier at all.
+ *
+ * These symbols are permanently reserved for testing and are never assigned to
+ * an issuer, so the collision cannot come back.
+ */
 const ENTITIES = {
   northline: {
     id: 'northline-freight',
     name: '[SAMPLE] Northline Freight',
     kind: 'company' as const,
-    ticker: 'NLF',
+    ticker: 'ZVZZT',
     sector: 'Marine shipping',
   },
   meridian: {
     id: 'meridian-terminals',
     name: '[SAMPLE] Meridian Terminals',
     kind: 'company' as const,
-    ticker: 'MDT',
+    ticker: 'ZWZZT',
     sector: 'Ports and terminals',
   },
   calder: {
     id: 'calder-industrial',
     name: '[SAMPLE] Calder Industrial',
     kind: 'company' as const,
-    ticker: 'CLDR',
+    ticker: 'ZXZZT',
     sector: 'Industrial manufacturing',
   },
   brightway: {
     id: 'brightway-retail',
     name: '[SAMPLE] Brightway Retail',
     kind: 'company' as const,
-    ticker: 'BWR',
+    ticker: 'ZAZZT',
     sector: 'General retail',
   },
   orrin: {

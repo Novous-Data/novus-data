@@ -1,0 +1,50 @@
+# Runs the same command a contributor runs before committing: npm run check,
+# which is `tsc --noEmit && eslint && npm run doctor`.
+#
+# Why this exists: every correctness guard in this repository -- the strict
+# typecheck, the no-restricted-imports rules that hold the content-layer
+# boundary, the input ledger -- runs only on the machine of whoever happens to
+# be typing. That means the guards are real but their execution is not
+# guaranteed. This makes it guaranteed.
+#
+# `doctor` is included without --strict on purpose. Unanswered launch inputs
+# are the expected state before launch, so failing on them would leave the
+# branch permanently red and train everyone to ignore it. It runs to surface
+# its warnings in the log; only a typecheck or lint failure fails the job.
+name: check
+
+# `pull_request` covers every branch that opens a PR; `push` is scoped to the
+# default branch so a commit on a PR branch does not fire both and run twice.
+on:
+  pull_request:
+  push:
+    branches:
+      - claude/practical-einstein-tzfg55
+
+# A new push supersedes an in-flight run on the same ref.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `ci` rather than `install`: it installs from the lockfile exactly and
+      # fails if package.json and package-lock.json disagree, so CI cannot
+      # quietly resolve a different dependency tree than a contributor has.
+      - run: npm ci
+
+      - run: npm run check

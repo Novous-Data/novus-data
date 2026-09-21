@@ -748,8 +748,7 @@ tiers; a CMS or admin interface; self-hosted email or subscriber
 management; **live market-data APIs or price feeds**; search, tag filtering or
 comments; analytics or tracking; a test framework; a custom email capture form;
 MDX tooling; a scheduled sync workflow; a mobile app, a
-native client or push notifications; a dark/light mode toggle; a Content Security
-Policy.
+native client or push notifications; a dark/light mode toggle.
 
 ### Amended by the author: accounts, and the backend they need
 
@@ -878,8 +877,17 @@ been running visibly and correctly for a while.
 
 ### 14.3 Smaller deferred items
 
-A scheduled GitHub Action could run `sync-issues` automatically. A CSP can be
-added in report-only mode after cutover. Analytics, search and tag filtering are
+A scheduled GitHub Action could run `sync-issues` automatically.
+
+**The CSP is now shipped, in report-only mode**, ahead of the cutover this
+section originally waited for. The reasoning changed rather than the caution:
+a report-only policy blocks nothing, so it is the tool for discovering the
+unknown newsletter-CDN host rather than a guess that could break the site.
+`next.config.ts` carries the policy and the two deliberate loosenings —
+`script-src 'unsafe-inline'`, because a nonce would force every page dynamic
+and break the static-rendering rule in §13, and an `img-src` with no CDN host,
+which is the thing the report-only run exists to find out. Switch to the
+enforcing header once the reports are quiet against real traffic. Analytics, search and tag filtering are
 listed with their reasons in `HANDOFF.md`. None is coded.
 
 ## 14a. The published standard of proof

@@ -96,7 +96,7 @@ export default function PrivacyPage() {
               Supabase can technically reach the data it stores, as any database provider can.
             </p>
             <p>
-              <ExternalLink href="https://supabase.com/privacy">
+              <ExternalLink standalone href="https://supabase.com/privacy">
                 Supabase&rsquo;s privacy policy
               </ExternalLink>
             </p>
@@ -130,7 +130,7 @@ export default function PrivacyPage() {
             point, and its terms are between you and Beehiiv.
           </p>
           <p>
-            <ExternalLink href="https://www.beehiiv.com/privacy">
+            <ExternalLink standalone href="https://www.beehiiv.com/privacy">
               Beehiiv&rsquo;s privacy policy
             </ExternalLink>
           </p>

@@ -83,8 +83,10 @@ export default async function HomePage() {
               </li>
             ))}
           </ul>
-          <p className="mt-6">
-            <TextLink href="/disruptions">The full register</TextLink>
+          <p className="mt-3">
+            <TextLink standalone href="/disruptions">
+              The full register
+            </TextLink>
           </p>
         </Container>
       ) : null}
@@ -101,8 +103,10 @@ export default async function HomePage() {
               <ExposureRow key={row.entity.id} row={row} />
             ))}
           </ul>
-          <p className="mt-6">
-            <TextLink href="/exposure">The full exposure chart</TextLink>
+          <p className="mt-3">
+            <TextLink standalone href="/exposure">
+              The full exposure chart
+            </TextLink>
           </p>
         </Container>
       ) : null}
@@ -134,8 +138,10 @@ export default async function HomePage() {
               <p className="mt-3 max-w-[62ch] text-muted">{latestIssue.excerpt}</p>
             ) : null}
           </div>
-          <p className="mt-6">
-            <TextLink href="/briefings">Every issue</TextLink>
+          <p className="mt-3">
+            <TextLink standalone href="/briefings">
+              Every issue
+            </TextLink>
           </p>
         </Container>
       ) : null}
@@ -150,8 +156,10 @@ export default async function HomePage() {
             </div>
           ))}
         </dl>
-        <p className="mt-6">
-          <TextLink href="/coverage">Why each of these matters</TextLink>
+        <p className="mt-3">
+          <TextLink standalone href="/coverage">
+            Why each of these matters
+          </TextLink>
         </p>
       </Container>
 
@@ -167,8 +175,10 @@ export default async function HomePage() {
             <p className="mt-3 max-w-[52ch] text-muted">
               Notifications when the register changes. Not built yet.
             </p>
-            <p className="mt-6">
-              <TextLink href="/alerts">What it will and will not do</TextLink>
+            <p className="mt-3">
+              <TextLink standalone href="/alerts">
+                What it will and will not do
+              </TextLink>
             </p>
           </section>
         </div>

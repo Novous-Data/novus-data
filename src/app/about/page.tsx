@@ -55,7 +55,7 @@ export default function AboutPage() {
             movement in both by email.
           </p>
           <p>
-            <TextLink href="/coverage">
+            <TextLink standalone href="/coverage">
               Each topic is set out in full, with why it matters
             </TextLink>
             .

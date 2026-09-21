@@ -5,14 +5,35 @@ import type { ComponentProps, ReactNode } from 'react';
 const baseClasses =
   'text-link underline decoration-[color-mix(in_srgb,var(--accent-text)_45%,transparent)] decoration-1 underline-offset-[0.2em] transition-colors hover:decoration-[var(--accent-text)]';
 
+/**
+ * For a link that is the whole of its paragraph: a call to action closing a
+ * section, rather than a word inside a sentence.
+ *
+ * WCAG 2.5.8 exempts an inline link from the 44px target size, and rightly so
+ * — the sentence around it is not clickable, and growing the link to suit a
+ * finger would wreck the line. A link sitting alone in its own paragraph has
+ * no such excuse. It is a control, and it gets a control's target: at 17px
+ * tall these were roughly a third of the height a thumb is assumed to need.
+ *
+ * The extra height is added above and below the text rather than under it, so
+ * the underline stays exactly where the type sets it and nothing moves
+ * optically. Call sites pair this with a smaller top margin, because the box
+ * now supplies the space the margin used to.
+ */
+const standaloneClasses = 'inline-flex min-h-11 items-center';
+
 /** Internal link, styled once so every link on the site matches. */
 export function TextLink({
   className,
   children,
+  standalone,
   ...props
-}: ComponentProps<typeof Link> & { children: ReactNode }) {
+}: ComponentProps<typeof Link> & { children: ReactNode; standalone?: boolean }) {
   return (
-    <Link className={clsx(baseClasses, className)} {...props}>
+    <Link
+      className={clsx(baseClasses, standalone && standaloneClasses, className)}
+      {...props}
+    >
       {children}
     </Link>
   );
@@ -41,11 +62,12 @@ export function MailLink({
 export function ExternalLink({
   className,
   children,
+  standalone,
   ...props
-}: ComponentProps<'a'> & { children: ReactNode }) {
+}: ComponentProps<'a'> & { children: ReactNode; standalone?: boolean }) {
   return (
     <a
-      className={clsx(baseClasses, className)}
+      className={clsx(baseClasses, standalone && standaloneClasses, className)}
       rel="noopener noreferrer"
       target="_blank"
       {...props}

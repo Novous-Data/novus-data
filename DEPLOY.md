@@ -13,14 +13,23 @@ A production build **will fail on purpose** until three things exist. That is by
 design — the alternative is shipping an about page with no author and a subscribe
 button that goes nowhere.
 
-1. **`src/config/publication.ts` → `author.name`** — your name exactly as it
-   should appear in print.
+1. **`src/config/publication.ts` → `authors[0].name`** — the editor's name
+   exactly as it should appear in print. `authors` is an array in masthead
+   order and the **first entry is the editor**: the byline of record, and the
+   name the build refuses to run without. Its `id` is `'editor'` and should
+   stay that way — register entries point at these ids, and changing one
+   silently detaches every assessment that person made.
 2. **`NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL`** — your Beehiiv subscribe page.
 3. **`NEXT_PUBLIC_CONTACT_EMAIL`** — the address you are happy to publish.
 
-While you are in `publication.ts`, also fill in `author.credentials` — statements
-that are **true and checkable today**, nothing forthcoming. An empty list is fine
-and the page renders correctly without it.
+While you are in `publication.ts`, also fill in that entry's `credentials` —
+statements that are **true and checkable today**, nothing forthcoming. An empty
+list is fine and the page renders correctly without it.
+
+**Adding a second author** means appending another entry to `authors` with its
+own permanent `id`. Do that *before* the first co-written register entry, not
+after: retro-fitting attribution to files that never carried it means guessing
+who wrote what.
 
 Check locally before pushing:
 

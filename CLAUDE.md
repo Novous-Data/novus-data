@@ -718,10 +718,12 @@ takes the page down or delays the others beyond its own timeout.
 ### Traps specific to this layer
 
 - **GDELT allows one request per five seconds per IP**, and answers faster
-  callers with HTTP 429. Requests are sequential, 5.5 s apart. On Vercel the
-  outbound IP is shared with other customers, so 429s can happen regardless;
-  a rate-limited theme is shown as unavailable while the others still render.
-  Each theme costs 5.5 s of regeneration time — add one only if it earns it.
+  callers with HTTP 429. Requests are sequential, 5.5 s apart, stop at the
+  first 429, and run inside a 32-second budget (see the findings below). On
+  Vercel the outbound IP is shared with other customers, so 429s can happen
+  regardless; the panel then says so and every other panel still renders.
+  Each theme costs 5.5 s of regeneration time and a share of that budget —
+  add one only if it earns it.
 - **The AISStream key is server-only.** It is read once in `sources/index.ts`,
   passed to the adapter, sent only inside the subscription message, and never
   stored on a `Reading`, logged, or placed in `/live.json`. `input-ledger.ts`
@@ -776,16 +778,43 @@ keyboard-operable, and a table view lists every interval.
 - The rest are marked "not verified in this build" in `meta.ts` rather than
   given a plausible-sounding licence. Verify them before charging.
 
-### Not yet verified against the real feeds
+### Verified against the real feeds — findings
 
 The environment this layer was built in could not reach any of the seven
-hosts (an egress allowlist returned 403 for each). Every adapter was written
-against the publisher's documented shape, fails safe to *unavailable* on
-anything it does not recognise, and was exercised against fixtures in the
-publisher's raw format; the AIS client was tested against a local WebSocket
-server speaking AISStream's protocol, including a refused key and an early
-close. **Run `npm run live:check` anywhere the network is open and record what
-it reports here**, the way §10 records the Beehiiv feed findings.
+hosts, so `.github/workflows/live-check.yml` runs `npm run live:check` on a
+GitHub Actions runner (open internet) for every PR that touches the layer.
+Its log is the record. First run, 22 September 2026:
+
+| Feed | Result |
+|---|---|
+| USGS | **Parsed.** 14 quakes; `asOf` from `metadata.generated`, 2 min old |
+| GDACS | **Parsed.** 7 orange/red alerts; 3 min old. (The adapter written with least certainty.) |
+| NOAA NHC | **Parsed.** 3 active storms; latest advisory 48 min old |
+| NASA EONET | **Parsed.** 48 open events, 2 within 300 km of a tracked location |
+| Open-Meteo | **Parsed.** All 12 ports; latest model interval 3 min old |
+| GDELT | **Refused — HTTP 429 on every request**, each taking ~11 s to arrive. Shape still unverified |
+| AISStream | Not run — no key in the repository's secrets |
+
+**What the GDELT result changed.** Five slow refusals plus the pacing gaps
+took 78 seconds — past both the route's 60-second `maxDuration` and Next's
+60-second limit for prerendering a page at build time, so it would have failed
+a Vercel deploy. `fetchGdelt()` now stops at the first 429 (once a server is
+refused, the rest of the cycle is refused too) and runs inside a 32-second
+budget with 8-second per-request timeouts; what it did not reach is reported
+as "not requested this cycle". Simulated: an instant 429 now costs one
+request and 0.1 s, eleven-second answers cost 21.5 s, success is unchanged.
+
+**The open question is whether GDELT will serve Vercel at all.** Actions
+runners and Vercel functions both leave from shared cloud IP ranges, and
+GDELT's limit is per IP. If `/monitor` shows GDELT rate-limited cycle after
+cycle in production, pacing will not fix it. The fallback is a different
+route to the same data: GDELT also publishes raw fifteen-minute update files
+at `data.gdeltproject.org`, which are static downloads with no request limit.
+That is a larger adapter (zipped CSV) and is not built. Decide on evidence
+from production, not from one CI run.
+
+To verify AIS the same way, add a repository secret named `AISSTREAM_API_KEY`;
+the workflow passes it through, and the script prints only whether it is set.
 
 ### What it deliberately does not do
 

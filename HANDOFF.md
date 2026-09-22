@@ -273,10 +273,14 @@ decisions that would be expensive to reverse:
 - **No history.** A vessel count means most against its own past, and keeping
   a past needs a store. That is a decision about a database, left to you.
 
-**Not verified against the real feeds.** The build environment's network
-blocked all seven hosts. The adapters are written to each publisher's
-documented shape and fail safe, but the first run of `npm run live:check`
-somewhere with open internet is the real test. Record its findings in §6d.
+**Verified from GitHub Actions, with one open question.** The build
+environment's network blocked all seven hosts, so a CI workflow now runs
+`npm run live:check` on a runner with open internet. First run: USGS, GDACS,
+NHC, EONET and Open-Meteo all parsed real responses. GDELT refused every
+request with a slow 429, which exposed a 78-second regeneration that would
+have failed a Vercel build; it is now bounded to about 32 seconds and stops at
+the first refusal. Whether GDELT will serve Vercel's shared IPs reliably is
+the open question — CLAUDE.md §6d has the findings and the fallback.
 
 **A lint bug found on the way.** Flat config replaces rather than merges two
 `no-restricted-imports` entries for one file, so the page/component boundary

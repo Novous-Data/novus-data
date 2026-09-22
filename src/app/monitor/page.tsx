@@ -49,7 +49,8 @@ import { formatCount, formatShare, formatUtc, formatUtcDate, formatUtcShort } fr
  * imported constant (LIVE_REVALIDATE_SECONDS) would be silently ignored.
  *
  * `maxDuration` covers the slowest regeneration: a 30-second vessel sample
- * running alongside GDELT's paced requests (five, 5.5 s apart).
+ * (plus up to 10 s to connect) running alongside GDELT, which is held to a
+ * 32-second budget because a throttled GDELT once took 78 s (§6d findings).
  *
  * Every reading states when its SOURCE produced it, and its age is computed
  * in the reader's browser (LiveAge). A cached page can therefore be old, but

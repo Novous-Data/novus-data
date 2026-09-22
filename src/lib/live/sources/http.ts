@@ -24,7 +24,15 @@ import type { LiveSourceId } from '../types';
  * reader sees is a sentence this layer wrote.
  */
 export class LiveSourceError extends Error {
-  constructor(public readonly publicReason: string) {
+  constructor(
+    public readonly publicReason: string,
+    /**
+     * Set when the upstream answered 429. A caller making several requests to
+     * one host uses it to stop early: once a server is being refused, every
+     * further request in the same cycle is refused too, and only costs time.
+     */
+    public readonly rateLimited = false,
+  ) {
     super(publicReason);
     this.name = 'LiveSourceError';
   }
@@ -66,7 +74,7 @@ export async function fetchJson(
   }
 
   if (response.status === 429) {
-    throw new LiveSourceError(`${label} is rate-limiting requests; it will be retried next cycle.`);
+    throw new LiveSourceError(`${label} is rate-limiting requests; it will be retried next cycle.`, true);
   }
   if (!response.ok) {
     throw new LiveSourceError(`${label} answered with HTTP ${response.status}.`);

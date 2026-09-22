@@ -41,6 +41,22 @@ import {
 
 const ENDPOINT = 'https://api.gdeltproject.org/api/v2/doc/doc';
 const GAP_MS = 5_500;
+
+/**
+ * Wall-clock budget for every GDELT request in one regeneration, and the most
+ * any single request may take.
+ *
+ * MEASURED, not assumed: the first run against the real API (from a GitHub
+ * Actions runner, whose outbound IP is shared like Vercel's) was refused with
+ * 429 on every request, and each refusal took around eleven seconds to
+ * arrive. Five of those plus the pacing gaps came to 78 seconds — past both
+ * the route's 60-second `maxDuration` and Next's 60-second limit for
+ * prerendering a page at build time, which would fail the deploy. With the
+ * budget, GDELT can never take more than about half of either limit, and
+ * whatever it did not reach is reported as not attempted.
+ */
+const BUDGET_MS = 32_000;
+const REQUEST_TIMEOUT_MS = 8_000;
 const WINDOW = '24h';
 const MAX_HEADLINES = 12;
 
@@ -90,29 +106,65 @@ function url(query: string, extra: Record<string, string>): string {
   return `${ENDPOINT}?${params}`;
 }
 
-async function attempt(target: string): Promise<{ fetched: FetchedJson | null; error: string | null }> {
+interface Attempt {
+  fetched: FetchedJson | null;
+  error: string | null;
+  rateLimited: boolean;
+}
+
+async function attempt(target: string, timeoutMs: number): Promise<Attempt> {
   try {
-    return { fetched: await fetchJson(target, 'gdelt', { label: 'GDELT' }), error: null };
+    return {
+      fetched: await fetchJson(target, 'gdelt', { label: 'GDELT', timeoutMs }),
+      error: null,
+      rateLimited: false,
+    };
   } catch (error) {
     return {
       fetched: null,
       error: error instanceof LiveSourceError ? error.publicReason : 'GDELT could not be read.',
+      rateLimited: error instanceof LiveSourceError && error.rateLimited,
     };
   }
 }
 
-/** One request at a time, GAP_MS apart. See RATE LIMIT above. */
+const SKIPPED_AFTER_429 = 'not requested this cycle, because GDELT was already rate-limiting this server.';
+const SKIPPED_FOR_TIME = 'not requested this cycle, because GDELT was slow to answer and the page does not wait past its time budget.';
+
+/**
+ * One request at a time, GAP_MS apart (see RATE LIMIT above), inside
+ * BUDGET_MS, and stopping at the first 429. Themes first, headlines last:
+ * the charts are the part of this panel nothing else on the page provides.
+ */
 export async function fetchGdelt(): Promise<GdeltRaw> {
-  const series: GdeltRaw['series'] = [];
-  for (const [index, theme] of GDELT_THEMES.entries()) {
-    if (index > 0) await sleep(GAP_MS);
-    series.push({ themeId: theme.id, ...(await attempt(url(theme.query, { mode: 'timelinevolraw' }))) });
+  const deadline = Date.now() + BUDGET_MS;
+  const targets = [
+    ...GDELT_THEMES.map((theme) => ({ themeId: theme.id as string | null, target: url(theme.query, { mode: 'timelinevolraw' }) })),
+    { themeId: null, target: url(HEADLINE_QUERY, { mode: 'artlist', maxrecords: '75', sort: 'datedesc' }) },
+  ];
+
+  const results: Attempt[] = [];
+  let halt: string | null = null;
+
+  for (const [index, { target }] of targets.entries()) {
+    if (!halt && index > 0) {
+      if (Date.now() + GAP_MS + REQUEST_TIMEOUT_MS > deadline) halt = SKIPPED_FOR_TIME;
+      else await sleep(GAP_MS);
+    }
+    if (halt) {
+      results.push({ fetched: null, error: halt, rateLimited: false });
+      continue;
+    }
+    const result = await attempt(target, Math.min(REQUEST_TIMEOUT_MS, Math.max(1_000, deadline - Date.now())));
+    results.push(result);
+    if (result.rateLimited) halt = SKIPPED_AFTER_429;
   }
-  await sleep(GAP_MS);
-  const headlines = await attempt(
-    url(HEADLINE_QUERY, { mode: 'artlist', maxrecords: '75', sort: 'datedesc' }),
+
+  const series = targets.flatMap((t, index) =>
+    t.themeId ? [{ themeId: t.themeId, fetched: results[index].fetched, error: results[index].error }] : [],
   );
-  return { series, headlines };
+  const last = results[results.length - 1];
+  return { series, headlines: { fetched: last.fetched, error: last.error } };
 }
 
 function parseSeries(theme: GdeltTheme, body: unknown): SignalSeries | null {

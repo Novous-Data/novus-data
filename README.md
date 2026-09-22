@@ -30,6 +30,9 @@ cp .env.example .env.local   # then fill in the values below
 npm run dev              # http://localhost:3000
 ```
 
+**New to the project?** `CONTRIBUTING.md` opens with a twenty-minute joining
+path — what to run, what to read, and how to add yourself to the masthead.
+
 ## Commands
 
 **Start with `npm run doctor`.** It reports where the project stands and the one

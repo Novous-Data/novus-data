@@ -100,6 +100,10 @@ git push
 - A severity that the sources do not support. `estimated` exists for a reason —
   use it and say so.
 - Any figure not present in a cited source. **Empty is better than invented.**
+- A date written any way other than a quoted `"YYYY-MM-DD"`. The loader refuses
+  the rest, because looser forms are read differently than they are written.
+- An entity whose name, ticker or sector disagrees with how another file already
+  describes the same `entity.id`. `npm run doctor` names both files.
 
 ---
 
@@ -199,6 +203,8 @@ is load-bearing. `CLAUDE.md` has the full reasoning.
 | It is `src/proxy.ts`, not `middleware.ts` | Next 16 renamed it. Every Supabase guide still shows the old name |
 | Feed discovery is a `<link>` element | As metadata it renders on zero routes, silently |
 | The alerts service lives in a separate repo | It is the component that has to stay up; merging it makes every notification change a deploy of the website |
+| Register dates are quoted `"YYYY-MM-DD"` strings | Unquoted, YAML rolls `2026-13-01` forward to `2027-01-01` before anything can check it. Quotes keep the text you wrote |
+| One entity id means one company | Two files describing the same id differently used to render one company under two tickers on the same page |
 
 ---
 

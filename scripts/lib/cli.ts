@@ -134,9 +134,24 @@ export function isIsoDate(value: string): boolean {
 /**
  * Whole days between an ISO date and now. Negative for a future date, which is
  * worth surfacing rather than clamping — a review date in the future is a typo.
+ *
+ * Takes the date part rather than appending to whatever it was given, which it
+ * used to do. `${iso}T00:00:00Z` produced a valid Date only for a bare
+ * `YYYY-MM-DD`; handed a full timestamp it built
+ * `2026-08-01T00:00:00.000ZT00:00:00Z`, got Invalid Date, and returned null.
+ *
+ * That was a real defect with a bad shape, because `doctor` treats null as
+ * "no age to report" and simply omitted the entry from its staleness list —
+ * while the site, which parses the same value with a bare `new Date()`, went
+ * on marking it stale. The register loader now normalises every date to
+ * `YYYY-MM-DD`, so the mismatch cannot arise from that path any more; this
+ * stays defensive because the helper is shared and the failure was silent in
+ * exactly the direction that matters.
  */
 export function daysSince(iso: string, now: Date = new Date()): number | null {
-  const then = new Date(`${iso}T00:00:00Z`);
+  const day = /^(\d{4}-\d{2}-\d{2})/.exec(iso)?.[1];
+  if (!day) return null;
+  const then = new Date(`${day}T00:00:00Z`);
   if (Number.isNaN(then.getTime())) return null;
   return Math.floor((now.getTime() - then.getTime()) / 86_400_000);
 }

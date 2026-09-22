@@ -334,6 +334,43 @@ exposures:
 <p>Optional sanitised analysis body.</p>
 ```
 
+**Every date must be a quoted `"YYYY-MM-DD"` string, and the quotes are
+load-bearing.** An unquoted YAML date is parsed by js-yaml before the loader
+sees it, and js-yaml rolls impossible dates forward silently rather than
+refusing them — measured, not assumed:
+
+| Written unquoted | Becomes |
+|---|---|
+| `updatedAt: 2026-02-30` | `2026-03-02` — a day that does not exist |
+| `updatedAt: 2026-13-01` | `2027-01-01` — **a year out** |
+
+By the time such a value reaches `isoDate()` it is a valid `Date` and the
+author's text is gone, so there is nothing left to check. A quoted string keeps
+the text, which is the only thing that can be validated — so an unquoted date
+is now warned about and the entry is skipped. The string form is narrow for the
+same reason: `new Date()` reads `"10/09/2026"` as 9 October rather than
+10 September, and `"September 2026"` as the 1st, so only `YYYY-MM-DD` (with an
+optional time part, which is discarded) is accepted. This section tells the
+reader to trust the review date over the freshness of the page, which makes a
+silently shifted date the worst thing this layer can emit: plausible, precise,
+and traceable to nobody.
+
+**One entity id means one company, across every file.** `entity.id` is written
+per-exposure, so the same company is described afresh in each file that
+mentions it, and nothing used to check that those descriptions agreed. Two
+files naming `acme-freight` with different tickers rendered this, on one page,
+with no warning: the chart row said `Acme Freight / ZVZZT` while the table view
+below it said `Acme Freight Group plc / ZWZZT`. The chart and the entity page
+took whichever record loaded first; the table rendered each exposure's own
+copy. `reconcileEntities()` in `sources/local-files.ts` now makes the first
+occurrence in filename order canonical, rewrites every other mention to match,
+and warns naming both files and every differing field. It **reconciles rather
+than refuses** because the disagreement is over a display name, not a claim —
+the mechanism, confidence, date and sources are all still intact — and dropping
+a sound assessment over a metadata typo would be the wrong trade. This is worth
+recognising as a shape: unreachable with one entry, near-certain with twenty,
+and twenty overlapping entries is exactly what the chart exists to draw.
+
 **`author` is how the register stays traceable with more than one writer.** It
 holds an `id` from `publication.authors`; an id not on the masthead is warned
 about and nulled rather than rendered, because inventing an attribution is
@@ -849,6 +886,18 @@ its four required fields simply does not render. If
 `src/lib/disruptions/sources/local-files.ts` ever changes what it enforces,
 change `scripts/new-disruption.ts` in the same commit. A scaffolder that writes
 files the loader rejects is worse than no scaffolder.
+
+The drift can run the other way too, and did: `isIsoDate()` in `scripts/lib/cli.ts`
+was already strict about `YYYY-MM-DD` while the loader accepted anything
+`new Date()` could read. A scaffolded entry was therefore always fine and a
+**hand-edited** one was not — and hand-editing `updatedAt` is exactly what
+every review does. The loader now matches the scaffolder.
+
+**All three of these tools respect `NOVUS_DISRUPTIONS_DIR`.** `new-disruption`
+used to hardcode `content/disruptions`, so with the override set in `.env.local`
+— which `loadEnvLocal()` reads — a freshly scaffolded entry went into the real
+register while `doctor` and `review` read somewhere else, and it appeared to
+have vanished.
 
 ## 13. Out of scope for this repository
 

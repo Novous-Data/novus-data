@@ -25,23 +25,49 @@ async function requireAccountId(): Promise<string> {
   return id;
 }
 
+/**
+ * How many names one reader may follow.
+ *
+ * A server action is a public endpoint, as the note above says, and the form
+ * is not the only thing that can post to it. Validating each value's shape is
+ * not enough on its own: nothing stopped a caller posting a hundred thousand
+ * well-formed slugs, all of which passed the regex and all of which were
+ * written to the row. Row-level security confines the damage to the caller's
+ * own record, so this is storage abuse rather than a breach — but an unbounded
+ * write from an open endpoint should be bounded at the endpoint.
+ *
+ * The limit is far above any real watchlist and is not presented in the UI,
+ * because a reader using the page cannot reach it: the form only offers the
+ * entities that exist.
+ */
+const MAX_WATCHLIST_ENTRIES = 500;
+
 export async function updateWatchlistAction(formData: FormData) {
   const id = await requireAccountId();
 
   // Values come from a form, so they are strings of unknown provenance until
-  // checked against the register's own vocabulary.
-  const categories = formData
-    .getAll('category')
-    .filter((value): value is string => typeof value === 'string')
-    .filter((value): value is DisruptionCategory =>
-      (DISRUPTION_CATEGORIES as string[]).includes(value),
-    );
+  // checked against the register's own vocabulary. Deduplicated as well as
+  // checked: posting the same id a thousand times stored it a thousand times.
+  const categories = [
+    ...new Set(
+      formData
+        .getAll('category')
+        .filter((value): value is string => typeof value === 'string')
+        .filter((value): value is DisruptionCategory =>
+          (DISRUPTION_CATEGORIES as string[]).includes(value),
+        ),
+    ),
+  ];
 
-  const entityIds = formData
-    .getAll('entity')
-    .filter((value): value is string => typeof value === 'string')
-    .map((value) => value.trim())
-    .filter((value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value));
+  const entityIds = [
+    ...new Set(
+      formData
+        .getAll('entity')
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.trim())
+        .filter((value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)),
+    ),
+  ].slice(0, MAX_WATCHLIST_ENTRIES);
 
   const repository = await getAccountRepository();
   await repository.updateWatchlist(id, { entityIds, categories });

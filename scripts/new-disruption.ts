@@ -43,7 +43,21 @@ import {
   type Prompter,
 } from './lib/cli';
 
-const DISRUPTIONS_DIR = path.join(process.cwd(), 'content', 'disruptions');
+/**
+ * Where entries are written.
+ *
+ * Respects NOVUS_DISRUPTIONS_DIR for the same reason `doctor` and `review` do:
+ * all three are author tooling reading and writing one register, and they have
+ * to agree about where it is. This used to hardcode `content/disruptions`, so
+ * with the override set in `.env.local` — which `loadEnvLocal()` reads — a
+ * freshly scaffolded entry landed in the real register while `doctor` and
+ * `review` were reading somewhere else, and the entry appeared to have
+ * vanished. Every path this script prints is relative to cwd, so an override
+ * is visible in the output rather than silent.
+ */
+const DISRUPTIONS_DIR = process.env.NOVUS_DISRUPTIONS_DIR
+  ? path.resolve(process.env.NOVUS_DISRUPTIONS_DIR)
+  : path.join(process.cwd(), 'content', 'disruptions');
 
 const STATUSES = ['watch', 'active', 'easing', 'resolved'] as const;
 const CATEGORIES = [
@@ -558,7 +572,8 @@ async function main(): Promise<void> {
 
     const contents = render(entry);
     const prefix = await nextPrefix();
-    const relative = path.join('content', 'disruptions', `${prefix}-${id}.md`);
+    const file = path.join(DISRUPTIONS_DIR, `${prefix}-${id}.md`);
+    const relative = path.relative(process.cwd(), file);
 
     heading(`About to write ${relative}`);
     console.log(colour.dim(contents.replace(/^/gm, '  ')));
@@ -569,7 +584,6 @@ async function main(): Promise<void> {
       return;
     }
 
-    const file = path.join(process.cwd(), relative);
     if (existsSync(file)) {
       warn(`${relative} already exists. Nothing written.`);
       return;

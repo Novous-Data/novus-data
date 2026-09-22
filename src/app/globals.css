@@ -500,3 +500,138 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Print and PDF.
+
+   WHY THIS EXISTS. The site is dark by brand decision (§9), and a browser's
+   print dialog drops background colours unless the reader ticks the box. So
+   without this block a printed page is --text (#F4F6FA) on white paper — about
+   1.07:1, which is to say blank. That is not a cosmetic gap: an analyst who
+   PDFs a register entry to send to a colleague is the exact reader this site is
+   written for, and the page they forward is empty.
+
+   Everything here works by redefining the same tokens the screen design uses,
+   so there is no second set of rules to keep in step. Anything styled through
+   --ink / --surface / --text / --text-muted follows automatically.
+   --------------------------------------------------------------------------- */
+@media print {
+  :root {
+    /* Paper is the ground. --surface and --surface-2 collapse into it: raised
+       panels are a screen metaphor, and on paper the hairlines already divide
+       the page without spending toner on a fill. */
+    --ink: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --border: rgba(0, 0, 0, 0.22);
+    --border-strong: #8b8b93;
+    --text: #101014;
+    --text-muted: #45454d;
+    --accent: #45597f;
+    --accent-text: #26375a;
+
+    /* ---------------------------------------------------------------------
+       Severity, inverted — and this is the one decision here that is not
+       mechanical.
+
+       §6a fixes the screen ramp dark → light as severity rises, because "the
+       lightest step has to be the one that reads as most" on a dark ground.
+       On white paper that ordering reverses: the lightest step becomes the one
+       that reads as LEAST, so shipping the screen ramp unchanged would make
+       the encoding say the opposite of what it means. This applies the same
+       principle to a light ground rather than inventing a second one.
+
+       Single-hue blue, hue spread 2°, monotone lightness, and the step nearest
+       the paper still clear of the 3:1 a non-text mark needs:
+
+         low      #7590BF   L* 59.1    3.27:1 on white
+         moderate #44608F   L* 40.6    6.33:1
+         high     #1E2C47   L* 18.9   13.60:1
+
+       L* gaps of 18.5 and 21.7 — monotone and roughly even, like the screen
+       ramp's. Stated as arithmetic rather than as a claim of equal rigour: the
+       screen ramp was validated as a set, this one mirrors its reasoning.
+
+       The texture channel above needs no change, and that is not luck. It
+       hatches in `var(--ink)` — the ground — so it is polarity-correct by
+       construction: dark hatching on light fills against a dark page, white
+       hatching on dark fills against paper.
+       --------------------------------------------------------------------- */
+    --sev-low: #7590bf;
+    --sev-moderate: #44608f;
+    --sev-high: #1e2c47;
+
+    /* Status dots never appear without their word beside them (§6a), so these
+       only have to be legible, not distinguishable from each other by hue. */
+    --status-active: #8a5b00;
+    --status-easing: #26375a;
+    --status-watch: #55555d;
+    --status-resolved: #6e6e76;
+
+    color-scheme: light;
+  }
+
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+  }
+
+  /* The severity fill IS the datum, so it is the one thing on the page worth
+     overriding the reader's background preference for. The table below is
+     forced open in the same breath, so even a browser that ignores this
+     prints a complete page. */
+  .exposure-cell {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* The table view carries mechanism, confidence, as-of date and source count
+     in words — it is the version that works when colour does not, which on
+     paper is the version that matters most. It sits in a <details> that is
+     collapsed by default, so printing it today yields a summary line and no
+     table. Both selectors are here on purpose: the first is how current
+     Chromium exposes collapsed content, the second is the long-standing
+     fallback for engines without it. */
+  details > summary {
+    list-style: none;
+  }
+  details::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+  details:not([open]) > *:not(summary) {
+    display: block;
+  }
+
+  /* A source you cannot follow is not a source. The standard this site
+     publishes at /about#method is that every claim carries a followable URL —
+     a printed page that strips them fails that standard on its own terms. */
+  a[href^="http"]::after {
+    content: " <" attr(href) ">";
+    font-size: 0.85em;
+    word-break: break-all;
+    color: var(--text-muted);
+  }
+
+  /* Don't split a claim, a source or a row across a page break: half an
+     assessment on each side of a fold is how a reader misreads one. */
+  li,
+  tr,
+  dl {
+    break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  /* Decoration, and anything whose only job is on a screen. */
+  .grid-field {
+    display: none;
+  }
+}

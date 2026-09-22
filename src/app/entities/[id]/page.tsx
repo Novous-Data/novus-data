@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { Container } from '@/components/container';
+import { PrintPermalink } from '@/components/print-permalink';
 import { SourceList } from '@/components/source-list';
 import { StatusBadge } from '@/components/status-badge';
 import { TextLink } from '@/components/text-link';
@@ -199,6 +200,7 @@ export default async function EntityPage(props: PageProps<'/entities/[id]'>) {
       </Container>
 
       <Container width="reading" className="mt-10">
+        <PrintPermalink path={`/entities/${entity.id}`} className="mb-2" />
         <p className="max-w-measure text-meta text-muted">
           Novus Data publishes analysis and commentary, not investment advice. Nothing here is a
           recommendation to buy or sell any security, and an assessment that a disruption reaches a

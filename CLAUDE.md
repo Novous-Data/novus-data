@@ -672,6 +672,67 @@ be used rather than reinvented:
 page title is decoration" holds for a web page, but a masthead is exactly where
 a rule carries meaning: it closes the title block and opens the content.
 
+### Print and PDF — the palette inverts, and the severity ramp inverts with it
+
+`@media print` at the end of `globals.css` redefines the same tokens rather than
+adding a second set of rules, so anything styled through `--ink` / `--surface` /
+`--text` / `--text-muted` follows on its own.
+
+**This was a real defect, not a polish item.** A browser's print dialog drops
+background colours unless the reader ticks the box, so before this block a
+printed page was `--text` (`#F4F6FA`) on white paper — about **1.07:1**, i.e.
+blank. The reader who PDFs a register entry to forward to a colleague is the
+exact reader §2 describes, and the page they forwarded was empty.
+
+Four decisions in there are load-bearing:
+
+1. **The severity ramp inverts.** §6a fixes the screen ramp dark → light
+   because "the lightest step has to be the one that reads as most" on a dark
+   ground. On paper that ordering reverses, so the screen ramp would make the
+   encoding say the opposite of what it means. The print ramp is single-hue
+   blue, hue spread 2°, monotone lightness, with the step nearest the paper
+   still clear of the 3:1 a non-text mark needs:
+
+   | Level | Print token | L\* | Contrast on white |
+   |---|---|---|---|
+   | Low | `#7590BF` | 59.1 | 3.27:1 |
+   | Moderate | `#44608F` | 40.6 | 6.33:1 |
+   | High | `#1E2C47` | 18.9 | 13.60:1 |
+
+   L\* gaps of 18.5 and 21.7 — monotone and roughly even. Stated as arithmetic
+   rather than as a claim of equal rigour: the screen ramp was validated as a
+   set, this one mirrors its reasoning onto a light ground.
+
+2. **The texture channel needed no change, and that is not luck.** It hatches in
+   `var(--ink)` — the ground — so it is polarity-correct by construction: dark
+   hatching on light fills against a dark page, white hatching on dark fills
+   against paper. Do not rewrite it to a literal colour.
+
+3. **The exposure table is forced open.** It lives in a `<details>` that is
+   collapsed by default, and it is the view that carries mechanism, confidence,
+   as-of date and source count *in words* — which on paper is the view that
+   matters most. Both `::details-content` and the
+   `details:not([open]) > *:not(summary)` fallback are present on purpose;
+   verified to render with real height in Chromium.
+
+4. **Source URLs print.** `a[href^="http"]::after` appends the href. The
+   standard published at `/about#method` is that every claim carries a
+   followable URL, so a printed page that strips them fails that standard on
+   its own terms. `PrintPermalink` does the same job for the page itself, and
+   renders **nothing** unless `NEXT_PUBLIC_SITE_URL` is really set — printing
+   `http://localhost:3000/...` as a permanent address would be worse than
+   printing no address. It carries no "retrieved on" date, because every page
+   here is static and the only date available at render is the build's.
+
+Screen-only chrome is hidden with Tailwind's `print:` variant at the component
+that owns it — the header, the footer's link lists, the adjacent-issue nav —
+rather than by selector in `globals.css`, which stays about tokens.
+
+**The disclaimer appearing both beside the content and in the footer on a
+printed page is deliberate, not a duplication bug.** Repeating a risk notice is
+the norm in financial documents, issue pages carry no inline disclaimer of their
+own and rely on the footer's, and no CSS can know which pages have both.
+
 Tailwind utility names map onto these: `bg-ink`, `bg-surface`, `bg-surface-2`,
 `text-fg`, `text-muted`, `text-link`, `border-hairline`, `border-rule`,
 `border-accent`.

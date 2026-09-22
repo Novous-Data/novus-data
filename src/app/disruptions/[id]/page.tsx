@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { Container } from '@/components/container';
 import { JsonLd } from '@/components/json-ld';
+import { PrintPermalink } from '@/components/print-permalink';
 import { ProseBody } from '@/components/prose-body';
 import { SourceList } from '@/components/source-list';
 import { authorById, editor, hasCoAuthors } from '@/config/publication';
@@ -174,6 +175,7 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
       </Container>
 
       <Container width="reading" className="mt-16">
+        <PrintPermalink path={`/disruptions/${disruption.id}`} className="mb-2" />
         <p className="max-w-measure text-meta text-muted">
           Novus Data publishes analysis and commentary, not investment advice. Nothing here is a
           recommendation to buy or sell any security.

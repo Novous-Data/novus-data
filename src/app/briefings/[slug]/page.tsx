@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 
 import { Container } from '@/components/container';
 import { ProseBody } from '@/components/prose-body';
+import { PrintPermalink } from '@/components/print-permalink';
 import { JsonLd } from '@/components/json-ld';
 import { SubscribePanel } from '@/components/subscribe-panel';
 import { ExternalLink, TextLink } from '@/components/text-link';
@@ -157,6 +158,8 @@ export default async function IssuePage(props: PageProps<'/briefings/[slug]'>) {
             <ExternalLink href={issue.externalUrl}>Beehiiv</ExternalLink>.
           </p>
         ) : null}
+
+        <PrintPermalink path={`/briefings/${issue.slug}`} className="mt-12" />
       </Container>
 
       <Container width="reading" className="mt-16">
@@ -165,7 +168,9 @@ export default async function IssuePage(props: PageProps<'/briefings/[slug]'>) {
 
       {previous || next ? (
         <Container width="reading" className="mt-16">
-          <nav aria-label="More briefings" className="border-t border-hairline pt-8">
+          {/* Hidden in print: both sides are links to pages a sheet of paper
+              cannot reach. */}
+          <nav aria-label="More briefings" className="border-t border-hairline pt-8 print:hidden">
             {/* Position encodes direction: earlier on the left, later on the
                 right. No arrow glyphs. */}
             <div className="grid gap-8 sm:grid-cols-2">

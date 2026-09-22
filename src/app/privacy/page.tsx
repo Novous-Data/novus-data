@@ -171,7 +171,7 @@ export default function PrivacyPage() {
 function Section({ heading, children }: { heading: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="font-serif text-heading font-semibold text-fg">{heading}</h2>
+      <h2 className="text-heading font-semibold text-fg">{heading}</h2>
       <div className="mt-4 flex max-w-measure flex-col gap-4 text-muted">{children}</div>
     </section>
   );

@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 import { publication } from '@/config/publication';
 import { getIssue, listIssueSlugs } from '@/lib/content';
-import { ogColors, ogSize, serifFonts } from '@/lib/og';
+import { ogColors, ogSize, cardFonts } from '@/lib/og';
 import { formatIssueLabel, formatLongDate } from '@/lib/format';
 
 export const alt = `A briefing from ${publication.name}`;
@@ -41,7 +41,7 @@ export default async function IssueOpengraphImage({
           justifyContent: 'space-between',
           backgroundColor: ogColors.ink,
           padding: '64px 80px',
-          fontFamily: 'Newsreader',
+          fontFamily: 'IBM Plex Sans',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -65,12 +65,23 @@ export default async function IssueOpengraphImage({
           {title}
         </div>
 
-        <div style={{ display: 'flex', gap: 48, fontSize: 26, color: ogColors.muted }}>
+        {/* The metadata row is the card's figures, so it takes Plex Mono — the
+            same rule the page applies to every date and count (§9). It is what
+            makes a card look like it came from this site. */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 44,
+            fontSize: 24,
+            color: ogColors.muted,
+            fontFamily: 'IBM Plex Mono',
+          }}
+        >
           {number ? <div style={{ display: 'flex' }}>Issue {number}</div> : null}
           {date ? <div style={{ display: 'flex' }}>{date}</div> : null}
         </div>
       </div>
     ),
-    { ...size, fonts: serifFonts() },
+    { ...size, fonts: cardFonts() },
   );
 }

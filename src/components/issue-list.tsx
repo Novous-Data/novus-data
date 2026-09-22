@@ -47,7 +47,7 @@ function IssueRow({ issue }: { issue: IssueSummary }) {
         )}
 
         <div className="col-span-full sm:col-span-1">
-          <h3 className="font-serif text-[1.3125rem] font-semibold leading-snug text-fg transition-colors group-hover:text-link sm:text-[1.375rem]">
+          <h3 className="text-[1.3125rem] font-semibold leading-snug text-fg transition-colors group-hover:text-link sm:text-[1.375rem]">
             {issue.title}
           </h3>
           {issue.excerpt ? (

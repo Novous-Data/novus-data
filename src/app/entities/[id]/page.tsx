@@ -85,7 +85,7 @@ export default async function EntityPage(props: PageProps<'/entities/[id]'>) {
           </TextLink>
         </p>
 
-        <h1 className="mt-6 font-serif text-title font-semibold text-fg">{entity.name}</h1>
+        <h1 className="mt-6 text-title font-semibold text-fg">{entity.name}</h1>
 
         <p className="mt-4 text-meta text-muted">
           {entity.ticker ? (
@@ -159,7 +159,7 @@ export default async function EntityPage(props: PageProps<'/entities/[id]'>) {
 
       {claims.length > 0 ? (
         <Container width="reading" className="mt-16">
-          <h2 className="font-serif text-heading font-semibold text-fg">
+          <h2 className="text-heading font-semibold text-fg">
             How each disruption reaches {entity.name}
           </h2>
           <p className="mt-3 max-w-measure text-muted">
@@ -177,7 +177,7 @@ export default async function EntityPage(props: PageProps<'/entities/[id]'>) {
 
       {resolved.length > 0 ? (
         <Container width="reading" className="mt-16">
-          <h2 className="font-serif text-heading font-semibold text-fg">Resolved</h2>
+          <h2 className="text-heading font-semibold text-fg">Resolved</h2>
           <p className="mt-3 max-w-measure text-muted">
             These disruptions reached {entity.name} and have since resolved. They stay on the
             record: an assessment that simply vanishes is indistinguishable from one that was

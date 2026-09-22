@@ -225,6 +225,12 @@ The palette did not change at all. What changed:
   sans is what you operate, so `p`/`li`/`blockquote` take the serif in
   `@layer base` and controls take the sans back. Setting body copy in a UI sans
   was the loudest single tell.
+
+  > **Superseded.** The author later replaced this split with a single family —
+  > IBM Plex Sans throughout, IBM Plex Mono for figures. The argument above
+  > still holds *about Inter*, which was the actual tell; it does not hold
+  > against a sans with an opinion. **§9 is the current state; this section is
+  > history.** Do not restore the serif from here.
 - **Inter was specifically the problem.** It is the face a generated page
   reaches for.
 - **The scale came down**, not just across — 4.125rem display to 3.25rem. The
@@ -286,27 +292,32 @@ ignore it. Delete it or move it whenever you like; nothing depends on it.
 
 The brand palette is described in the brief as derived from an existing Novus Data
 logo, but the file was not supplied. The brief forbids redrawing or approximating
-it, so I did neither. The wordmark is set in Newsreader (`src/components/wordmark.tsx`)
-and `icon.tsx` / `apple-icon.tsx` generate the icons from the same treatment.
+it, so I did neither. The wordmark is set in IBM Plex Sans
+(`src/components/wordmark.tsx`) and `icon.tsx` / `apple-icon.tsx` generate the
+icons from the same treatment. It has carried three faces now — Source Serif 4,
+then Newsreader, now Plex Sans — because it follows whatever §9 currently sets.
+Deliberately not Plex Mono; §9 says why.
 
 **When you supply the real logo:** replace `wordmark.tsx`, and replace the two
 icon routes with the file. That is the whole change.
 
 ### 4.5 Font TTFs are committed to the repository
 
-`src/assets/fonts/` holds two TTFs. The image generator behind the icons and
-social cards needs TTF or WOFF, and `next/font` serves WOFF2, so the font data has
-to come from somewhere. Committing it also means social card generation does not
-depend on a third-party request succeeding mid-build. Both the original Source
-Serif 4 and the current Newsreader are SIL Open Font License, so redistribution
-inside the repository is permitted.
+`src/assets/fonts/` holds the TTFs behind the icons and social cards. The image
+generator needs TTF or WOFF and `next/font` serves WOFF2, so the font data has to
+come from somewhere. Committing it also means social card generation does not
+depend on a third-party request succeeding mid-build. Source Serif 4, Newsreader
+and the current IBM Plex are all SIL Open Font License, so redistribution inside
+the repository is permitted throughout.
 
-**Updated when the typography changed (§4.24).** The face is now Newsreader, and
-these two files are not shipped by Google — Newsreader publishes no static
-instances, and Satori throws on a variable font's `fvar` table. They were cut
-from the variable source with fontTools at wght 600/700, opsz pinned to 60. The
-method is recorded at the top of `src/lib/og.ts`; regenerate them the same way if
-the face is ever updated.
+**Updated twice.** The files are now `PlexSans-SemiBold.ttf`,
+`PlexSans-Bold.ttf` and `PlexMono-SemiBold.ttf` — three rather than two, because
+figures on a card are set in mono exactly as they are on the page. Satori throws
+on a variable font's `fvar` table, so these are static instances taken from
+Google Fonts' static endpoint and checked for the absence of `fvar` before being
+committed. **Verify the same way if they are ever replaced** — a variable file
+here fails the build, not the lint. The helper that reads them is `cardFonts()`;
+it was `serifFonts()`, which stopped being a true name when the serif went.
 
 ### 4.6 Cover images bypass `next/image`
 

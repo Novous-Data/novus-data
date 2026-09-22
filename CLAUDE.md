@@ -198,8 +198,8 @@ src/proxy.ts               Session refresh. NOT middleware.ts — renamed in Nex
 src/app/entities/          Company and sector pages, derived from the register. See 6c.
 src/app/register.json/     JSON Feed of the register — the alerting seam. See 6c.
 src/app/                   Routes, metadata routes, icons, error boundaries.
-src/assets/fonts/          Newsreader TTFs, for icon and social card rendering.
-                           Static cuts from the variable source — see src/lib/og.ts.
+src/assets/fonts/          IBM Plex TTFs, for icon and social card rendering.
+                           Static instances — Satori throws on a variable font.
 ```
 
 ## 6. Content architecture
@@ -622,34 +622,82 @@ issue pages included. Long-form legibility is handled by type, not by inverting
 to a light theme mid-site: body at `1.125rem` / `1.75` in `--text` (17:1), measure
 capped at 66ch. A light article page inside a dark site fragments the brand.
 
-### Typography — amended by the author
+### Typography — amended twice by the author. This is the current state
 
-The palette above is unchanged. The **typefaces and the type scale were
-replaced** on the author's instruction: the site was reading as generated
-rather than as a publication, and the brief is a classic financial paper.
+The palette above is unchanged and has been through both amendments untouched.
+The **typefaces have been replaced twice**, and the second replacement reverses
+the first. Both are the author's call. The history matters because the reasoning
+of the first is still quoted in places, and because reverting to it would undo a
+decision that was made deliberately.
 
-| Role | Was | Now |
-|---|---|---|
-| Editorial — headlines, ledes, summaries, issue bodies | Source Serif 4 | **Newsreader** |
-| Interface — navigation, labels, metadata, buttons | Inter | **Libre Franklin** |
+| Role | v1 | v2 | **Now (v3)** |
+|---|---|---|---|
+| Words — headlines, ledes, summaries, body, issue bodies | Source Serif 4 | Newsreader | **IBM Plex Sans** |
+| Interface — navigation, labels, buttons | Inter | Libre Franklin | **IBM Plex Sans** |
+| Figures — dates, counts, tickers, the kicker | — | — | **IBM Plex Mono** |
 
-Three things about this, all of which are load-bearing:
+**One family, plus its monospace sibling for figures.** v2's serif/sans split is
+gone: there is no `--font-serif` token, no `font-serif` utility anywhere in
+`src/`, and no per-element `font-family` block in `@layer base`. The family is
+set once on `body` and inherited. v2 needed two rules plus an opt-out list
+(`nav p`, `button`, `label`, `th`, `.text-meta`, `[data-ui]`) to keep interface
+text out of the reading face; none of that has to exist now.
 
-1. **The serif/sans split is a division of labour, not decoration.** On a news
-   page the serif is what you *read* and the sans is what you *operate*. So
-   `p`, `li`, `blockquote`, `figcaption` and `dd` take the serif in
-   `@layer base`; navigation, buttons, labels, table headers and `.text-meta`
-   take the sans back. **A publication that sets its body copy in a UI sans
-   reads as a web app about finance rather than as a financial publication** —
-   that single choice was the loudest tell.
-2. **Inter is the AI-default sans.** It is the face a generated page reaches
-   for. Reintroducing it undoes the point of this change.
-3. **The scale was pulled down, not just re-lettered.** The old top end
-   (`4.125rem` display, `2.75rem` title) is landing-page scale; it made an
-   index page shout. A broadsheet reserves its largest size for the lead story
-   and sets everything else close to the text. Display now tops out at
-   `3.25rem` and title at `2.125rem`, with looser tracking because Newsreader
-   is drawn more openly than the old face and over-tightened at the old values.
+**Why this reverses v2 without contradicting it.** v2 argued that "a publication
+that sets its body copy in a UI sans reads as a web app about finance rather
+than as a financial publication", and that argument is sound *about the face it
+was aimed at*. The face was **Inter** — the sans a generated page reaches for,
+and the actual tell. Plex is the opposite of a default: a corporate family with
+real quirks, and setting every figure in Plex Mono is a terminal convention no
+template arrives at by accident. The brief this answers was that the site still
+read as generated; the fix is a face with an opinion, not a different serif.
+
+**What survived the reversal is the division of labour, narrowed.** v2 had
+*serif reads, sans operates*. v3 has **words are Plex Sans, figures are Plex
+Mono** — and that is not a flourish. Every figure on this site sits in a column
+with others like it: a `<dl>` of review dates, an "as of" column, a count of
+names affected. A proportional face makes those ragged because its digits are
+not the same width. Mono plus `tabular-nums` makes them a table the eye reads
+straight down. **Plex Mono is deliberately unavailable for running text** — a
+monospace paragraph is a code block, and nothing here is code.
+
+Four details that will look like mistakes and are not:
+
+1. **`word-spacing: -0.2em` on `time` and `[data-numeric]`, and `-0.18em` on
+   `.kicker`.** A monospace word-space is a full character wide — roughly
+   `0.6em` against a proportional face's `0.25em` — so "09 Sept 2026" renders
+   with visible holes in it. Letter-spacing cannot do this job; it would close
+   the digits up too. Without this the dates read as three values, not one.
+2. **Mono is sized at `0.94em`, not `1em`.** Plex Mono is drawn considerably
+   wider than Plex Sans, so matched pixel sizes do not look matched.
+3. **Tracking went more negative and leading came down.** Plex Sans sits on a
+   wider, more open chassis than Newsreader, so v2's letter-spacing left a sans
+   headline loose and unresolved: display is now `-0.028em` (was `-0.014em`) and
+   title `-0.022em` (was `-0.011em`). Leading drops slightly at every step,
+   including the reading size from `1.75` to `1.7`, because a sans has no serifs
+   bridging glyphs along the baseline and the eye needs less leading to avoid
+   doubling back. **The sizes themselves are unchanged from v2** — the scale was
+   not the complaint.
+4. **The kicker is mono.** In print a letterspaced uppercase label is set in the
+   paper's sans because that is all a press had; on a terminal it is monospace,
+   because a terminal had nothing else. This is the single clearest signal of
+   the change, and it is why `.kicker` is still editorial furniture and still
+   must not be used for form labels or inline metadata.
+
+**The wordmark is Plex Sans, not Plex Mono**, at `-0.022em`. Mono is reserved
+for figures and the kicker; a wordmark set in it reads as a filename rather than
+a masthead, and the header renders it at 1rem where legibility matters most.
+
+**`src/assets/fonts/` and `src/lib/og.ts` are part of this and must move with
+it.** Generated cards and icons cannot read the CSS, so they carry their own
+copies: `PlexSans-SemiBold.ttf`, `PlexSans-Bold.ttf`, `PlexMono-SemiBold.ttf`.
+A card in a different typeface from the page it links to reads as two different
+products, and a card travels further and is judged faster than the page. Satori
+throws on a variable font's `fvar` table, so these are static instances, checked
+for the absence of `fvar` before being committed — verify the same way if they
+are ever replaced. IBM Plex is SIL Open Font License, so redistributing it here
+is permitted, on the same basis Newsreader was. The helper is `cardFonts()`; it
+was `serifFonts()`, which is no longer a true name.
 
 **Density is part of the same change.** Section rhythm went from
 `mt-20 sm:mt-28` to `mt-12 sm:mt-16` and register rows from `py-6` to `py-4`,

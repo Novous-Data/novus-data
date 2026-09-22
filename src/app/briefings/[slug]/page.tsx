@@ -95,7 +95,7 @@ export default async function IssuePage(props: PageProps<'/briefings/[slug]'>) {
           </TextLink>
         </p>
 
-        <h1 className="mt-6 font-serif text-title font-semibold text-fg">{issue.title}</h1>
+        <h1 className="mt-6 text-title font-semibold text-fg">{issue.title}</h1>
 
         {issue.excerpt ? (
           <p className="mt-6 max-w-measure text-subhead text-muted">{issue.excerpt}</p>
@@ -200,7 +200,7 @@ function AdjacentIssue({
       <p className="text-meta text-muted">{label}</p>
       <Link
         href={`/briefings/${issue.slug}`}
-        className="mt-1 inline-flex min-h-11 items-center font-serif text-[1.125rem] font-semibold text-fg transition-colors hover:text-link"
+        className="mt-1 inline-flex min-h-11 items-center text-[1.125rem] font-semibold text-fg transition-colors hover:text-link"
       >
         {issue.title}
       </Link>

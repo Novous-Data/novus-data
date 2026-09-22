@@ -50,7 +50,7 @@ export default function CoveragePage() {
           <section key={topic.id} id={topic.id} aria-labelledby={`${topic.id}-heading`}>
             <h2
               id={`${topic.id}-heading`}
-              className="font-serif text-heading font-semibold text-fg"
+              className="text-heading font-semibold text-fg"
             >
               {topic.title}
             </h2>

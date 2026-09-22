@@ -83,7 +83,7 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
           <span className="kicker kicker-muted">{CATEGORY_LABELS[disruption.category]}</span>
         </div>
 
-        <h1 className="mt-4 font-serif text-title font-semibold text-fg">{disruption.title}</h1>
+        <h1 className="mt-4 text-title font-semibold text-fg">{disruption.title}</h1>
 
         <p className="mt-6 max-w-measure text-subhead text-muted">{disruption.summary}</p>
 
@@ -145,7 +145,7 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
       ) : null}
 
       <Container width="reading" className="mt-16">
-        <h2 className="font-serif text-heading font-semibold text-fg">Who this reaches</h2>
+        <h2 className="text-heading font-semibold text-fg">Who this reaches</h2>
         <p className="mt-3 max-w-measure text-muted">
           Each entry states how the disruption reaches that company or sector, how well
           established the assessment is, and where it comes from.
@@ -170,7 +170,7 @@ export default async function DisruptionPage(props: PageProps<'/disruptions/[id]
       </Container>
 
       <Container width="reading" className="mt-16">
-        <h2 className="font-serif text-heading font-semibold text-fg">Sources</h2>
+        <h2 className="text-heading font-semibold text-fg">Sources</h2>
         <SourceList sources={disruption.sources} className="mt-5" />
       </Container>
 

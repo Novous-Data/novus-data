@@ -72,7 +72,7 @@ export default async function HomePage() {
                 >
                   <StatusBadge status={disruption.status} />
                   <div>
-                    <h3 className="font-serif text-[1.1875rem] font-semibold text-fg transition-colors group-hover:text-link">
+                    <h3 className="text-[1.1875rem] font-semibold text-fg transition-colors group-hover:text-link">
                       {disruption.title}
                     </h3>
                     <p className="mt-1.5 max-w-[62ch] text-[0.9375rem] text-muted">
@@ -126,7 +126,7 @@ export default async function HomePage() {
                 </time>
               ) : null}
             </p>
-            <h3 className="mt-3 max-w-[24ch] font-serif text-heading font-semibold text-fg">
+            <h3 className="mt-3 max-w-[24ch] text-heading font-semibold text-fg">
               <Link
                 href={`/briefings/${latestIssue.slug}`}
                 className="transition-colors hover:text-link"
@@ -151,7 +151,7 @@ export default async function HomePage() {
         <dl className="mt-6 grid gap-x-14 md:grid-cols-2">
           {coverageTopics.map((topic) => (
             <div key={topic.id} className="border-t border-hairline py-5">
-              <dt className="font-serif text-[1.1875rem] font-semibold text-fg">{topic.title}</dt>
+              <dt className="text-[1.1875rem] font-semibold text-fg">{topic.title}</dt>
               <dd className="mt-1.5 max-w-[52ch] text-[0.9375rem] text-muted">{topic.summary}</dd>
             </div>
           ))}
@@ -169,7 +169,7 @@ export default async function HomePage() {
         <div className="grid gap-8 md:grid-cols-2 [&>*]:min-w-0">
           <SubscribePanel heading={`Subscribe to ${publication.newsletter.name}`} />
           <section className="border border-hairline bg-surface p-7 sm:p-10">
-            <h2 className="font-serif text-heading font-semibold text-fg">
+            <h2 className="text-heading font-semibold text-fg">
               {publication.alerts.name}
             </h2>
             <p className="mt-3 max-w-[52ch] text-muted">
@@ -221,7 +221,7 @@ function LeadDisruption({ disruption }: { disruption: DisruptionSummary }) {
         ) : null}
       </div>
 
-      <h3 className="mt-4 max-w-[20ch] font-serif text-title font-semibold text-fg">
+      <h3 className="mt-4 max-w-[20ch] text-title font-semibold text-fg">
         {disruption.title}
       </h3>
 
@@ -250,7 +250,7 @@ function LeadIssue({ issue }: { issue: IssueSummary }) {
         {date ? <time dateTime={issue.publishedAt}>{date}</time> : null}
       </p>
 
-      <h3 className="mt-3 max-w-[20ch] font-serif text-title font-semibold text-fg">
+      <h3 className="mt-3 max-w-[20ch] text-title font-semibold text-fg">
         {issue.title}
       </h3>
 
@@ -283,13 +283,13 @@ function Opening() {
           {/* A masthead line rather than a bare repeat of the header wordmark:
               the name earns its place here by carrying the descriptor. */}
           <p className="flex flex-col gap-1 border-b-2 border-accent pb-4 sm:flex-row sm:items-baseline sm:gap-4">
-            <span className="font-serif text-[1.375rem] font-semibold tracking-[-0.012em] text-fg">
+            <span className="text-[1.375rem] font-semibold tracking-[-0.012em] text-fg">
               {publication.name}
             </span>
             <span className="text-meta text-muted">{publication.shortDescription}</span>
           </p>
 
-          <h1 className="mt-8 max-w-[15ch] font-serif text-display font-semibold text-fg">
+          <h1 className="mt-8 max-w-[15ch] text-display font-semibold text-fg">
             {publication.openingLine}
           </h1>
 
@@ -378,7 +378,7 @@ function RegisterPulse({
             </dt>
             <dd
               className={clsx(
-                'mt-2 font-serif font-semibold leading-none text-fg',
+                'mt-2 font-semibold leading-none text-fg',
                 stat.date ? 'text-[1.125rem] leading-snug' : 'text-[1.75rem]',
               )}
               data-numeric
@@ -397,7 +397,7 @@ function Mission() {
     <Container className="mt-12 sm:mt-16">
       <div className="max-w-reading section-rule">
         <p className="kicker kicker-muted">Our mission</p>
-        <p className="mt-4 font-serif text-title font-semibold text-fg">{publication.mission}</p>
+        <p className="mt-4 text-title font-semibold text-fg">{publication.mission}</p>
       </div>
     </Container>
   );
@@ -447,7 +447,7 @@ function WhatWeDo() {
             href={pillar.href}
             className="group flex flex-col border-t-2 border-hairline py-6 transition-colors hover:border-accent focus-visible:border-accent"
           >
-            <h3 className="font-serif text-[1.1875rem] font-semibold text-fg transition-colors group-hover:text-link">
+            <h3 className="text-[1.1875rem] font-semibold text-fg transition-colors group-hover:text-link">
               {pillar.title}
             </h3>
             <p className="mt-2.5 text-[0.9375rem] text-muted">{pillar.body}</p>
@@ -474,7 +474,7 @@ function TheApp() {
         <div className="grid gap-8 md:grid-cols-[1.4fr_1fr] md:gap-14 [&>*]:min-w-0">
           <div>
             <p className="kicker">In development</p>
-            <h2 className="mt-3 font-serif text-heading font-semibold text-fg">
+            <h2 className="mt-3 text-heading font-semibold text-fg">
               {publication.alerts.name}
             </h2>
             <p className="mt-4 max-w-measure text-muted">
@@ -509,7 +509,7 @@ function WhoItIsFor() {
 
       <div className="mt-8 grid gap-x-16 gap-y-10 md:grid-cols-2 [&>*]:min-w-0">
         <div className="border-t border-hairline pt-6">
-          <h3 className="font-serif text-[1.1875rem] font-semibold text-fg">
+          <h3 className="text-[1.1875rem] font-semibold text-fg">
             If you invest
           </h3>
           <div className="mt-3 flex flex-col gap-3 text-muted">
@@ -528,7 +528,7 @@ function WhoItIsFor() {
         </div>
 
         <div className="border-t border-hairline pt-6">
-          <h3 className="font-serif text-[1.1875rem] font-semibold text-fg">
+          <h3 className="text-[1.1875rem] font-semibold text-fg">
             If you run a business
           </h3>
           <div className="mt-3 flex flex-col gap-3 text-muted">
@@ -596,7 +596,7 @@ function ExposureRow({ row }: { row: EntityExposure }) {
 
 function SectionHeading({ children, id }: { children: ReactNode; id: string }) {
   return (
-    <h2 id={id} className="font-serif text-heading font-semibold text-fg">
+    <h2 id={id} className="text-heading font-semibold text-fg">
       {children}
     </h2>
   );

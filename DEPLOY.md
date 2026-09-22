@@ -371,3 +371,86 @@ after you have real readers, and the easiest to get quietly wrong.
 Unset `ACCOUNT_STORE` and redeploy. The site returns to its pre-launch state
 with no accounts, no cookie and no database calls. Nothing else has to change,
 which is the point of keeping the reading site static.
+
+## Part 5 — Live data and the AISStream key
+
+`/monitor` reads seven public feeds and regenerates every fifteen minutes. **Six
+need nothing from you**: GDELT, USGS, GDACS, NOAA NHC, NASA EONET and Open-Meteo
+work the moment the site is deployed. The seventh — vessel counts at ten
+chokepoints — needs a free AISStream key. Without it, that one panel says "not
+switched on yet" and everything else still works, so this is not a launch
+blocker.
+
+Steps 1–3 need an AISStream account and the Vercel dashboard, which are yours
+(Rule 7).
+
+### 1. Get the key
+
+1. Go to <https://aisstream.io> and sign in. (At the time of writing it offers
+   sign-in with a GitHub account; no payment details are asked for.)
+2. Open the **API Keys** page and create a key.
+3. Copy it. Treat it like a password: don't paste it into a chat, an email, a
+   screenshot or a commit.
+
+### 2. Try it locally first
+
+In `.env.local` (git-ignored — never `.env.example`):
+
+```
+AISSTREAM_API_KEY=paste-the-key-here
+```
+
+Then:
+
+```
+npm run live:check
+```
+
+It reads every feed once, for real, and takes about 35 seconds. The AISStream
+section should report how many of the ten chokepoint boxes heard vessels. The
+other six sections should each say **Live** with a count. It never prints the
+key. If a feed reports a parse failure rather than an HTTP status, the
+publisher's response shape differs from what the adapter expects — note which
+one and it can be fixed in `src/lib/live/sources/`.
+
+> **The name is exactly `AISSTREAM_API_KEY`, with no `NEXT_PUBLIC_` prefix.**
+> That prefix would publish the key in every visitor's browser. The build
+> refuses to run if it sees `NEXT_PUBLIC_AISSTREAM_API_KEY`; if that ever
+> happens, rename it *and* create a new key at aisstream.io, because the old
+> one must be assumed public.
+
+### 3. Add it to Vercel
+
+1. Vercel → your project → **Settings → Environment Variables**.
+2. Key `AISSTREAM_API_KEY`, value the key. Tick **Production** (and **Preview**
+   if you want preview deployments to sample vessels too).
+3. **Redeploy.** Environment variables reach a deployment only when it is
+   built, so the running site will not see the key until you do.
+
+### 4. Check it works
+
+1. Open `/monitor`. Under **Feed status**, "Vessels heard at ten chokepoints"
+   should show a time and **Live**, not "Not switched on yet".
+2. `/live.json` should show `"ais": { "status": "ok", ... }`.
+3. Wait fifteen minutes and reload: the times should move. The page
+   regenerates on the first visit after each fifteen-minute window, so on a
+   quiet site the first visitor after a gap briefly sees the older copy.
+
+### Costs and limits worth knowing
+
+- **Open-Meteo is free for non-commercial use only.** The day the site takes
+  payment or runs ads, the weather panel needs Open-Meteo's paid plan, or
+  it has to be removed. Nothing else changes when that happens.
+- **Regeneration uses function time.** Each regeneration runs for about 35
+  seconds (the vessel sample is 30), at most once per fifteen minutes and only
+  when someone visits. That is well inside Vercel's Hobby allowance. The
+  route's `maxDuration` is 60 seconds.
+- **GDELT occasionally rate-limits.** Vercel's outbound addresses are shared
+  with other customers, so a theme can come back rate-limited through no fault
+  of this site. It shows as unavailable for one cycle, and the others still
+  render.
+
+### Roll back
+
+Delete `AISSTREAM_API_KEY` in Vercel and redeploy. The vessel panel returns to
+"not switched on yet"; nothing else changes.

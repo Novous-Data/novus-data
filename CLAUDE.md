@@ -6,13 +6,17 @@ before changing anything.
 ## 1. What this project is
 
 **Novus Data is an information and financial-news site about supply chain
-disruption.** It does three things, in this order of importance:
+disruption.** It does four things, in this order of importance:
 
 1. **The register** (`/disruptions`) — what is going wrong in physical trade
    right now, each entry dated, sourced and given a status.
 2. **The exposure chart** (`/exposure`) — which companies and sectors each
    problem reaches, and by what mechanism.
-3. **The briefing** (`/briefings`) — an email newsletter summarising movement in
+3. **The monitor** (`/monitor`) — live readings from public feeds, re-read
+   every fifteen minutes: vessels heard at ten chokepoints, news volume on
+   disruption themes, natural hazards near trade routes, wind at major ports.
+   Raw readings, not assessments; see §6d.
+4. **The briefing** (`/briefings`) — an email newsletter summarising movement in
    the first two. **It is one part of the site, not the whole of it.** An
    earlier version of this repository was built as an information page for the
    newsletter; that framing is wrong and has been replaced.
@@ -86,11 +90,24 @@ issue titles anywhere that could reach production.
 If a layout wants a number, use a real one or change the layout. **Empty is
 better than invented.**
 
+**Amended by the author: live readings.** The author asked for live, close to
+real-time data, so `/monitor` and `/live.json` now state figures — vessel
+counts, news-volume shares, magnitudes, wind speeds. They are the second
+sanctioned place figures appear, and they are held to a rule enforced in code
+(§6d), not in editorial habit: every figure comes from a named public source
+with a followable link, carries the time **that source** produced it, and is
+marked delayed or stale against the source's own cadence. A feed that fails
+renders as *unavailable* with a reason — never a placeholder, never a last
+known value presented as current, never a zero. The prohibition on
+*fabricated* figures is unchanged and applies with full force here: a live
+panel with no data says so.
+
 **This rule got stronger, not weaker, when the site became a data product.** The
 register and the exposure chart do publish claims about named companies — but
 only claims that carry a mechanism, a confidence level, a date and a followable
 source, enforced in code (§6a). Sourced is not the same as invented. Nothing
-else on the site may state a figure at all.
+else on the site may state a figure at all, except the live readings described
+in the amendment above and in §6d.
 
 Two fenced exceptions, both `[SAMPLE]`-prefixed, both unreachable without
 `CONTENT_SOURCE=fixtures`, and both throwing at module load if a production
@@ -109,6 +126,13 @@ build touches them:
   **Every company in it is invented.** Attaching a made-up exposure to a real
   listed company would read as a sourced claim about a real business, which is
   exactly the harm §6a exists to prevent. Keep the names fictional.
+- `src/lib/live/sources/fixtures.ts` — placeholder live readings, shaped like
+  each publisher's raw response and run through the **real** parsers, so the
+  demo exercises the same code production does. Titles are `[SAMPLE]`, URLs
+  are `example.invalid`, vessel MMSIs start `999`. Timestamps are relative to
+  now and deliberately spread so every state renders: a delayed feed, a stale
+  one, a rate-limited theme, an empty storm list, a port at gale force. The
+  page also shows a `[SAMPLE] data` banner whenever this source is active.
 
 ### Rule 2 — No implied organisation
 
@@ -177,6 +201,7 @@ scripts/build-preview.ts   Review tooling. Folds the built site into one HTML fi
 scripts/doctor.ts          State of the project + the next action. Reads INPUT_LEDGER.
 scripts/new-disruption.ts  Register scaffolder. Mirrors the loader's validation.
 scripts/review-register.ts The review worklist, by how close each entry is to stale.
+scripts/live-check.ts      Reads every live feed once, for real. Run where the network is open.
 scripts/lib/cli.ts         Shared colour, prompting and .env.local reading.
 src/config/                Every fact the site states, and the navigation.
   publication.ts             The facts. Pure data, no side effects, safe anywhere.
@@ -186,12 +211,21 @@ src/config/                Every fact the site states, and the navigation.
 src/lib/content/           The issue content layer. See section 6.
 src/lib/disruptions/       The register and exposure layer. See section 6a.
 src/lib/accounts/          The account contract and its Supabase store. See 6b.
+src/lib/live/              The live layer: seven public feeds, one adapter each. See 6d.
+  types.ts, meta.ts,         Pure — safe in client components. Components import
+  nodes.ts, display.ts       labels from these, never from the layer index.
+  sources/                   The adapters. SERVER ONLY; the index reads the AIS key.
 src/lib/supabase/          Supabase clients. admin.ts is SERVER ONLY. See 6b.
 src/lib/env.ts             Environment access and URL resolution.
 src/lib/format.ts          Dates, issue numbers, reading time.
 src/lib/og.ts              Font data and colours for generated images.
 src/lib/structured-data.ts JSON-LD builders.
-src/components/            Presentational components. One client component.
+src/components/            Presentational components. Five client components:
+                           site-nav, sign-in-panel, and the three in live/.
+src/components/live/       The monitor's pieces. live-age, auto-refresh and
+                           signal-chart are client components; reading-block is not.
+src/app/monitor/           The live page. ISR, revalidate = 900. See 6d.
+src/app/live.json/         The live snapshot, machine-readable. Same cycle.
 src/app/account/           The signed-in page and its server actions. Dynamic.
 src/app/auth/              Magic-link callback and sign-out. Dynamic.
 src/proxy.ts               Session refresh. NOT middleware.ts — renamed in Next 16.
@@ -595,6 +629,175 @@ element instead, React hoists it into `<head>` everywhere. **Do not "tidy" it
 back into metadata** — it fails silently, on every page, with nothing in the
 build output to say so.
 
+## 6d. The live layer and the monitor
+
+`src/lib/live/` is the fourth typed layer — the one §14.1 anticipated, built
+the same way as the other three: its own types, sources behind a public API,
+the same lint boundary. A time series has a different shape, refresh cadence
+and failure mode from a document or a tracked assessment, so it is not bolted
+onto either. `/monitor` renders it; `/live.json` publishes it.
+
+**The author's decision, recorded.** §14 said none of this should be coded
+until issues were publishing on a schedule. The author overrode that and asked
+for live, close to real-time data with a fifteen-minute update period. That is
+their call; what follows is how it was made safe to publish.
+
+### Seven feeds
+
+| Source | What the page reads | Key |
+|---|---|---|
+| AISStream (WebSocket) | Vessels heard in a box across each of ten chokepoints, in a 30-second sample | `AISSTREAM_API_KEY` |
+| GDELT DOC 2.0 | News volume on four themes, 15-minute intervals over 24 h; latest headlines | none |
+| USGS | Earthquakes M4.5+, past day | none |
+| GDACS | Orange and red disaster alerts, past 14 days | none |
+| NOAA NHC | Active tropical cyclones, Atlantic and E. Pacific | none |
+| NASA EONET | Open natural events within 300 km of a tracked location | none |
+| Open-Meteo | Current wind at twelve container ports | none |
+
+Six need no key and work the moment the site is deployed. Without the AIS key
+that one panel says "not switched on yet" and nothing else changes.
+
+### The rule the layer exists to enforce
+
+> **A reading's age comes from a timestamp inside the upstream data, never
+> from our clock.**
+
+Every layer between a publisher and a reader can serve a value long after it
+arrived: the fetch cache, ISR, a CDN, a tab left open overnight. A reading
+stamped with our render time would describe a two-hour-old number as current —
+exactly what §14.1 warned "would destroy more credibility than this whole site
+builds". So each adapter takes `asOf` from inside the payload (the feed's own
+generated time, the latest observation in it) via `resolveAsOf()` in
+`sources/http.ts`, falls back to the HTTP `Date` header only with a note
+saying so, and otherwise refuses. **Do not add a fallback to `new Date()`.**
+
+The **age** is then computed in the reader's browser, against the reader's
+clock, and keeps ticking (`components/live/live-age.tsx`). The server renders
+only the absolute time, which stays true forever — the same move §6a makes
+for review dates. Freshness (*Live / Delayed / Stale*) is judged per source,
+because cadences differ by orders of magnitude: a vessel count is old after
+thirty minutes, an EONET event is curated daily. Windows are in `meta.ts`.
+
+### Three shapes, and no fourth
+
+A `Reading<T>` is `ok` (data, `asOf`, `asOfBasis`, notes), `unavailable` (a
+reason **we** wrote — never an upstream error body, never a secret) or
+`not-configured` (the name of the variable that would enable it). The page
+renders all three plainly. There is no shape that means "show the last value"
+or "show zero", and `ReadingBlock` is the only frame a panel is drawn in.
+
+Every source is settled independently (`sources/index.ts`): a feed that is
+down, slow, rate-limited or reshaped becomes one panel saying so, and never
+takes the page down or delays the others beyond its own timeout.
+
+### How "every fifteen minutes" actually works
+
+- `/monitor` and `/live.json` export **`revalidate = 900` as a literal.** Next
+  16 reads it statically; `LIVE_REVALIDATE_SECONDS` imported from `types.ts`
+  would be silently ignored. Same for `maxDuration = 60`.
+- ISR is stale-while-revalidate: the first request after fifteen minutes gets
+  the cached page and starts a regeneration; the next gets the new one. If a
+  regeneration throws, the last good page keeps being served — which is safe
+  only because every reading on it carries its own time.
+- Fetches pass `next: { revalidate: 900, tags }`. Next 16 does **not** cache
+  `fetch` by default; a stale entry is re-fetched, not served, and only HTTP
+  200s are stored, so an upstream error is never cached. **Never use
+  `cache: 'no-store'` here** — it makes the route dynamic, and every reader
+  would then cost every publisher a request.
+- The AIS sample is a WebSocket, which Next does not cache at all; it is
+  simply re-sampled on each regeneration.
+- An open tab calls `router.refresh()` every five minutes while visible
+  (`auto-refresh.tsx`). Five, not fifteen, because checking on the same cycle
+  as regeneration can land just before a new version exists and show it a
+  full cycle late; between regenerations each check is a cache hit.
+- Build time: `/monitor` is prerendered during `next build`, so a build does
+  one full read (about 35 seconds). That is inside the default 60-second
+  static generation timeout, with little to spare — do not add sources that
+  push a regeneration past it without raising `staticPageGenerationTimeout`.
+
+### Traps specific to this layer
+
+- **GDELT allows one request per five seconds per IP**, and answers faster
+  callers with HTTP 429. Requests are sequential, 5.5 s apart. On Vercel the
+  outbound IP is shared with other customers, so 429s can happen regardless;
+  a rate-limited theme is shown as unavailable while the others still render.
+  Each theme costs 5.5 s of regeneration time — add one only if it earns it.
+- **The AISStream key is server-only.** It is read once in `sources/index.ts`,
+  passed to the adapter, sent only inside the subscription message, and never
+  stored on a `Reading`, logged, or placed in `/live.json`. `input-ledger.ts`
+  refuses to build if `NEXT_PUBLIC_AISSTREAM_API_KEY` exists, for the same
+  reason it refuses the Supabase service role key.
+- **A zero vessel count means no signal, not no ship.** The table shows "No
+  signal in this sample" instead of a zero bar. Rows are in fixed order and
+  never ranked: receiver coverage differs by strait, so the rows are not
+  comparable, and rows that reshuffle every update hide the change a reader
+  is scanning for. SOG 102.3 is the AIS "not available" sentinel and is
+  excluded; "under way" means at least 1 knot.
+- **Client components must not use `Intl` for dates.** Node and browsers ship
+  different ICU data ("Sep" against "Sept" in en-GB), which is a hydration
+  mismatch on every timestamp. `display.ts` builds strings from UTC fields by
+  hand. Server-only pages may keep using `src/lib/format.ts`.
+- **Components never import `@/lib/live`** (lint-enforced). The index reaches
+  the adapters; one careless import from a client component would ship the
+  fetch code into the browser bundle.
+
+### Trade nodes are places, never companies
+
+Hazards are measured against `nodes.ts`: ten chokepoints, twelve container
+ports and three semiconductor clusters, all named by place. A distance to a
+port says nothing about any business that uses it, and naming a company here
+would be an exposure claim that skipped every requirement in §6a. "Within
+300 km" (`PROXIMITY_KM`) is stated on the page as a distance, not an impact.
+
+### The charts
+
+News volume is four small multiples — one sparkline per theme — rather than
+four lines on one axis, because volumes differ by an order of magnitude and a
+shared axis would flatten three of them. Each has its own scale, labelled on
+the right (the financial convention), and the page says so. The line plots a
+theme's **share** of all articles GDELT monitored, not the raw count, because
+world news output has a strong daily cycle and a raw count would "spike" every
+afternoon. Raw counts are in the readout and the table view.
+
+Marks use existing tokens only: `--accent` for bars and lines (3.1:1 on
+`--ink`, clear of the 3:1 a non-text mark needs — exactly its sanctioned
+structural use) and `--accent-text` for the one emphasised point.
+`--status-active` is never a chart colour. Hand-written SVG with
+`vector-effect: non-scaling-stroke`, no chart library (§7). The crosshair is
+keyboard-operable, and a table view lists every interval.
+
+### Terms — read before monetising
+
+- **Open-Meteo's free API is non-commercial only.** Its terms treat a site
+  with subscriptions or advertising as commercial. The day Novus Data charges
+  or runs ads, this source needs a paid plan or has to go.
+- **GDELT** permits commercial use but requires a citation and a link to
+  gdeltproject.org wherever the data is used; the page and `/live.json` carry it.
+- The rest are marked "not verified in this build" in `meta.ts` rather than
+  given a plausible-sounding licence. Verify them before charging.
+
+### Not yet verified against the real feeds
+
+The environment this layer was built in could not reach any of the seven
+hosts (an egress allowlist returned 403 for each). Every adapter was written
+against the publisher's documented shape, fails safe to *unavailable* on
+anything it does not recognise, and was exercised against fixtures in the
+publisher's raw format; the AIS client was tested against a local WebSocket
+server speaking AISStream's protocol, including a refused key and an early
+close. **Run `npm run live:check` anywhere the network is open and record what
+it reports here**, the way §10 records the Beehiiv feed findings.
+
+### What it deliberately does not do
+
+- **No history or baseline.** "Is 11 vessels in the Taiwan Strait low?" needs
+  a record of previous samples, which needs somewhere to store them. This
+  repository stores no data (§13); a baseline is a decision about a store, not
+  a code change.
+- **No alerting.** A watcher that polls `/live.json` and notifies readers is
+  the separate service in §14.2.
+- **No prices.** Freight rates, commodity prices and indices remain out of
+  scope (§13).
+
 ## 7. Dependencies
 
 Runtime: `gray-matter`, `clsx`, `@tailwindcss/typography`, and — only because
@@ -608,7 +811,9 @@ never pulls them into its graph.
 
 **There is no charting library and there should not be one.** The exposure chart
 is a `<table>` of styled cells, which is why each cell can be a link, hold
-visually-hidden text and take keyboard focus. A canvas or SVG chart library
+visually-hidden text and take keyboard focus. The monitor's sparklines are
+hand-written SVG in `components/live/signal-chart.tsx`, and its chokepoint bars
+are styled table cells, for the same reasons. A canvas or SVG chart library
 would lose all three and add a client bundle to a page that currently ships no
 JavaScript at all.
 Dev (sync script and review tooling only): `fast-xml-parser`, `sanitize-html`,
@@ -858,6 +1063,7 @@ four answers here.**
 | `NOVUS_ALLOW_INCOMPLETE` | Allows a production build with unanswered inputs | No — **never set on Vercel** | Site |
 | `NOVUS_CONTENT_DIR` | Overrides the issue archive directory | No — review tooling only, **never set on Vercel** | Site |
 | `NOVUS_DISRUPTIONS_DIR` | Overrides the register directory | No — review tooling only, **never set on Vercel** | Site |
+| `AISSTREAM_API_KEY` | Enables the chokepoint vessel counts on `/monitor`. Free at aisstream.io. **Never `NEXT_PUBLIC_`** — the build refuses | No — without it that one panel says "not switched on yet" | **Server only** |
 | `BEEHIIV_RSS_URL` | The feed to sync from | Only to run the sync | **Sync script only** — not needed on Vercel |
 
 ## 12. Commands
@@ -866,6 +1072,7 @@ four answers here.**
 npm run doctor           where the project stands + the next action (--next, --strict)
 npm run new-disruption   scaffold a register entry (--template for a blank file)
 npm run review           the register review worklist (--due for what is due)
+npm run live:check       read every live feed once, for real (--strict)
 npm run check            typecheck + lint + doctor
 npm run dev              development server
 npm run dev:demo         development server against the sample archive and register
@@ -916,7 +1123,10 @@ that is now **narrowly** permitted, on these terms:
 
 - **The reading site stays static.** The register, the exposure chart, the
   entity pages, the briefings, the home page and the feed are all still
-  prerendered and ship no session-dependent markup. Only `/account` and
+  prerendered and ship no session-dependent markup. `/monitor` and
+  `/live.json` are the one exception to "static", and a narrow one: they are
+  prerendered too, then regenerated on the server every fifteen minutes (ISR,
+  §6d). They read no session and are identical for every reader. Only `/account` and
   `/auth/*` are dynamic, and they are dynamic because they await `cookies()`.
   **If a static page ever starts reading the session, that is a regression** —
   the home page's signed-in state is resolved client-side after mount
@@ -949,6 +1159,15 @@ exposure chart *are* the product. What remains out of scope is **live market
 data**: a price, a rate or an index pulled from a feed and shown as current. The
 site publishes assessments with an as-of date, not a ticker.
 
+**Amended by the author: live physical-world readings are in scope.** The
+author asked for "updates and close to real time data". `/monitor` now reads
+seven public feeds — vessel positions, news volume, natural hazards, weather —
+every fifteen minutes. That is deliberately *not* the market data forbidden
+above: none of it is a price, a rate or an index, and none of it is presented
+as an assessment. Every reading carries its source's own timestamp (§6d).
+Adding a price or freight-rate feed is still a separate decision to ask about,
+because being wrong about a price costs more than being late about a storm.
+
 The alerts app is a real, stated direction — the seam is documented in §14.2 and
 nothing here forecloses it. It is still out of scope for *this repository*,
 because its state is per-user and mutable and this repo is a static site.
@@ -967,6 +1186,13 @@ two decisions in v1 were made to keep these doors open, and a later change that
 closes them would be expensive to undo.
 
 ### 14.1 The indicators layer
+
+**Partly built — see §6d.** `src/lib/live/` is this layer for physical-world
+readings (vessels, news volume, hazards, weather), and it answers the three
+questions below: every reading has a source, an as-of timestamp taken from
+the data, and a defined stale behaviour. What remains unbuilt is the part
+this section worried about most — prices and freight rates — and that stays
+a separate decision.
 
 The register layer in `src/lib/disruptions/` is the first instance of this
 pattern and proves it works. When *live indicator data* arrives — a freight

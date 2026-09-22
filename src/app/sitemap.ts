@@ -28,11 +28,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .filter((href) => !href.startsWith('/debug'))
     .map((href) => ({
       url: absoluteUrl(href),
+      // /monitor is regenerated every fifteen minutes; saying so is what tells
+      // a crawler that yesterday's copy of it is not the page.
       changeFrequency:
-        href === '/' || href === '/disruptions' || href === '/exposure' || href === '/briefings'
-          ? 'weekly'
-          : 'monthly',
-      priority: href === '/' ? 1 : href === '/disruptions' || href === '/exposure' ? 0.9 : 0.7,
+        href === '/monitor'
+          ? 'hourly'
+          : href === '/' || href === '/disruptions' || href === '/exposure' || href === '/briefings'
+            ? 'weekly'
+            : 'monthly',
+      priority:
+        href === '/' ? 1 : href === '/disruptions' || href === '/exposure' || href === '/monitor' ? 0.9 : 0.7,
     }));
 
   const issueRoutes: MetadataRoute.Sitemap = issues.map((issue) => {

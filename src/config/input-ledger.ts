@@ -297,6 +297,36 @@ export function assertNoPublicServiceRoleKey(): void {
   );
 }
 
+/**
+ * The same refusal for the AISStream key, and for the same reason.
+ *
+ * The stakes are lower than the service role key — this one reads public
+ * vessel broadcasts rather than anyone's personal data — but AISStream's own
+ * documentation says the key must never reach a browser, a published key can
+ * be used by anyone until it is rotated, and abuse of it is charged to this
+ * site's account. The prefix mistake is the realistic way it would leak.
+ */
+export function assertNoPublicAisKey(): void {
+  // Literal name, for the same inlining reason as above.
+  if (!process.env.NEXT_PUBLIC_AISSTREAM_API_KEY) return;
+
+  throw new Error(
+    [
+      '',
+      'NEXT_PUBLIC_AISSTREAM_API_KEY is set.',
+      '',
+      'The AISStream key must NEVER carry the NEXT_PUBLIC_ prefix: that prefix',
+      'publishes it in the browser bundle, and AISStream requires the key to stay',
+      'on the server.',
+      '',
+      'Rename it to AISSTREAM_API_KEY, and generate a new key at aisstream.io:',
+      'the old one must be assumed public.',
+      '',
+    ].join('\n'),
+  );
+}
+
 assertNoPublicServiceRoleKey();
+assertNoPublicAisKey();
 
 assertLaunchReady();

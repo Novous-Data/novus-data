@@ -207,6 +207,12 @@ async function main(): Promise<void> {
       note: 'Footer RSS link for readers. Separate from BEEHIIV_RSS_URL, which is a build tool input.',
     },
     {
+      // Name only, never the value — see the note at the top of this file.
+      label: 'AISSTREAM_API_KEY',
+      set: Boolean(process.env.AISSTREAM_API_KEY?.trim()),
+      note: 'Enables the chokepoint vessel counts on /monitor; without it that one panel says "not switched on yet". Free at aisstream.io. Server only — set it in .env.local and on Vercel, never with a NEXT_PUBLIC_ prefix. DEPLOY.md Part 5.',
+    },
+    {
       label: 'BEEHIIV_RSS_URL',
       set: hasFeedUrl,
       note: 'Read only by `npm run sync-issues`. Never needed on Vercel.',

@@ -115,6 +115,7 @@ and the review preview's panel, so this list cannot silently go stale.
 | `NEXT_PUBLIC_BEEHIIV_HOME_URL`, `NEXT_PUBLIC_BEEHIIV_FEED_URL` | Those footer links do not render |
 | `NEXT_PUBLIC_SITE_URL` | Falls back to `$VERCEL_URL`, then localhost. Set it at domain cutover |
 | `BEEHIIV_RSS_URL` | **The archive is empty and the feed was never inspected.** See 6 |
+| `AISSTREAM_API_KEY` | The chokepoint vessel panel on `/monitor` says "not switched on yet"; the other six live feeds work without it. Free key — DEPLOY.md Part 5 |
 | Logo file | Wordmark and icons are set typographically. See 4.4 |
 | Three visual reference sites | Design follows the brand spec and the editorial references named in the brief |
 
@@ -248,6 +249,41 @@ site no longer uses. See §4.5 for how the replacement statics were produced.
 described the committed TTFs as Source Serif after they had been replaced.
 Caught on the next review rather than by the build, because a comment cannot
 fail a typecheck.
+
+### 4.25 Live data: a monitor, re-read every fifteen minutes
+
+Asked for directly — "I don't want a static site, I want updates and close to
+real time data", then "use GDELT and AIS… make the update period every 15 min
+and incorporate as much as possible". CLAUDE.md §6d has the full design; the
+decisions that would be expensive to reverse:
+
+- **Age comes from inside the data, never our clock**, and is computed in the
+  reader's browser. A cached page can be old; it cannot claim to be new.
+- **Seven feeds, not two.** GDELT and AIS as asked, plus five official,
+  keyless sources that fill the obvious gaps: USGS earthquakes, GDACS disaster
+  alerts, NOAA hurricanes, NASA EONET natural events, and Open-Meteo port wind.
+- **ISR at fifteen minutes, not live per request.** A thousand readers cost
+  each publisher one request per cycle. A per-request design would breach
+  GDELT's rate limit on the first busy afternoon.
+- **Raw readings, kept apart from the register.** Nothing on the monitor feeds
+  the exposure chart automatically; the page says so, and so does
+  `/about#live`.
+- **Hazards are measured against places, never companies.** A distance to a
+  port is not an exposure claim, and §6a governs those.
+- **No history.** A vessel count means most against its own past, and keeping
+  a past needs a store. That is a decision about a database, left to you.
+
+**Not verified against the real feeds.** The build environment's network
+blocked all seven hosts. The adapters are written to each publisher's
+documented shape and fail safe, but the first run of `npm run live:check`
+somewhere with open internet is the real test. Record its findings in §6d.
+
+**A lint bug found on the way.** Flat config replaces rather than merges two
+`no-restricted-imports` entries for one file, so the page/component boundary
+block had been silently switching off the "no RSS parser, no sanitiser under
+`src/`" rule for exactly the pages and components it protected. Fixed by
+defining each restriction once and spreading it into every block; probed with
+throwaway files to confirm every rule now fires.
 
 ## 4. Judgement calls I had to make
 

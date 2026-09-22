@@ -422,6 +422,15 @@ function WhatWeDo() {
       cta: 'Open the chart',
     },
     {
+      // A link, not a live panel. Reading the feeds here would put the home
+      // page on the fifteen-minute regeneration cycle too, doubling the calls
+      // to every publisher for a preview of a page one click away.
+      href: '/monitor',
+      title: 'The monitor',
+      body: 'Seven public feeds, re-read every fifteen minutes: ships moving through ten chokepoints, how much of the world’s news is about disruption, and natural hazards and wind near the ports that matter. Every reading shows when its source produced it.',
+      cta: 'Open the monitor',
+    },
+    {
       href: '/briefings',
       title: 'The briefing',
       body: `${publication.newsletter.name} pulls the week together in writing and sends it by email — what moved, what it is likely to reach next, and what is worth ignoring.`,
@@ -433,14 +442,17 @@ function WhatWeDo() {
     <Container className="mt-12 sm:mt-16">
       <SectionHeading id="what-we-do">What we do at Novus Data</SectionHeading>
       <p className="mt-4 max-w-measure text-muted">
-        Three things, and they feed each other. The register records the problem, the chart says
-        who it lands on, and the briefing explains what it means.
+        Four things, and they feed each other. The register records the problem, the chart says
+        who it lands on, the monitor shows what is moving now, and the briefing explains what it
+        means.
       </p>
 
       {/* One link per pillar, wrapping the whole card: a larger target than a
           trailing text link, and the rule at the top carries the hover so the
-          three columns read as a row rather than three loose paragraphs. */}
-      <div className="mt-8 grid gap-x-14 md:grid-cols-3">
+          columns read as a row rather than loose paragraphs. Two by two until
+          there is room for four across, because four at tablet width leaves
+          each column about twenty characters wide. */}
+      <div className="mt-8 grid gap-x-10 md:grid-cols-2 lg:grid-cols-4">
         {pillars.map((pillar) => (
           <Link
             key={pillar.href}

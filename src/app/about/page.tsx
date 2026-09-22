@@ -125,6 +125,26 @@ export default function AboutPage() {
               relative &ldquo;three days ago&rdquo; would.
             </p>
           </div>
+
+          <div className="border-t border-hairline pt-6">
+            <h3 className="text-[1.0625rem] font-medium text-fg" id="live">
+              Live readings are not assessments
+            </h3>
+            <p className="mt-3">
+              The <TextLink href="/monitor">monitor</TextLink> shows raw readings from public
+              feeds — vessels heard at chokepoints, news volume, natural hazards, port wind —
+              re-read every fifteen minutes. Each carries the name of its source, a link to it, and
+              the time the <em>source</em> produced the data, which is not the same as when the
+              page was built. Each is marked delayed or stale against that source&rsquo;s own
+              normal update cycle. A feed that fails shows as unavailable, with the reason, and
+              nothing is drawn in its place.
+            </p>
+            <p className="mt-3">
+              None of it feeds the register or the exposure chart automatically. A reading becomes
+              a register entry only when it has been read, explained and sourced to the standard
+              above.
+            </p>
+          </div>
         </Section>
 
         <Section heading="Corrections" id="corrections">

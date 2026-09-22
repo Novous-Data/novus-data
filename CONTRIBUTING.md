@@ -140,6 +140,42 @@ roadmap — argue for it and make the change.
 - For register entries specifically: the PR should let the reviewer follow every
   source without leaving the diff. If they can't check it, neither can a reader.
 
+#### Make the first rule real
+
+The line above is currently a promise, not a constraint: either of us can push
+straight to the default branch and the other finds out afterwards. That is the
+same shape of mistake this project refuses everywhere else — the register's
+four-field rule works because `sources/local-files.ts` enforces it, not because
+we remember to be careful. The workflow deserves the same treatment.
+
+**This needs a repository admin and cannot be done by an agent** (CLAUDE.md
+Rule 7), so it is written here rather than automated. In GitHub:
+
+1. **Settings → Branches → Add branch ruleset**
+2. Name it `default-branch`, set **Enforcement status: Active**
+3. **Target branches → Add target → Include default branch**
+   (choosing the default branch by role rather than by name means the rule
+   survives renaming it to `main`)
+4. Tick **Require a pull request before merging**
+5. Tick **Require status checks to pass**, then search and select **`check`** —
+   the workflow in `.github/workflows/check.yml`
+6. Leave **Require approvals** at **0** for now. See below.
+7. **Create**
+
+**Why approvals start at zero.** Requiring one approval on a two-person project
+means neither of us can land anything while the other is asleep or in school.
+A rule that blocks work at 11pm is a rule someone disables at 11:05, and a
+disabled rule protects nothing. The two boxes above already deliver most of the
+value — every change becomes a pull request, and CI must be green before it can
+merge. Turn approvals on when the cost of waiting is lower than the cost of a
+mistake: realistically, once the register has entries and a bad merge could
+publish a wrong assessment.
+
+**What this does not do.** It does not stop a bad change; it stops an *unseen*
+one. CI checks types, lint and the input ledger. It cannot tell whether a
+mechanism is well-argued or a source says what an entry claims it says. That is
+still the editor's job, and no setting replaces it.
+
 ---
 
 ## Two people, two Claude sessions

@@ -493,3 +493,82 @@ To switch it on once licensed:
 
 Which funds are quoted is `src/config/markets.ts`. It lists funds rather than
 companies on purpose — see the comment there.
+
+---
+
+## Part 7 — Move the repository into a free organisation
+
+**Why.** The repository belongs to a personal account (`Novous-Data`), and
+GitHub gives a personal account's collaborators one fixed level — *write* —
+with no way to make anyone else an admin. Settings, secrets, branch rulesets,
+collaborators and deletion all stay with that one login. An organisation has
+real roles, so both of us can be owners. GitHub Free for organisations costs
+nothing, and for a public repository it includes everything this project uses:
+Actions, secrets and rulesets.
+
+Every step needs your GitHub login (Rule 7). Signed in as `Novous-Data`:
+
+### 1. Turn on two-factor authentication — both of you, first
+
+github.com → avatar → **Settings → Password and authentication → Enable
+two-factor authentication**. An owner can delete everything, so the two logins
+become the only lock on the project. Alex does the same on `arowsom-oss`.
+
+### 2. Create the organisation
+
+Avatar → **Your organizations → New organization → Free**.
+
+- **Name.** GitHub says as you type whether a name is free. Try `novus-data`
+  first: the current account is spelled *Novous*, and this is the moment to
+  fix it. The name becomes the address — `github.com/<name>/novus-data`.
+- **Contact email.** Any address you read.
+- **"This organization belongs to"** → **My personal account.** The other
+  option, *A business or institution*, accepts GitHub's Corporate Terms on a
+  business's behalf. Choose it only once Novus Data is a registered legal
+  entity; you can switch later.
+- When asked to add members, add **`arowsom-oss`**. Alex receives an
+  invitation and must accept it.
+
+### 3. Make Alex an owner
+
+Organisation → **People** → `arowsom-oss` → **Change role → Owner**. You are
+already an owner as the creator.
+
+**What owner means.** Either of you can change anything, including deleting
+the repository, deleting the organisation, and removing the other owner.
+That is what full access is, and it is the normal setup for two co-founders —
+GitHub also recommends at least two owners so an organisation is never lost
+with one account. Agree between you, in writing, that neither removes the
+other or deletes anything without asking first.
+
+### 4. Transfer the repository
+
+`github.com/Novous-Data/novus-data` → **Settings → General → Danger Zone →
+Transfer** → **Specific organization** → pick the new one → type the
+repository name to confirm.
+
+Code, branches, issues and pull requests — open ones included — move with it.
+GitHub redirects the old address, both in the browser and for `git`.
+
+### 5. Reconnect what pointed at the old address
+
+- **Claude Code on the web.** Its access was granted to the `Novous-Data`
+  account, not to the new organisation. Reconnect at claude.ai → **Settings →
+  Connectors → GitHub**, and when GitHub asks where to install, include the
+  new organisation and this repository. Until then, Claude sessions cannot
+  read or push to it.
+- **Vercel**, if the project is already imported: **Project → Settings → Git**.
+  If it shows disconnected, reconnect and allow the Vercel app on the
+  organisation.
+- **Local clones:** `git remote set-url origin
+  https://github.com/<name>/novus-data.git`. The redirect works today, but it
+  breaks for good if anyone ever creates a new `Novous-Data/novus-data`.
+
+Nothing in the code needs changing: no file in the repository contains its own
+address.
+
+### 6. Then make the workflow rule real
+
+With both of you owners, either can create the default-branch ruleset in
+CONTRIBUTING.md ("Make the first rule real"). It is the reason admin access
+was worth having.

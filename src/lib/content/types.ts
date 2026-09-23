@@ -27,6 +27,11 @@ export const POST_KIND_LABELS: Record<PostKind, string> = {
   review: 'Long-term review',
 };
 
+/** A post's one URL: briefings under /briefings, articles and reviews under /articles. */
+export function postPath(post: { kind: PostKind; slug: string }): string {
+  return post.kind === 'briefing' ? `/briefings/${post.slug}` : `/articles/${post.slug}`;
+}
+
 /** Beehiiv tags that file a post as an article or a review. Compared case-insensitively. */
 export const KIND_TAGS: Record<'article' | 'review', string[]> = {
   article: ['article', 'articles'],

@@ -1,5 +1,5 @@
 import { publication } from '@/config/publication';
-import { POST_KIND_LABELS, listArticles, listIssues } from '@/lib/content';
+import { POST_KIND_LABELS, listArticles, listIssues, postPath } from '@/lib/content';
 import { absoluteUrl } from '@/lib/env';
 
 /**
@@ -36,7 +36,7 @@ export async function GET() {
     description: 'Briefings, articles and long-term reviews, newest first. Summaries only; each post is read on its page.',
     icon: absoluteUrl('/icon'),
     items: posts.map((post) => {
-      const path = post.kind === 'briefing' ? `/briefings/${post.slug}` : `/articles/${post.slug}`;
+      const path = postPath(post);
       const published = Date.parse(post.publishedAt);
       return {
         id: post.slug,

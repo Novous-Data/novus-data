@@ -11,7 +11,7 @@ import type { Issue, IssueNeighbours, IssueSummary, PostKind } from './types';
 import { getContentSource } from './sources';
 
 export type { ContentDiagnostics, Issue, IssueNeighbours, IssueSummary, PostKind } from './types';
-export { KIND_TAGS, POST_KIND_LABELS } from './types';
+export { KIND_TAGS, POST_KIND_LABELS, postPath } from './types';
 export { getContentSourceName } from './sources';
 
 /**

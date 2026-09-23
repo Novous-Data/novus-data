@@ -55,14 +55,22 @@ export interface FetchedJson {
 export async function fetchJson(
   url: string,
   source: LiveSourceId,
-  options: { timeoutMs?: number; label?: string } = {},
+  options: {
+    timeoutMs?: number;
+    label?: string;
+    /**
+     * Extra request headers — used to carry an API key in a header rather
+     * than in the URL, so the key never appears in anything that logs URLs.
+     */
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<FetchedJson> {
   const label = options.label ?? source;
   let response: Response;
 
   try {
     response = await fetch(url, {
-      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT, ...options.headers },
       signal: AbortSignal.timeout(options.timeoutMs ?? 12_000),
       next: { revalidate: LIVE_REVALIDATE_SECONDS, tags: ['live', `live:${source}`] },
     });
@@ -91,6 +99,63 @@ export async function fetchJson(
     // of plain text. Treat it as a failure, and do not echo it.
     throw new LiveSourceError(`${label} returned something other than JSON.`);
   }
+}
+
+/**
+ * A raw GET for bodies that are not JSON — a text index, a zip archive.
+ *
+ * `revalidateSeconds` defaults to the page's fifteen-minute cycle. A file that
+ * never changes once published (a GDELT export is named for its fifteen-minute
+ * slot and never rewritten) can be cached far longer, which is what keeps a
+ * seven-day baseline cheap: each file is downloaded once, then read from the
+ * cache on every later regeneration. Only 200s are stored, so a file that
+ * 404s is asked for again next time rather than remembered as missing.
+ */
+async function fetchRaw(
+  url: string,
+  source: LiveSourceId,
+  options: { timeoutMs?: number; label?: string; revalidateSeconds?: number },
+): Promise<Response> {
+  const label = options.label ?? source;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { 'user-agent': USER_AGENT },
+      signal: AbortSignal.timeout(options.timeoutMs ?? 12_000),
+      next: {
+        revalidate: options.revalidateSeconds ?? LIVE_REVALIDATE_SECONDS,
+        tags: ['live', `live:${source}`],
+      },
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === 'TimeoutError';
+    throw new LiveSourceError(
+      timedOut ? `${label} did not answer in time.` : `${label} could not be reached.`,
+    );
+  }
+  if (response.status === 429) {
+    throw new LiveSourceError(`${label} is rate-limiting requests; it will be retried next cycle.`, true);
+  }
+  if (!response.ok) throw new LiveSourceError(`${label} answered with HTTP ${response.status}.`);
+  return response;
+}
+
+export async function fetchText(
+  url: string,
+  source: LiveSourceId,
+  options: { timeoutMs?: number; label?: string; revalidateSeconds?: number } = {},
+): Promise<{ text: string; served: string | null }> {
+  const response = await fetchRaw(url, source, options);
+  return { text: await response.text(), served: isoFrom(response.headers.get('date')) };
+}
+
+export async function fetchBytes(
+  url: string,
+  source: LiveSourceId,
+  options: { timeoutMs?: number; label?: string; revalidateSeconds?: number } = {},
+): Promise<Buffer> {
+  const response = await fetchRaw(url, source, options);
+  return Buffer.from(await response.arrayBuffer());
 }
 
 // ---------------------------------------------------------------------------

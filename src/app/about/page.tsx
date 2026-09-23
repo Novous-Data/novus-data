@@ -132,12 +132,20 @@ export default function AboutPage() {
             </h3>
             <p className="mt-3">
               The <TextLink href="/monitor">monitor</TextLink> shows raw readings from public
-              feeds — vessels heard at chokepoints, news volume, natural hazards, port wind —
-              re-read every fifteen minutes. Each carries the name of its source, a link to it, and
-              the time the <em>source</em> produced the data, which is not the same as when the
-              page was built. Each is marked delayed or stale against that source&rsquo;s own
-              normal update cycle. A feed that fails shows as unavailable, with the reason, and
-              nothing is drawn in its place.
+              feeds, re-read every fifteen minutes: where news reporting of strikes, blockades,
+              sanctions and fighting is running above its own normal, ships heard at chokepoints,
+              natural hazards, port wind and energy prices. Each carries the name of its source, a
+              link to it, and the time the <em>source</em> produced the data, which is not the same
+              as when the page was built. Each is marked delayed or stale against that
+              source&rsquo;s own normal update cycle. A feed that fails shows as unavailable, with
+              the reason, and nothing is drawn in its place.
+            </p>
+            <p className="mt-3">
+              &ldquo;Above normal&rdquo; is measured, not judged: a place&rsquo;s share of all
+              reporting in the last three hours against its share in the same hours on each of the
+              previous seven days. It counts reporting, not events. Flags are published rules
+              firing on readings — every rule is printed on the monitor — and a flag is a reason to
+              look, not a finding.
             </p>
             <p className="mt-3">
               None of it feeds the register or the exposure chart automatically. A reading becomes

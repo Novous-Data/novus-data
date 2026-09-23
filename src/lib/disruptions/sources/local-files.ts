@@ -17,6 +17,8 @@ import path from 'node:path';
 import matter from 'gray-matter';
 
 import { publication } from '@/config/publication';
+// Pure reference data, not the live layer's network code: which place ids exist.
+import { nodeById } from '@/lib/live/nodes';
 import type {
   Confidence,
   Disruption,
@@ -356,6 +358,22 @@ function parseDisruptionFile(file: string, raw: string, warnings: string[]): Dis
     }
   }
 
+  // Places. An id that is not a tracked place is a typo; warn and drop it
+  // rather than linking a place board row that does not exist.
+  const places: string[] = [];
+  for (const raw of Array.isArray(data.places) ? data.places : []) {
+    const place = typeof raw === 'string' ? raw.trim() : '';
+    if (!place) continue;
+    if (nodeById(place)) {
+      if (!places.includes(place)) places.push(place);
+    } else {
+      warn(
+        warnings,
+        `${file}: "places" lists "${place}", which is not a tracked place. It was dropped. Tracked place ids are listed in src/lib/live/nodes.ts.`,
+      );
+    }
+  }
+
   const contentHtml = body.trim();
 
   return {
@@ -368,6 +386,7 @@ function parseDisruptionFile(file: string, raw: string, warnings: string[]): Dis
     updatedAt,
     summary,
     author,
+    places,
     sources,
     exposures: parseExposures(data.exposures, file, warnings),
     contentHtml: contentHtml.length > 0 ? contentHtml : null,

@@ -40,9 +40,28 @@ export const LIVE_REVALIDATE_SECONDS = 900;
 /** Distance within which a hazard is flagged as near a trade node. A display rule, stated on the page. */
 export const PROXIMITY_KM = 300;
 
-export type LiveSourceId = 'ais' | 'gdelt' | 'usgs' | 'gdacs' | 'nhc' | 'eonet' | 'weather';
+export type LiveSourceId =
+  | 'ais'
+  | 'gdelt'
+  | 'usgs'
+  | 'gdacs'
+  | 'nhc'
+  | 'eonet'
+  | 'weather'
+  | 'fred'
+  | 'quotes';
 
-export const LIVE_SOURCE_IDS: LiveSourceId[] = ['ais', 'gdelt', 'usgs', 'gdacs', 'nhc', 'eonet', 'weather'];
+export const LIVE_SOURCE_IDS: LiveSourceId[] = [
+  'gdelt',
+  'ais',
+  'usgs',
+  'gdacs',
+  'nhc',
+  'eonet',
+  'weather',
+  'fred',
+  'quotes',
+];
 
 /** What is known about a source before any data is fetched. */
 export interface SourceMeta {
@@ -148,33 +167,125 @@ export interface AisData {
   chokepoints: ChokepointSample[];
 }
 
-export interface SignalPoint {
-  /** ISO 8601, start of the interval. */
-  at: string;
-  /** Distinct articles matching the theme in the interval. */
-  articles: number;
-  /** All articles GDELT monitored in the interval, for scale. */
-  monitored: number;
-}
+// --- GDELT: where reporting is rising against its own normal --------------
 
-export interface SignalSeries {
-  themeId: string;
-  label: string;
-  points: SignalPoint[];
-}
+/**
+ * The thresholds the change detection uses. Published on /monitor and at
+ * /about#live, so a reader can check any flag against the rule that raised
+ * it. Change them here and both pages follow.
+ *
+ * "Reports" throughout means GDELT's NumArticles: the number of source
+ * articles that mentioned a conflict-type event geocoded to the place. It
+ * measures how much is being written, not how much is happening.
+ */
+export const REPORTING_RULES = {
+  /** A city-level location is a hotspot at this many reports in the window… */
+  hotspotMinReports: 20,
+  /** …and at least this multiple of its normal share of all reporting. */
+  hotspotMinRatio: 3,
+  countryMinReports: 50,
+  countryMinRatio: 2,
+  /** Near a tracked place: below this many reports, no level is claimed. */
+  placeMinReports: 10,
+  /**
+   * How close a story must be geocoded to count for a place. Tighter than
+   * the hazard radius (PROXIMITY_KM), because news is geocoded to a city and
+   * a wide radius double-counts: at 300 km one strike in Rotterdam raised
+   * alerts for Rotterdam, Antwerp and the Strait of Dover. Chokepoints get
+   * more room because attacks on shipping are usually placed at the nearest
+   * coastal city — Aden for Bab el-Mandeb is about 180 km.
+   */
+  portRadiusKm: 100,
+  chokepointRadiusKm: 200,
+  elevatedRatio: 2,
+  surgingRatio: 3,
+  /**
+   * A place with no reporting at all in the baseline is treated as if it had
+   * this many reports' worth, so a first appearance reads as large rather
+   * than infinite.
+   */
+  minExpected: 2,
+} as const;
 
-export interface Headline {
-  title: string;
+export interface SourceLink {
   url: string;
   domain: string;
-  seenAt: string;
-  sourceCountry: string | null;
+}
+
+/** A city-level location reporting far above its own normal. */
+export interface Hotspot {
+  key: string;
+  /** As GDELT's geocoder names it, e.g. "Aden, Adan, Yemen". */
+  name: string;
+  countryCode: string | null;
+  countryName: string | null;
+  lat: number;
+  lon: number;
+  /** Conflict reports in the recent window. */
+  reports: number;
+  /** Reports the location would have had at its normal share. */
+  expected: number;
+  /** reports ÷ expected. */
+  ratio: number;
+  nearest: NearestNode | null;
+  /** Up to three articles behind the count — the reporting itself, unverified. */
+  sources: SourceLink[];
+}
+
+export interface CountrySurge {
+  code: string;
+  name: string;
+  reports: number;
+  expected: number;
+  ratio: number;
+}
+
+/** One kind of problem — strikes, blockades, sanctions — and how its share moved. */
+export interface ProblemTrend {
+  id: string;
+  label: string;
+  reports: number;
+  /** Share of all reporting in the recent window. */
+  share: number;
+  /** The same share across the baseline. */
+  normalShare: number;
+  /** share ÷ normalShare, or null when there is no baseline to divide by. */
+  ratio: number | null;
+}
+
+export type ReportingLevel = 'normal' | 'elevated' | 'surging';
+
+export const REPORTING_LEVEL_LABELS: Record<ReportingLevel, string> = {
+  normal: 'Normal',
+  elevated: 'Elevated',
+  surging: 'Surging',
+};
+
+/** Conflict reporting geocoded near a tracked place (REPORTING_RULES radii). */
+export interface PlaceReporting {
+  nodeId: string;
+  reports: number;
+  expected: number;
+  ratio: number;
+  level: ReportingLevel;
 }
 
 export interface GdeltData {
-  windowHours: number;
-  series: SignalSeries[];
-  headlines: Headline[];
+  /** The recent window compared against the baseline. */
+  windowStart: string;
+  windowEnd: string;
+  baselineDays: number;
+  recentFiles: number;
+  recentFilesExpected: number;
+  baselineFiles: number;
+  baselineFilesExpected: number;
+  /** All reporting in the recent window, every kind of event — the denominator. */
+  totalReports: number;
+  conflictReports: number;
+  hotspots: Hotspot[];
+  countries: CountrySurge[];
+  problems: ProblemTrend[];
+  places: PlaceReporting[];
 }
 
 export interface Quake {
@@ -268,6 +379,62 @@ export interface WeatherData {
   ports: PortWind[];
 }
 
+// --- Prices ----------------------------------------------------------------
+
+export type PriceUnit = 'usd-bbl' | 'usd-mmbtu' | 'usd-gal' | 'index';
+
+export const PRICE_UNIT_LABELS: Record<PriceUnit, string> = {
+  'usd-bbl': 'US$ per barrel',
+  'usd-mmbtu': 'US$ per million Btu',
+  'usd-gal': 'US$ per gallon',
+  index: 'index',
+};
+
+export interface PricePoint {
+  /** The observation date as the publisher states it, YYYY-MM-DD. */
+  date: string;
+  value: number;
+}
+
+/** A public-domain price series — EIA and Federal Reserve data, served by FRED. */
+export interface PriceSeries {
+  id: string;
+  label: string;
+  /** Who produced the number, not who served it. */
+  origin: string;
+  unit: PriceUnit;
+  cadence: 'daily' | 'weekly';
+  /** Oldest first. Roughly six months. */
+  points: PricePoint[];
+  latest: PricePoint;
+  /** Per cent change against the observation about a week and a month earlier. */
+  changeWeek: number | null;
+  changeMonth: number | null;
+  /** The series page on FRED, where the number can be checked. */
+  sourceUrl: string;
+}
+
+export interface FredData {
+  series: PriceSeries[];
+}
+
+/** A listed security's last price. Only shown when a licensed key is configured. */
+export interface Quote {
+  symbol: string;
+  label: string;
+  price: number;
+  previousClose: number | null;
+  changePct: number | null;
+  /** The provider's timestamp for the price — not when we asked. */
+  at: string;
+}
+
+export interface QuotesData {
+  quotes: Quote[];
+  /** Symbols asked for that the provider returned nothing for. */
+  missing: string[];
+}
+
 export interface LiveSnapshot {
   /** When this page's data was assembled. The page is regenerated every fifteen minutes. */
   generatedAt: string;
@@ -278,6 +445,52 @@ export interface LiveSnapshot {
   nhc: Reading<NhcData>;
   eonet: Reading<EonetData>;
   weather: Reading<WeatherData>;
+  fred: Reading<FredData>;
+  quotes: Reading<QuotesData>;
+}
+
+// --- Derived: flags and the place board -------------------------------------
+
+/**
+ * A flag is a rule firing on a reading — never a judgement. Each one carries
+ * the rule in words, the reading's own time and a link to the source, so a
+ * reader can check it without trusting us. Nothing here is an assessment;
+ * assessments live in the register.
+ */
+export type FlagLevel = 'alert' | 'watch';
+
+export const FLAG_LEVEL_LABELS: Record<FlagLevel, string> = {
+  alert: 'Alert',
+  watch: 'Watch',
+};
+
+export interface LiveFlag {
+  /** Stable across regenerations while the condition holds — a watcher diffs on it. */
+  id: string;
+  level: FlagLevel;
+  title: string;
+  /** The reading, in a sentence. */
+  detail: string;
+  /** The rule that fired, in words. */
+  rule: string;
+  source: LiveSourceId;
+  /** The reading's own time. */
+  at: string;
+  placeId: string | null;
+  href: string | null;
+}
+
+/** Everything the live feeds say about one tracked place, in one row. */
+export interface PlaceSummary {
+  nodeId: string;
+  reporting: PlaceReporting | null;
+  quakes: { count: number; maxMagnitude: number | null };
+  alerts: { count: number; worst: string | null };
+  storms: { count: number; nearestKm: number | null };
+  events: number;
+  wind: { windMs: number; beaufort: number; label: string } | null;
+  vessels: { underway: number; heard: number } | null;
+  flags: number;
 }
 
 // ---------------------------------------------------------------------------

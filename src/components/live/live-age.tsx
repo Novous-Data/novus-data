@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { formatAge, formatUtc } from '@/lib/live/display';
+import { formatAge, formatUtc, formatUtcDate } from '@/lib/live/display';
 // Pure modules only. The layer index reaches the network adapters, and a
 // client component that imported it would drag them into the browser bundle.
 import { SOURCE_META } from '@/lib/live/meta';
@@ -69,11 +69,17 @@ export function LiveAge({
   at,
   source,
   className,
+  precision = 'minute',
 }: {
   at: string;
   /** When given, the source's own freshness windows decide Live / Delayed / Stale. */
   source?: LiveSourceId;
   className?: string;
+  /**
+   * 'day' for a value that is dated, not timed — a daily settlement price.
+   * Printing "00:00 UTC" beside it would claim a precision nobody published.
+   */
+  precision?: 'minute' | 'day';
 }) {
   const now = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const then = Date.parse(at);
@@ -88,8 +94,8 @@ export function LiveAge({
 
   return (
     <span className={className}>
-      <time dateTime={at}>{formatUtc(at)}</time>
-      {age !== null ? (
+      <time dateTime={at}>{precision === 'day' ? formatUtcDate(at) : formatUtc(at)}</time>
+      {age !== null && precision === 'minute' ? (
         <>
           <span aria-hidden="true" className="text-accent">
             {' · '}

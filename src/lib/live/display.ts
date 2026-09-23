@@ -64,14 +64,38 @@ export function formatAge(minutes: number): string {
   return days === 1 ? '1 day' : `${days} days`;
 }
 
-/**
- * A share of coverage as a percentage, to a precision that means something at
- * its size. GDELT shares are small — tenths or hundredths of a per cent — so a
- * fixed two decimals would print most of them as "0.00%".
- */
-export function formatShare(percent: number): string {
-  if (percent === 0) return '0%';
-  if (percent >= 10) return `${percent.toFixed(1)}%`;
-  if (percent >= 1) return `${percent.toFixed(2)}%`;
-  return `${percent.toPrecision(2)}%`;
+/** "3.4×" — a multiple of normal. One decimal is all the method supports. */
+export function formatRatio(ratio: number): string {
+  if (!Number.isFinite(ratio)) return '—';
+  return `${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)}×`;
+}
+
+/** "+2.1%" / "−0.4%" with a real minus sign, so the columns align and read. */
+export function formatSignedPct(pct: number | null): string {
+  if (pct === null || !Number.isFinite(pct)) return '—';
+  const rounded = Math.abs(pct) < 0.05 ? 0 : pct;
+  const sign = rounded > 0 ? '+' : rounded < 0 ? '\u2212' : '';
+  return `${sign}${Math.abs(rounded).toFixed(1)}%`;
+}
+
+/** Prices in their own unit's convention. */
+export function formatPrice(value: number, unit: 'usd-bbl' | 'usd-mmbtu' | 'usd-gal' | 'index' | 'usd'): string {
+  if (!Number.isFinite(value)) return '—';
+  switch (unit) {
+    case 'usd-bbl':
+    case 'usd':
+      return `$${value.toFixed(2)}`;
+    case 'usd-mmbtu':
+    case 'usd-gal':
+      return `$${value.toFixed(3)}`;
+    case 'index':
+      return value.toFixed(2);
+  }
+}
+
+/** "22 Sep 2026" from a bare YYYY-MM-DD, without passing through a time zone. */
+export function formatUtcDateOnly(date: string): string {
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return '—';
+  return `${match[3]} ${MONTHS[Number(match[2]) - 1]} ${match[1]}`;
 }

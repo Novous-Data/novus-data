@@ -1,261 +1,508 @@
 /**
- * GDELT DOC 2.0 — how much of the world's news is about each disruption theme,
- * in fifteen-minute intervals over the past day, plus the latest headlines.
+ * GDELT Event Database 2.0 — where conflict reporting is rising against its
+ * own normal.
  *
  * ---------------------------------------------------------------------------
- * WHAT THIS SIGNAL IS, AND WHAT IT IS NOT
+ * WHAT THIS MEASURES
  *
- * It is a count of articles. It measures attention, not disruption: a spike
- * means the press is writing about port strikes, which is worth knowing and is
- * not the same as ports being shut. The page labels it "news volume" for that
- * reason, and the headlines beneath it are third-party reporting that Novus
- * Data has not verified. Neither ever feeds the register's assessments.
+ * Every fifteen minutes GDELT publishes a file of events its software coded
+ * from the world's news: who did what to whom, where, and how many articles
+ * reported it. This adapter keeps the conflict-type events (CAMEO QuadClass
+ * 3 and 4: threats, protests, strikes, blockades, sanctions, seizures,
+ * assaults, fighting) and asks one question of them:
+ *
+ *   Is a place, a country or a kind of problem getting a larger share of the
+ *   world's reporting than it normally does?
+ *
+ * "Normally" is the same three-hour window of the day on each of the previous
+ * seven days. The time-of-day match matters: the mix of the world's news
+ * shifts with the sun, so a baseline averaged over the whole day would flag
+ * Asian ports every night simply because Asia is awake.
+ *
+ * Shares, not raw counts, because total news output swings through the day
+ * and the week. A share cancels that out.
+ *
+ * It measures REPORTING, not events. A surge means more is being written
+ * about a place — which is worth knowing early — not that more is happening
+ * there, and GDELT's coding and geocoding are automated and imperfect. The
+ * page says so, and nothing here ever feeds the register.
  *
  * ---------------------------------------------------------------------------
- * RATE LIMIT
+ * WHY THE RAW FILES AND NOT GDELT'S QUERY API
  *
- * GDELT allows one request every five seconds per IP and answers faster
- * callers with HTTP 429. Requests are therefore made one at a time with a
- * gap, and a 429 costs one series for one cycle rather than failing the lot.
- * On Vercel the outbound IP is shared with other customers, so 429s can
- * happen regardless of our own pacing; the page reports them honestly as a
- * partial result rather than hiding them.
+ * The first version used the DOC 2.0 API. From GitHub's runners (shared cloud
+ * IPs, like Vercel's) it refused every request — HTTP 429, then timeouts — in
+ * both real runs (CLAUDE.md §6d). The raw exports are static files on
+ * data.gdeltproject.org with no request limit, and each file is immutable
+ * once published, so the fetch cache holds the seven-day baseline and a
+ * regeneration usually downloads only the newest file or two.
  *
  * Citation is a condition of use (see ../meta.ts) — the page carries it.
  * ---------------------------------------------------------------------------
  */
 
-import type { GdeltData, Headline, Reading, SignalPoint, SignalSeries } from '../types';
+import { countryName } from '../countries';
+import { ALL_NODES, distanceKm, nearestNode } from '../nodes';
 import {
-  LiveSourceError,
-  asArray,
-  fetchJson,
-  isRecord,
-  isoFromGdelt,
-  latestIso,
-  num,
-  sleep,
-  str,
-  type FetchedJson,
-} from './http';
+  REPORTING_RULES,
+  type CountrySurge,
+  type GdeltData,
+  type Hotspot,
+  type PlaceReporting,
+  type ProblemTrend,
+  type Reading,
+  type ReportingLevel,
+  type SourceLink,
+} from '../types';
+import { LiveSourceError, fetchBytes, fetchText } from './http';
+import { unzipFirstEntry } from './unzip';
 
-const ENDPOINT = 'https://api.gdeltproject.org/api/v2/doc/doc';
-const GAP_MS = 5_500;
+const LAST_UPDATE_URL = 'http://data.gdeltproject.org/gdeltv2/lastupdate.txt';
+const FILE_BASE_URL = 'http://data.gdeltproject.org/gdeltv2/';
+
+const SLOT_MS = 15 * 60_000;
+const DAY_MS = 24 * 60 * 60_000;
+
+/** Twelve fifteen-minute files: the last three hours. */
+export const RECENT_SLOTS = 12;
+export const BASELINE_DAYS = 7;
+/** Four files from the same three-hour window on each baseline day, 45 minutes apart. */
+const BASELINE_SLOTS_PER_DAY = 4;
+const BASELINE_STEP_MS = 45 * 60_000;
+
+/** Below these, the comparison is not made at all and the panel says why. */
+const MIN_RECENT_FILES = 8;
+const MIN_BASELINE_FILES = 14;
+
+/** Wall-clock budget for the whole read, so a slow host can never push a regeneration past maxDuration. */
+const BUDGET_MS = 30_000;
+const FILE_TIMEOUT_MS = 10_000;
+const CONCURRENCY = 8;
+/** An export is never rewritten once published, so it can be cached for longer than the baseline spans. */
+const IMMUTABLE_SECONDS = 9 * 24 * 60 * 60;
+
+const MAX_HOTSPOTS = 12;
+const MAX_COUNTRIES = 10;
+const SOURCES_PER_HOTSPOT = 3;
+
+// ---------------------------------------------------------------------------
+// The file layout. GDELT 2.0 event exports are tab-separated with 61 columns
+// and no header (GDELT Event Codebook V2.0). Only these are read.
+// ---------------------------------------------------------------------------
+
+export const EXPORT_COLUMNS = 61;
+const COL = {
+  eventBaseCode: 27,
+  eventRootCode: 28,
+  quadClass: 29,
+  numArticles: 33,
+  geoType: 51,
+  geoFullName: 52,
+  geoCountry: 53,
+  geoLat: 56,
+  geoLon: 57,
+  geoFeatureId: 58,
+  sourceUrl: 60,
+} as const;
+
+/** ActionGeo_Type 3 (US city) and 4 (world city). Country and state centroids are not places. */
+const CITY_GEO_TYPES = new Set(['3', '4']);
 
 /**
- * Wall-clock budget for every GDELT request in one regeneration, and the most
- * any single request may take.
- *
- * MEASURED, not assumed: the first run against the real API (from a GitHub
- * Actions runner, whose outbound IP is shared like Vercel's) was refused with
- * 429 on every request, and each refusal took around eleven seconds to
- * arrive. Five of those plus the pacing gaps came to 78 seconds — past both
- * the route's 60-second `maxDuration` and Next's 60-second limit for
- * prerendering a page at build time, which would fail the deploy. With the
- * budget, GDELT can never take more than about half of either limit, and
- * whatever it did not reach is reported as not attempted.
+ * The kinds of problem tracked, by CAMEO code. Chosen for what moves goods:
+ * a strike, a blockade or a sanction is a supply chain event in a way most
+ * diplomatic friction is not. Codes are CAMEO's, not ours.
  */
-const BUDGET_MS = 32_000;
-const REQUEST_TIMEOUT_MS = 8_000;
-const WINDOW = '24h';
-const MAX_HEADLINES = 12;
-
-export interface GdeltTheme {
-  id: string;
-  label: string;
-  query: string;
-}
-
-/**
- * The themes tracked. Each is one request, so each costs five seconds of
- * regeneration time: add a theme only if it earns that.
- */
-export const GDELT_THEMES: GdeltTheme[] = [
-  {
-    id: 'chokepoints',
-    label: 'Chokepoints and canals',
-    query: '("suez canal" OR "panama canal" OR "red sea shipping" OR "strait of hormuz")',
-  },
-  {
-    id: 'ports-labour',
-    label: 'Ports and labour',
-    query: '("port strike" OR "dockworkers" OR "port congestion" OR "port closure")',
-  },
-  {
-    id: 'trade-policy',
-    label: 'Export controls and tariffs',
-    query: '("export controls" OR "export ban" OR "rare earth exports" OR "tariff hike")',
-  },
-  {
-    id: 'energy',
-    label: 'Energy supply',
-    query: '("oil supply" OR "refinery outage" OR "pipeline shutdown" OR "LNG supply")',
-  },
+export const PROBLEM_TYPES: Array<{ id: string; label: string; bases?: string[]; roots?: string[] }> = [
+  { id: 'strikes', label: 'Strikes and boycotts', bases: ['143'] },
+  { id: 'blockades', label: 'Blockades and obstruction', bases: ['144', '191'] },
+  { id: 'sanctions', label: 'Sanctions and embargoes', bases: ['163'] },
+  { id: 'seizures', label: 'Seizures of property', bases: ['171'] },
+  { id: 'restrictions', label: 'Administrative restrictions', bases: ['172'] },
+  { id: 'protests', label: 'Protests of all kinds', roots: ['14'] },
+  { id: 'threats', label: 'Threats', roots: ['13'] },
+  { id: 'posture', label: 'Military posturing', roots: ['15'] },
+  { id: 'assaults', label: 'Assaults and bombings', roots: ['18'] },
+  { id: 'fighting', label: 'Armed fighting', roots: ['19', '20'] },
 ];
 
-const HEADLINE_QUERY =
-  '("supply chain disruption" OR "shipping disruption" OR "port strike" OR "suez canal" OR "panama canal" OR "export controls")';
+// ---------------------------------------------------------------------------
+// One file → tallies. Pure, exported, and what the fixtures run through.
+// ---------------------------------------------------------------------------
 
-export interface GdeltRaw {
-  series: Array<{ themeId: string; fetched: FetchedJson | null; error: string | null }>;
-  headlines: { fetched: FetchedJson | null; error: string | null };
+export interface LocationTally {
+  name: string;
+  countryCode: string | null;
+  lat: number;
+  lon: number;
+  reports: number;
+  /** The best-reported articles behind this location, most-reported first. */
+  sources: Array<{ url: string; reports: number }>;
 }
 
-function url(query: string, extra: Record<string, string>): string {
-  const params = new URLSearchParams({ query, timespan: WINDOW, format: 'json', ...extra });
-  return `${ENDPOINT}?${params}`;
+export interface FileTally {
+  rows: number;
+  malformed: number;
+  totalReports: number;
+  conflictReports: number;
+  locations: Record<string, LocationTally>;
+  countries: Record<string, number>;
+  problems: Record<string, number>;
+  places: Record<string, number>;
 }
 
-interface Attempt {
-  fetched: FetchedJson | null;
-  error: string | null;
-  rateLimited: boolean;
+function emptyTally(): FileTally {
+  return {
+    rows: 0,
+    malformed: 0,
+    totalReports: 0,
+    conflictReports: 0,
+    locations: {},
+    countries: {},
+    problems: {},
+    places: {},
+  };
 }
 
-async function attempt(target: string, timeoutMs: number): Promise<Attempt> {
-  try {
-    return {
-      fetched: await fetchJson(target, 'gdelt', { label: 'GDELT', timeoutMs }),
-      error: null,
-      rateLimited: false,
-    };
-  } catch (error) {
-    return {
-      fetched: null,
-      error: error instanceof LiveSourceError ? error.publicReason : 'GDELT could not be read.',
-      rateLimited: error instanceof LiveSourceError && error.rateLimited,
-    };
-  }
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\/[^\s]+$/i.test(value);
 }
 
-const SKIPPED_AFTER_429 = 'not requested this cycle, because GDELT was already rate-limiting this server.';
-const SKIPPED_FOR_TIME = 'not requested this cycle, because GDELT was slow to answer and the page does not wait past its time budget.';
+export function tallyExport(text: string): FileTally {
+  const tally = emptyTally();
 
-/**
- * One request at a time, GAP_MS apart (see RATE LIMIT above), inside
- * BUDGET_MS, and stopping at the first 429. Themes first, headlines last:
- * the charts are the part of this panel nothing else on the page provides.
- */
-export async function fetchGdelt(): Promise<GdeltRaw> {
-  const deadline = Date.now() + BUDGET_MS;
-  const targets = [
-    ...GDELT_THEMES.map((theme) => ({ themeId: theme.id as string | null, target: url(theme.query, { mode: 'timelinevolraw' }) })),
-    { themeId: null, target: url(HEADLINE_QUERY, { mode: 'artlist', maxrecords: '75', sort: 'datedesc' }) },
-  ];
+  for (const line of text.split('\n')) {
+    if (line.trim() === '') continue;
+    tally.rows += 1;
 
-  const results: Attempt[] = [];
-  let halt: string | null = null;
-
-  for (const [index, { target }] of targets.entries()) {
-    if (!halt && index > 0) {
-      if (Date.now() + GAP_MS + REQUEST_TIMEOUT_MS > deadline) halt = SKIPPED_FOR_TIME;
-      else await sleep(GAP_MS);
-    }
-    if (halt) {
-      results.push({ fetched: null, error: halt, rateLimited: false });
+    const f = line.split('\t');
+    if (f.length !== EXPORT_COLUMNS) {
+      tally.malformed += 1;
       continue;
     }
-    const result = await attempt(target, Math.min(REQUEST_TIMEOUT_MS, Math.max(1_000, deadline - Date.now())));
-    results.push(result);
-    if (result.rateLimited) halt = SKIPPED_AFTER_429;
-  }
+    const quad = f[COL.quadClass];
+    const reports = Number(f[COL.numArticles]);
+    if (!/^[1-4]$/.test(quad) || !Number.isInteger(reports) || reports < 0) {
+      tally.malformed += 1;
+      continue;
+    }
 
-  const series = targets.flatMap((t, index) =>
-    t.themeId ? [{ themeId: t.themeId, fetched: results[index].fetched, error: results[index].error }] : [],
-  );
-  const last = results[results.length - 1];
-  return { series, headlines: { fetched: last.fetched, error: last.error } };
-}
+    tally.totalReports += reports;
+    if (quad !== '3' && quad !== '4') continue;
+    tally.conflictReports += reports;
 
-function parseSeries(theme: GdeltTheme, body: unknown): SignalSeries | null {
-  if (!isRecord(body)) return null;
-  // timelinevolraw: { timeline: [ { series, data: [ { date, value, norm } ] } ] }
-  const first = asArray(body.timeline).find(isRecord);
-  if (!first) return null;
+    const root = f[COL.eventRootCode];
+    const base = f[COL.eventBaseCode];
+    for (const type of PROBLEM_TYPES) {
+      if (type.bases?.includes(base) || type.roots?.includes(root)) {
+        tally.problems[type.id] = (tally.problems[type.id] ?? 0) + reports;
+      }
+    }
 
-  const points: SignalPoint[] = asArray(first.data)
-    .filter(isRecord)
-    .map((point) => ({
-      at: isoFromGdelt(point.date),
-      articles: num(point.value),
-      monitored: num(point.norm),
-    }))
-    .filter((p): p is SignalPoint => p.at !== null && p.articles !== null && p.monitored !== null)
-    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    const country = f[COL.geoCountry].trim();
+    if (country) tally.countries[country] = (tally.countries[country] ?? 0) + reports;
 
-  return points.length > 0 ? { themeId: theme.id, label: theme.label, points } : null;
-}
+    if (!CITY_GEO_TYPES.has(f[COL.geoType])) continue;
+    const lat = Number(f[COL.geoLat]);
+    const lon = Number(f[COL.geoLon]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
 
-function normaliseTitle(title: string): string {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-function parseHeadlines(body: unknown): Headline[] {
-  if (!isRecord(body)) return [];
-  const seen = new Set<string>();
-  const headlines: Headline[] = [];
-
-  for (const raw of asArray(body.articles)) {
-    if (!isRecord(raw)) continue;
-    // English only: a headline the reader cannot read is not information.
-    if (str(raw.language) && str(raw.language) !== 'English') continue;
-
-    const title = str(raw.title);
-    const link = str(raw.url);
-    const seenAt = isoFromGdelt(raw.seendate);
-    if (!title || !link || !seenAt || !/^https?:\/\//i.test(link)) continue;
-
-    // Syndicated copies of one story share a title; keep the first.
-    const key = normaliseTitle(title);
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    headlines.push({
-      title,
-      url: link,
-      domain: str(raw.domain) ?? new URL(link).hostname,
-      seenAt,
-      sourceCountry: str(raw.sourcecountry),
+    const key = f[COL.geoFeatureId].trim() || `${lat.toFixed(2)},${lon.toFixed(2)}`;
+    const location = (tally.locations[key] ??= {
+      name: f[COL.geoFullName].trim() || 'Unnamed place',
+      countryCode: country || null,
+      lat,
+      lon,
+      reports: 0,
+      sources: [],
     });
-    if (headlines.length >= MAX_HEADLINES) break;
+    location.reports += reports;
+
+    const url = f[COL.sourceUrl].trim();
+    if (isHttpUrl(url)) {
+      const existing = location.sources.find((s) => s.url === url);
+      if (existing) existing.reports += reports;
+      else location.sources.push({ url, reports });
+      location.sources.sort((a, b) => b.reports - a.reports);
+      location.sources.length = Math.min(location.sources.length, SOURCES_PER_HOTSPOT * 2);
+    }
+
+    for (const node of ALL_NODES) {
+      const radius =
+        node.kind === 'chokepoint' ? REPORTING_RULES.chokepointRadiusKm : REPORTING_RULES.portRadiusKm;
+      if (distanceKm(lat, lon, node.lat, node.lon) <= radius) {
+        tally.places[node.id] = (tally.places[node.id] ?? 0) + reports;
+      }
+    }
   }
-  return headlines;
+
+  return tally;
+}
+
+function add(into: Record<string, number>, from: Record<string, number>): void {
+  for (const [key, value] of Object.entries(from)) into[key] = (into[key] ?? 0) + value;
+}
+
+function merge(tallies: FileTally[]): FileTally {
+  const total = emptyTally();
+  for (const t of tallies) {
+    total.rows += t.rows;
+    total.malformed += t.malformed;
+    total.totalReports += t.totalReports;
+    total.conflictReports += t.conflictReports;
+    add(total.countries, t.countries);
+    add(total.problems, t.problems);
+    add(total.places, t.places);
+    for (const [key, loc] of Object.entries(t.locations)) {
+      const into = (total.locations[key] ??= { ...loc, reports: 0, sources: [] });
+      into.reports += loc.reports;
+      for (const source of loc.sources) {
+        const existing = into.sources.find((s) => s.url === source.url);
+        if (existing) existing.reports += source.reports;
+        else into.sources.push({ ...source });
+      }
+    }
+  }
+  return total;
+}
+
+// ---------------------------------------------------------------------------
+// Fetching
+// ---------------------------------------------------------------------------
+
+export interface GdeltRaw {
+  /** The newest file's own fifteen-minute stamp, as ISO. */
+  latest: string;
+  recent: Array<FileTally | null>;
+  baseline: Array<FileTally | null>;
+}
+
+function stampOf(time: number): string {
+  return new Date(time).toISOString().replace(/[-:T]/g, '').slice(0, 14);
+}
+
+function timeOfStamp(stamp: string): number | null {
+  const m = stamp.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/);
+  if (!m) return null;
+  const time = Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`);
+  return Number.isFinite(time) ? time : null;
+}
+
+/** Recent slots, newest first, then the same window on each baseline day. */
+export function slotTimes(latest: number): { recent: number[]; baseline: number[] } {
+  const recent = Array.from({ length: RECENT_SLOTS }, (_, k) => latest - k * SLOT_MS);
+  const baseline: number[] = [];
+  for (let day = 1; day <= BASELINE_DAYS; day += 1) {
+    for (let step = 0; step < BASELINE_SLOTS_PER_DAY; step += 1) {
+      baseline.push(latest - day * DAY_MS - step * BASELINE_STEP_MS);
+    }
+  }
+  return { recent, baseline };
+}
+
+async function pool<T, R>(items: T[], limit: number, run: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await run(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+export async function fetchGdelt(): Promise<GdeltRaw> {
+  const deadline = Date.now() + BUDGET_MS;
+
+  // The index is the one thing that must be fresh: it names the newest file.
+  const index = await fetchText(LAST_UPDATE_URL, 'gdelt', { label: 'GDELT', timeoutMs: 8_000 });
+  const stamp = index.text.match(/(\d{14})\.export\.CSV\.zip/i)?.[1];
+  const latest = stamp ? timeOfStamp(stamp) : null;
+  if (latest === null) throw new LiveSourceError("GDELT's update index did not name an event file.");
+
+  const { recent, baseline } = slotTimes(latest);
+
+  const read = async (time: number): Promise<FileTally | null> => {
+    const remaining = deadline - Date.now();
+    if (remaining < 1_500) return null;
+    try {
+      const zipped = await fetchBytes(`${FILE_BASE_URL}${stampOf(time)}.export.CSV.zip`, 'gdelt', {
+        label: 'GDELT',
+        timeoutMs: Math.min(FILE_TIMEOUT_MS, remaining),
+        revalidateSeconds: IMMUTABLE_SECONDS,
+      });
+      return tallyExport(unzipFirstEntry(zipped).toString('utf8'));
+    } catch {
+      // A missing or unreadable file costs one slot, never the reading. GDELT
+      // does occasionally skip an interval; the counts below say how many
+      // were read.
+      return null;
+    }
+  };
+
+  const results = await pool([...recent, ...baseline], CONCURRENCY, read);
+  return {
+    latest: new Date(latest).toISOString(),
+    recent: results.slice(0, recent.length),
+    baseline: results.slice(recent.length),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Tallies → what is changing
+// ---------------------------------------------------------------------------
+
+function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+function levelFor(reports: number, ratio: number): ReportingLevel {
+  if (reports < REPORTING_RULES.placeMinReports) return 'normal';
+  if (ratio >= REPORTING_RULES.surgingRatio) return 'surging';
+  if (ratio >= REPORTING_RULES.elevatedRatio) return 'elevated';
+  return 'normal';
 }
 
 export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
-  const notes: string[] = [];
-  const series: SignalSeries[] = [];
+  const recentFiles = raw.recent.filter((t): t is FileTally => t !== null);
+  const baselineFiles = raw.baseline.filter((t): t is FileTally => t !== null);
 
-  for (const entry of raw.series) {
-    const theme = GDELT_THEMES.find((t) => t.id === entry.themeId);
-    if (!theme) continue;
-    const parsed = entry.fetched ? parseSeries(theme, entry.fetched.body) : null;
-    if (parsed) series.push(parsed);
-    else notes.push(`${theme.label}: ${entry.error ?? 'no data for the past day'}`);
+  if (recentFiles.length < MIN_RECENT_FILES) {
+    throw new LiveSourceError(
+      `Only ${recentFiles.length} of GDELT's last ${raw.recent.length} fifteen-minute files could be read — too few to compare.`,
+    );
+  }
+  if (baselineFiles.length < MIN_BASELINE_FILES) {
+    throw new LiveSourceError(
+      `Only ${baselineFiles.length} of ${raw.baseline.length} baseline files could be read — too few to say what normal is.`,
+    );
   }
 
-  const headlines = raw.headlines.fetched ? parseHeadlines(raw.headlines.fetched.body) : [];
-  if (!raw.headlines.fetched) notes.push(`Headlines: ${raw.headlines.error ?? 'unavailable'}`);
+  const R = merge(recentFiles);
+  const B = merge(baselineFiles);
 
-  if (series.length === 0 && headlines.length === 0) {
-    // Every request failed. Report the failure itself, not prefixed with the
-    // first theme's name — that would imply only one theme was affected.
-    const first = raw.series.find((entry) => entry.error)?.error ?? raw.headlines.error;
-    throw new LiveSourceError(first ?? 'GDELT returned no usable data.');
+  // A file that parses into mostly-malformed rows means GDELT changed its
+  // layout. Better no reading than counts from the wrong columns.
+  const rows = R.rows + B.rows;
+  if (rows === 0 || (R.malformed + B.malformed) / rows > 0.2) {
+    throw new LiveSourceError("GDELT's event files did not match the 61-column layout this page reads.");
+  }
+  if (R.totalReports === 0 || B.totalReports === 0) {
+    throw new LiveSourceError('GDELT files were read but contained no reporting to compare.');
   }
 
-  const asOf = latestIso([
-    ...series.map((s) => s.points.at(-1)?.at ?? null),
-    ...headlines.map((h) => h.seenAt),
-  ]);
-  if (!asOf) throw new LiveSourceError('GDELT data carried no usable timestamps.');
+  const expectedFrom = (baseReports: number) =>
+    Math.max((baseReports / B.totalReports) * R.totalReports, REPORTING_RULES.minExpected);
 
+  const hotspots: Hotspot[] = [];
+  for (const [key, loc] of Object.entries(R.locations)) {
+    if (loc.reports < REPORTING_RULES.hotspotMinReports) continue;
+    const expected = expectedFrom(B.locations[key]?.reports ?? 0);
+    const ratio = loc.reports / expected;
+    if (ratio < REPORTING_RULES.hotspotMinRatio) continue;
+    hotspots.push({
+      key,
+      name: loc.name,
+      countryCode: loc.countryCode,
+      countryName: countryName(loc.countryCode),
+      lat: loc.lat,
+      lon: loc.lon,
+      reports: loc.reports,
+      expected,
+      ratio,
+      nearest: nearestNode(loc.lat, loc.lon),
+      sources: loc.sources
+        .slice()
+        .sort((a, b) => b.reports - a.reports)
+        .reduce<SourceLink[]>((picked, s) => {
+          // One link per publisher, so three links are three voices.
+          const domain = domainOf(s.url);
+          if (picked.length < SOURCES_PER_HOTSPOT && !picked.some((p) => p.domain === domain)) {
+            picked.push({ url: s.url, domain });
+          }
+          return picked;
+        }, []),
+    });
+  }
+  // Ranked by excess reporting — how far above normal, in reports — so a big
+  // place moderately up outranks a village that went from one article to five.
+  hotspots.sort((a, b) => b.reports - b.expected - (a.reports - a.expected));
+
+  const countries: CountrySurge[] = [];
+  for (const [code, reports] of Object.entries(R.countries)) {
+    if (reports < REPORTING_RULES.countryMinReports) continue;
+    const expected = expectedFrom(B.countries[code] ?? 0);
+    const ratio = reports / expected;
+    if (ratio < REPORTING_RULES.countryMinRatio) continue;
+    countries.push({ code, name: countryName(code) ?? code, reports, expected, ratio });
+  }
+  countries.sort((a, b) => b.reports - b.expected - (a.reports - a.expected));
+
+  const problems: ProblemTrend[] = PROBLEM_TYPES.map((type) => {
+    const reports = R.problems[type.id] ?? 0;
+    const share = reports / R.totalReports;
+    const normalShare = (B.problems[type.id] ?? 0) / B.totalReports;
+    return {
+      id: type.id,
+      label: type.label,
+      reports,
+      share,
+      normalShare,
+      ratio: normalShare > 0 ? share / normalShare : null,
+    };
+  }).sort((a, b) => {
+    // Rising first; a type with reporting now and none normally ranks with
+    // the risers; one with nothing either time goes last.
+    const rank = (p: ProblemTrend) => p.ratio ?? (p.reports > 0 ? Number.POSITIVE_INFINITY : -1);
+    return rank(b) - rank(a);
+  });
+
+  const places: PlaceReporting[] = ALL_NODES.map((node) => {
+    const reports = R.places[node.id] ?? 0;
+    const expected = expectedFrom(B.places[node.id] ?? 0);
+    const ratio = reports / expected;
+    return { nodeId: node.id, reports, expected, ratio, level: levelFor(reports, ratio) };
+  });
+
+  const notes = [
+    'Counts are of news articles reporting conflict-type events, as coded automatically by GDELT. They measure how much is being written about a place, not how much is happening there, and automated geocoding sometimes places a story in the wrong city.',
+  ];
+  const missing = raw.recent.length - recentFiles.length + (raw.baseline.length - baselineFiles.length);
+  if (missing > 0) {
+    notes.push(
+      `${missing} of ${raw.recent.length + raw.baseline.length} fifteen-minute files could not be read this cycle; the comparison uses the rest.`,
+    );
+  }
+
+  const latest = Date.parse(raw.latest);
   return {
     status: 'ok',
     source: 'gdelt',
-    asOf,
-    asOfBasis: 'latest GDELT interval',
-    data: { windowHours: 24, series, headlines },
+    // The newest file's own stamp: the data's time, taken from GDELT's file
+    // name, never our clock.
+    asOf: raw.latest,
+    asOfBasis: 'latest GDELT fifteen-minute update',
+    data: {
+      windowStart: new Date(latest - (RECENT_SLOTS - 1) * SLOT_MS).toISOString(),
+      windowEnd: new Date(latest + SLOT_MS).toISOString(),
+      baselineDays: BASELINE_DAYS,
+      recentFiles: recentFiles.length,
+      recentFilesExpected: raw.recent.length,
+      baselineFiles: baselineFiles.length,
+      baselineFilesExpected: raw.baseline.length,
+      totalReports: R.totalReports,
+      conflictReports: R.conflictReports,
+      hotspots: hotspots.slice(0, MAX_HOTSPOTS),
+      countries: countries.slice(0, MAX_COUNTRIES),
+      problems,
+      places,
+    },
     notes,
   };
 }

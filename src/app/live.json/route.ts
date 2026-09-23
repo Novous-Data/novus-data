@@ -1,6 +1,16 @@
 import { publication } from '@/config/publication';
 import { absoluteUrl } from '@/lib/env';
-import { LIVE_REVALIDATE_SECONDS, LIVE_SOURCE_IDS, PROXIMITY_KM, SOURCE_META, getLiveSnapshot } from '@/lib/live';
+import { listDisruptions } from '@/lib/disruptions';
+import {
+  FLAG_RULES,
+  LIVE_REVALIDATE_SECONDS,
+  LIVE_SOURCE_IDS,
+  PROXIMITY_KM,
+  SOURCE_META,
+  deriveFlags,
+  derivePlaces,
+  getLiveSnapshot,
+} from '@/lib/live';
 
 /**
  * The live snapshot, machine-readable — the same data /monitor renders.
@@ -46,7 +56,30 @@ export const revalidate = 900;
 export const maxDuration = 60;
 
 export async function GET() {
-  const snapshot = await getLiveSnapshot();
+  const disruptions = await listDisruptions();
+  const open = disruptions.filter((d) => d.status !== 'resolved');
+  const tickers = new Map<string, string>();
+  for (const d of open) {
+    for (const e of d.exposures) if (e.entity.ticker) tickers.set(e.entity.ticker, e.entity.name);
+  }
+
+  const snapshot = await getLiveSnapshot({
+    extraSymbols: [...tickers].map(([symbol, label]) => ({ symbol, label })),
+  });
+  // Derived exactly as /monitor derives them, from the same snapshot, so the
+  // app and the page can never disagree about what is flagged.
+  const flags = deriveFlags(snapshot);
+  const places = derivePlaces(snapshot, flags).map((place) => ({
+    ...place,
+    // Register entries naming this place, so a client can link a flag
+    // straight to the assessment — or see that there is none yet.
+    register: open.filter((d) => d.places.includes(place.nodeId)).map((d) => ({
+      id: d.id,
+      title: d.title,
+      status: d.status,
+      url: absoluteUrl(`/disruptions/${d.id}`),
+    })),
+  }));
 
   const body = {
     version: 1,
@@ -54,13 +87,15 @@ export async function GET() {
     home_page_url: absoluteUrl('/monitor'),
     feed_url: absoluteUrl('/live.json'),
     description:
-      'Raw readings from public feeds on shipping, news volume, natural hazards and port ' +
-      'weather. These are not assessments and do not feed the register. Each reading ' +
+      'Raw readings from public feeds on shipping, conflict reporting against normal, natural hazards, port ' +
+      'weather and energy prices, with the flags and place board derived from them. ' +
+      'These are not assessments and do not feed the register. Each reading ' +
       'carries asOf — when its source produced it — which is the only valid measure of its age.',
     refresh_seconds: LIVE_REVALIDATE_SECONDS,
     proximity_km: PROXIMITY_KM,
     attribution: [
-      'News volume and headlines: The GDELT Project, https://www.gdeltproject.org/',
+      'Conflict reporting: The GDELT Project, https://www.gdeltproject.org/',
+      'Energy prices: U.S. Energy Information Administration; dollar index: Federal Reserve Board; via FRED, https://fred.stlouisfed.org/',
       'Weather data by Open-Meteo.com, CC BY 4.0, https://open-meteo.com/',
     ],
     sources: LIVE_SOURCE_IDS.map((id) => {
@@ -77,6 +112,14 @@ export async function GET() {
         stale_after_minutes: meta.staleAfterMinutes,
       };
     }),
+    /**
+     * Rule firings on the snapshot below. `id` is stable while the condition
+     * holds: a watcher notifies on ids it has not seen before, exactly as it
+     * diffs /register.json. `rules` states every rule in words.
+     */
+    flags,
+    rules: FLAG_RULES,
+    places,
     snapshot,
   };
 

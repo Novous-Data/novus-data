@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { ActionLink } from '@/components/action';
 import { Container } from '@/components/container';
+import { IssueList } from '@/components/issue-list';
 import { JsonLd } from '@/components/json-ld';
 import { NeedsInput } from '@/components/needs-input';
 import { StatusBadge } from '@/components/status-badge';
@@ -16,7 +17,7 @@ import { formatAuthorNames, publication } from '@/config/publication';
 import type { DisruptionSummary, EntityExposure } from '@/lib/disruptions';
 import { CATEGORY_LABELS, SEVERITY_LABELS, buildExposureMatrix, listDisruptions } from '@/lib/disruptions';
 import type { IssueSummary } from '@/lib/content';
-import { listIssues } from '@/lib/content';
+import { listArticles, listIssues } from '@/lib/content';
 import { absoluteUrl, accountsConfigured } from '@/lib/env';
 import { formatIssueLabel, formatLongDate, formatShortDate } from '@/lib/format';
 import { publicationJsonLd } from '@/lib/structured-data';
@@ -28,10 +29,11 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [disruptions, issues, matrix] = await Promise.all([
+  const [disruptions, issues, matrix, analysis] = await Promise.all([
     listDisruptions(),
     listIssues(3),
     buildExposureMatrix(),
+    listArticles(undefined, 3),
   ]);
 
   const open = disruptions.filter((entry) => entry.status !== 'resolved');
@@ -141,6 +143,22 @@ export default async function HomePage() {
           <p className="mt-3">
             <TextLink standalone href="/briefings">
               Every issue
+            </TextLink>
+          </p>
+        </Container>
+      ) : null}
+
+      {/* Only once something is published: an empty "latest analysis" block
+          is a promise, and this page makes none. */}
+      {analysis.length > 0 ? (
+        <Container className="mt-12 sm:mt-16">
+          <SectionHeading id="analysis">Latest analysis</SectionHeading>
+          <div className="mt-6">
+            <IssueList issues={analysis} label="Latest articles and reviews" basePath="/articles" />
+          </div>
+          <p className="mt-3">
+            <TextLink standalone href="/articles">
+              All articles and long-term reviews
             </TextLink>
           </p>
         </Container>

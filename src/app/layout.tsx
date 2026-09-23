@@ -83,6 +83,12 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           href="/register.json"
           title="Novus Data — disruption register"
         />
+        <link
+          rel="alternate"
+          type="application/feed+json"
+          href="/feed.json"
+          title="Novus Data — briefings, articles and reviews"
+        />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-link focus:bg-surface focus:px-4 focus:py-3 focus:text-fg"

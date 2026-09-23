@@ -16,6 +16,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 
 import type { ContentDiagnostics, ContentSource, Issue } from '../types';
+import { kindFor } from '../types';
 import { wordCount } from '@/lib/format';
 
 /**
@@ -191,9 +192,18 @@ function parseIssueFile(file: string, raw: string, warnings: string[]): Issue | 
   const publishedAt = parsedDate.kind === 'valid' ? parsedDate.iso : '';
 
   const contentHtml = body.trim();
+  const tags = normaliseTags(data.tags);
+
+  if (data.kind !== undefined && !['briefing', 'article', 'review'].includes(String(data.kind))) {
+    warn(
+      warnings,
+      `${file}: "kind" is "${String(data.kind)}"; it must be briefing, article or review. The post's tags decide instead.`,
+    );
+  }
 
   return {
     slug,
+    kind: kindFor(data.kind, tags),
     issueNumber: normaliseIssueNumber(data.issueNumber),
     title,
     publishedAt,
@@ -202,7 +212,7 @@ function parseIssueFile(file: string, raw: string, warnings: string[]): Issue | 
     // deliberately exposes it under the platform-neutral name externalUrl.
     externalUrl: normaliseText(data.beehiivUrl) ?? normaliseText(data.externalUrl),
     coverImageUrl: normaliseText(data.coverImageUrl),
-    tags: normaliseTags(data.tags),
+    tags,
     contentHtml: contentHtml.length > 0 ? contentHtml : null,
   };
 }

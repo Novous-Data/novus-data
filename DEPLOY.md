@@ -374,10 +374,11 @@ which is the point of keeping the reading site static.
 
 ## Part 5 — Live data and the AISStream key
 
-`/monitor` reads seven public feeds and regenerates every fifteen minutes. **Six
-need nothing from you**: GDELT, USGS, GDACS, NOAA NHC, NASA EONET and Open-Meteo
-work the moment the site is deployed. The seventh — vessel counts at ten
-chokepoints — needs a free AISStream key. Without it, that one panel says "not
+`/monitor` reads nine feeds and regenerates every fifteen minutes. **Seven need
+nothing from you**: GDELT, USGS, GDACS, NOAA NHC, NASA EONET, Open-Meteo and
+FRED work the moment the site is deployed. Vessel counts at ten chokepoints
+need a free AISStream key (this part); share prices need a licensed key and a
+decision (Part 6). Without it, that one panel says "not
 switched on yet" and everything else still works, so this is not a launch
 blocker.
 
@@ -390,7 +391,9 @@ Steps 1–3 need an AISStream account and the Vercel dashboard, which are yours
    sign-in with a GitHub account; no payment details are asked for.)
 2. Open the **API Keys** page and create a key.
 3. Copy it. Treat it like a password: don't paste it into a chat, an email, a
-   screenshot or a commit.
+   screenshot or a commit. **If a key has already been pasted into a chat or a
+   shared conversation, delete it on the same page and create a fresh one** —
+   it costs nothing, and the old one can no longer be assumed private.
 
 ### 2. Try it locally first
 
@@ -450,7 +453,43 @@ one and it can be fixed in `src/lib/live/sources/`.
   of this site. It shows as unavailable for one cycle, and the others still
   render.
 
+### 5. Optional — let the automatic check test it too
+
+The `live-check` workflow reads every feed for real on each PR that touches the
+live layer. To include the vessel sample: GitHub → the repository → **Settings
+→ Secrets and variables → Actions → New repository secret**, name
+`AISSTREAM_API_KEY`, the same value. The workflow prints only whether the key
+is set, and GitHub masks secrets in logs.
+
 ### Roll back
 
 Delete `AISSTREAM_API_KEY` in Vercel and redeploy. The vessel panel returns to
 "not switched on yet"; nothing else changes.
+
+## Part 6 — Share prices (a licensing decision first)
+
+Energy prices need nothing: they are public-domain U.S. government data. **Share
+prices are different.** Exchange prices are licensed, and every free API tier
+checked when this was built — Finnhub's included — is for personal,
+non-commercial use. A public website showing prices is redistribution. So the
+share-price panel is built, tested, and **off**.
+
+Your options, in order of honesty:
+
+1. **Leave it off.** The monitor is complete without it; energy prices and the
+   dollar are already there.
+2. **Buy a plan that licenses display**, or get Finnhub's written permission,
+   then switch it on as below.
+3. Switch it on with a free key anyway. Don't — it breaches the provider's
+   terms on a site whose whole claim is that it does things properly.
+
+To switch it on once licensed:
+
+1. Create a key in the Finnhub dashboard.
+2. Vercel → **Settings → Environment Variables** → `FINNHUB_API_KEY` (no
+   `NEXT_PUBLIC_` prefix — the build refuses one) → Production → **Redeploy**.
+3. `/monitor` → **Energy and markets → Share prices** should list five funds,
+   plus the ticker of every company on the exposure chart.
+
+Which funds are quoted is `src/config/markets.ts`. It lists funds rather than
+companies on purpose — see the comment there.

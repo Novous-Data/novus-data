@@ -213,6 +213,11 @@ async function main(): Promise<void> {
       note: 'Enables the chokepoint vessel counts on /monitor; without it that one panel says "not switched on yet". Free at aisstream.io. Server only — set it in .env.local and on Vercel, never with a NEXT_PUBLIC_ prefix. DEPLOY.md Part 5.',
     },
     {
+      label: 'FINNHUB_API_KEY',
+      set: Boolean(process.env.FINNHUB_API_KEY?.trim()),
+      note: 'Share prices on /monitor; that panel says "not switched on yet" without it. A licensing decision before a configuration step — Finnhub\'s free plan is non-commercial and public display is redistribution. DEPLOY.md Part 6.',
+    },
+    {
       label: 'BEEHIIV_RSS_URL',
       set: hasFeedUrl,
       note: 'Read only by `npm run sync-issues`. Never needed on Vercel.',

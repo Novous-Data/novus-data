@@ -3,27 +3,32 @@ import type { ReactNode } from 'react';
 
 import { Container } from '@/components/container';
 import { AutoRefresh } from '@/components/live/auto-refresh';
+import { ChangingPanel } from '@/components/live/changing-panel';
+import { FlagList } from '@/components/live/flag-list';
 import { LiveAge } from '@/components/live/live-age';
+import { EnergyPanel, QuotesTable } from '@/components/live/markets-panel';
+import { PlaceBoard, type PlaceRegisterEntry } from '@/components/live/place-board';
 import { ReadingBlock } from '@/components/live/reading-block';
-import { SignalChart } from '@/components/live/signal-chart';
 import { PageHeader } from '@/components/page-header';
 import { ExternalLink, TextLink } from '@/components/text-link';
+import { listDisruptions } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
 import {
   CHOKEPOINTS,
-  GDELT_THEMES,
+  FLAG_RULES,
   INDUSTRIAL,
   LIVE_SOURCE_IDS,
   PORTS,
   PROXIMITY_KM,
   SOURCE_META,
+  deriveFlags,
+  derivePlaces,
   getLiveSnapshot,
   getLiveSourceName,
   nodeById,
   type AisData,
   type EonetData,
   type GdacsData,
-  type GdeltData,
   type LiveSnapshot,
   type NearestNode,
   type NhcData,
@@ -31,7 +36,7 @@ import {
   type UsgsData,
   type WeatherData,
 } from '@/lib/live';
-import { formatCount, formatShare, formatUtc, formatUtcDate, formatUtcShort } from '@/lib/live/display';
+import { formatCount, formatUtc, formatUtcDate, formatUtcShort } from '@/lib/live/display';
 
 /**
  * /monitor — the live page.
@@ -63,30 +68,54 @@ export const maxDuration = 60;
 export const metadata: Metadata = {
   title: 'Monitor',
   description:
-    'Live readings on physical trade: vessels moving through ten chokepoints, news volume on disruption themes, natural hazards near trade routes, and wind at major container ports. Re-read every fifteen minutes, each with its source and time.',
+    'What is changing in physical trade: where reporting of strikes, blockades, sanctions and fighting is above normal, flags at ports and straits, ships at ten chokepoints, hazards, port wind and energy prices. Re-read every fifteen minutes, each with its source and time.',
   alternates: { canonical: absoluteUrl('/monitor') },
 };
 
 const SECTION_FOR: Record<keyof Omit<LiveSnapshot, 'generatedAt'>, string> = {
+  gdelt: 'changing',
   ais: 'chokepoints',
-  gdelt: 'news',
   usgs: 'hazards',
   gdacs: 'hazards',
   nhc: 'hazards',
   eonet: 'hazards',
   weather: 'weather',
+  fred: 'markets',
+  quotes: 'markets',
 };
 
 export default async function MonitorPage() {
-  const snapshot = await getLiveSnapshot();
+  // The register supplies two things the live layer deliberately does not
+  // read for itself: which entries name which places, and the tickers of
+  // companies already on the exposure chart (see config/markets.ts for why
+  // only those companies are ever quoted).
+  const disruptions = await listDisruptions();
+  const open = disruptions.filter((d) => d.status !== 'resolved');
+  const tickers = new Map<string, string>();
+  for (const d of open) {
+    for (const exposure of d.exposures) {
+      if (exposure.entity.ticker) tickers.set(exposure.entity.ticker, exposure.entity.name);
+    }
+  }
+  const register: Record<string, PlaceRegisterEntry[]> = {};
+  for (const d of open) {
+    for (const place of d.places) (register[place] ??= []).push({ id: d.id, title: d.title, status: d.status });
+  }
+
+  const snapshot = await getLiveSnapshot({
+    extraSymbols: [...tickers].map(([symbol, label]) => ({ symbol, label })),
+  });
   const demo = getLiveSourceName() === 'fixtures';
+  const flags = deriveFlags(snapshot);
+  const places = derivePlaces(snapshot, flags);
+  const everyFeedAnswered = LIVE_SOURCE_IDS.every((id) => snapshot[id].status !== 'unavailable');
 
   return (
     <>
       <PageHeader
         eyebrow="Live"
         title="Monitor"
-        lede="Seven public feeds on shipping, the news and natural hazards, re-read every fifteen minutes. Every reading shows when its source produced it — not when this page was built."
+        lede="What is changing in physical trade right now: where problems are being reported above normal, hazards near ports and straits, ships moving through chokepoints, and energy prices. Re-read every fifteen minutes; every reading shows when its source produced it."
       />
 
       <Container className="mt-5">
@@ -111,7 +140,33 @@ export default async function MonitorPage() {
           </p>
         </div>
 
-        <FeedStatus snapshot={snapshot} />
+        <Section id="attention" title="Needs attention">
+          <Intro>
+            Every published rule that fired on the latest readings, alerts first. A flag is a reason
+            to look, not a finding — the rules are listed below the flags.
+          </Intro>
+          <FlagList flags={flags} rules={FLAG_RULES} complete={everyFeedAnswered} />
+        </Section>
+
+        <Section id="changing" title="What&rsquo;s changing">
+          <Intro>
+            Where the world&rsquo;s news is reporting more conflict, disruption and unrest than it
+            normally does — strikes, blockades, sanctions, seizures, fighting — measured against each
+            place&rsquo;s own normal for this time of day. This counts reporting, not events: a rise
+            means more is being written about a place, which is often the first sign, and is not
+            proof that more is happening.
+          </Intro>
+          <ReadingBlock reading={snapshot.gdelt}>{(data) => <ChangingPanel data={data} />}</ReadingBlock>
+        </Section>
+
+        <Section id="places" title="Places">
+          <Intro>
+            Every tracked chokepoint, port and industrial cluster, with everything the feeds on this
+            page say about it and any register entry that names it. Places with flags come first.
+            Hazards count within {PROXIMITY_KM} km — a distance, not an assessment of impact.
+          </Intro>
+          <PlaceBoard places={places} register={register} />
+        </Section>
 
         <Section id="chokepoints" title="Chokepoints">
           <Intro>
@@ -123,14 +178,16 @@ export default async function MonitorPage() {
           <ReadingBlock reading={snapshot.ais}>{(data) => <ChokepointTable data={data} />}</ReadingBlock>
         </Section>
 
-        <Section id="news" title="News volume">
+        <Section id="markets" title="Energy and markets">
           <Intro>
-            How much of the world&rsquo;s news is about each theme, in fifteen-minute intervals over
-            the past day. This measures attention, not disruption: a rise means the press is writing
-            about port strikes, not that ports are shut. Each chart has its own scale — compare
-            shapes, not heights.
+            Crude oil, natural gas and diesel — the costs of moving goods — and the dollar, from U.S.
+            government data. Daily settlement values, published about a business day later: an
+            as-of date, not a live price.
           </Intro>
-          <ReadingBlock reading={snapshot.gdelt}>{(data) => <NewsPanel data={data} />}</ReadingBlock>
+          <ReadingBlock reading={snapshot.fred}>{(data) => <EnergyPanel data={data} />}</ReadingBlock>
+
+          <h3 className="kicker mt-10 mb-2">Share prices</h3>
+          <ReadingBlock reading={snapshot.quotes}>{(data) => <QuotesTable data={data} />}</ReadingBlock>
         </Section>
 
         <Section id="hazards" title="Hazards near trade routes">
@@ -163,6 +220,8 @@ export default async function MonitorPage() {
           </Intro>
           <ReadingBlock reading={snapshot.weather}>{(data) => <WindTable data={data} />}</ReadingBlock>
         </Section>
+
+        <FeedStatus snapshot={snapshot} />
 
         <Section id="sources" title="Sources and terms">
           <Attribution />
@@ -212,7 +271,7 @@ function Hazard<T>({
 
 function FeedStatus({ snapshot }: { snapshot: LiveSnapshot }) {
   return (
-    <section aria-labelledby="feeds-heading" className="section-rule mt-8">
+    <section aria-labelledby="feeds-heading" className="section-rule mt-12 sm:mt-16">
       <h2 id="feeds-heading" className="kicker kicker-muted">
         Feed status
       </h2>
@@ -236,7 +295,7 @@ function FeedStatus({ snapshot }: { snapshot: LiveSnapshot }) {
               </span>
               <span className="text-muted">
                 {reading.status === 'ok' ? (
-                  <LiveAge at={reading.asOf} source={id} />
+                  <LiveAge at={reading.asOf} source={id} precision={id === 'fred' ? 'day' : 'minute'} />
                 ) : reading.status === 'unavailable' ? (
                   <>
                     <span className="font-semibold text-fg">Unavailable</span> — {reading.reason}
@@ -320,128 +379,6 @@ function ChokepointTable({ data }: { data: AisData }) {
         })}
       </tbody>
     </table>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// News volume — small multiples, a table view, and the headlines
-// ---------------------------------------------------------------------------
-
-function NewsPanel({ data }: { data: GdeltData }) {
-  // The table view lists every interval, newest first, one column per theme.
-  const times = [...new Set(data.series.flatMap((s) => s.points.map((p) => p.at)))].sort().reverse();
-
-  return (
-    <>
-      {data.series.length > 0 ? (
-        // Every theme keeps its place, including one that failed this cycle:
-        // a chart that vanishes shuffles the others into its slot, and a
-        // reader scanning for change reads the shuffle as the change.
-        <div className="grid gap-x-10 gap-y-9 sm:grid-cols-2">
-          {GDELT_THEMES.map((theme) => {
-            const series = data.series.find((s) => s.themeId === theme.id);
-            return series ? (
-              <SignalChart key={theme.id} label={series.label} points={series.points} />
-            ) : (
-              <figure key={theme.id}>
-                <figcaption className="text-[0.9375rem] font-semibold text-fg">{theme.label}</figcaption>
-                <p className="mt-2 border-l-2 border-rule pl-3 text-meta text-muted">
-                  Not available at the last update — see the note below. Nothing is drawn in its
-                  place.
-                </p>
-              </figure>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {data.series.length > 0 ? (
-        // Screen only. On paper the charts and their labelled figures stand
-        // on their own; ninety-six rows of fifteen-minute intervals would add
-        // three pages and nothing a printed page is for.
-        <details className="mt-8 print:hidden">
-          <summary className="cursor-pointer text-meta text-link">
-            Table view — every interval
-          </summary>
-          <div className="mt-3 max-h-[28rem] overflow-auto border-y border-hairline">
-            <table className="w-full border-collapse text-meta">
-              <caption className="sr-only">
-                Share of monitored news coverage by theme, fifteen-minute intervals, newest first.
-              </caption>
-              <thead className="sticky top-0 bg-ink">
-                <tr className="border-b border-rule text-left text-muted">
-                  <th scope="col" className="py-2 pr-4 font-normal">
-                    Interval (UTC)
-                  </th>
-                  {data.series.map((s) => (
-                    <th key={s.themeId} scope="col" className="py-2 pr-4 text-right font-normal">
-                      {s.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {times.map((at) => (
-                  <tr key={at} className="border-b border-hairline">
-                    <th scope="row" className="py-1.5 pr-4 text-left font-normal text-muted">
-                      <time dateTime={at}>{formatUtcShort(at)}</time>
-                    </th>
-                    {data.series.map((s) => {
-                      const point = s.points.find((p) => p.at === at);
-                      return (
-                        <td key={s.themeId} className="py-1.5 pr-4 text-right text-fg">
-                          {point && point.monitored > 0 ? (
-                            <>
-                              <span data-numeric>{formatShare((point.articles / point.monitored) * 100)}</span>
-                              <span data-numeric className="ml-2 text-muted">
-                                ({formatCount(point.articles)})
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-muted">—</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      ) : null}
-
-      <h3 className="kicker mt-10">Latest headlines</h3>
-      <p className="mt-1 max-w-[72ch] text-meta text-muted">
-        Third-party reporting surfaced by GDELT, newest first. Not verified by Novus Data, and not a
-        register assessment.
-      </p>
-      {data.headlines.length > 0 ? (
-        <ol className="mt-3 border-b border-hairline">
-          {data.headlines.map((headline) => (
-            <li
-              key={headline.url}
-              className="grid gap-x-6 gap-y-0.5 border-t border-hairline py-2.5 sm:grid-cols-[8.5rem_1fr]"
-            >
-              <span className="text-meta text-muted">
-                <time dateTime={headline.seenAt}>{formatUtcShort(headline.seenAt)}</time>
-              </span>
-              <span>
-                <ExternalLink href={headline.url} className="text-[0.9375rem] leading-[1.45]">
-                  {headline.title}
-                </ExternalLink>
-                <span className="block text-meta text-muted">
-                  {headline.domain}
-                  {headline.sourceCountry ? ` · ${headline.sourceCountry}` : ''}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="mt-3 text-meta text-muted">No headlines were returned at the last update.</p>
-      )}
-    </>
   );
 }
 
@@ -700,8 +637,13 @@ function Attribution() {
       {/* Required attributions first, worded as the providers ask. */}
       <ul className="max-w-[72ch] space-y-1.5 text-[0.9375rem] text-fg">
         <li>
-          News volume and headlines: the GDELT Project,{' '}
+          Conflict reporting: the GDELT Project,{' '}
           <ExternalLink href="https://www.gdeltproject.org/">gdeltproject.org</ExternalLink>.
+        </li>
+        <li>
+          Energy prices: U.S. Energy Information Administration; the dollar index: Federal Reserve
+          Board; both via <ExternalLink href="https://fred.stlouisfed.org/">FRED</ExternalLink>,
+          Federal Reserve Bank of St. Louis.
         </li>
         <li>
           <ExternalLink href="https://open-meteo.com/">Weather data by Open-Meteo.com</ExternalLink>,

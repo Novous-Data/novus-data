@@ -52,5 +52,6 @@ jobs:
       - run: npm run live:check
         env:
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           # No colour codes in a log file.
           NO_COLOR: "1"

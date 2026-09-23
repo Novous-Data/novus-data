@@ -6,17 +6,20 @@ before changing anything.
 ## 1. What this project is
 
 **Novus Data is an information and financial-news site about supply chain
-disruption.** It does four things, in this order of importance:
+disruption.** It does five things, in this order of importance:
 
 1. **The register** (`/disruptions`) — what is going wrong in physical trade
    right now, each entry dated, sourced and given a status.
 2. **The exposure chart** (`/exposure`) — which companies and sectors each
    problem reaches, and by what mechanism.
-3. **The monitor** (`/monitor`) — live readings from public feeds, re-read
-   every fifteen minutes: vessels heard at ten chokepoints, news volume on
-   disruption themes, natural hazards near trade routes, wind at major ports.
-   Raw readings, not assessments; see §6d.
-4. **The briefing** (`/briefings`) — an email newsletter summarising movement in
+3. **The monitor** (`/monitor`) — what is changing, re-read every fifteen
+   minutes: where news reporting of strikes, blockades, sanctions and fighting
+   is running above its own normal, rule-based flags, a board of every tracked
+   place, ships at chokepoints, hazards, port wind and energy prices. Raw
+   readings, not assessments; see §6d.
+4. **Articles** (`/articles`) — long-term reviews and articles written for
+   the site, published from Beehiiv like the briefing (§6).
+5. **The briefing** (`/briefings`) — an email newsletter summarising movement in
    the first two. **It is one part of the site, not the whole of it.** An
    earlier version of this repository was built as an information page for the
    newsletter; that framing is wrong and has been replaced.
@@ -92,7 +95,8 @@ better than invented.**
 
 **Amended by the author: live readings.** The author asked for live, close to
 real-time data, so `/monitor` and `/live.json` now state figures — vessel
-counts, news-volume shares, magnitudes, wind speeds. They are the second
+counts, reporting against normal, magnitudes, wind speeds, energy prices, and
+(only behind a licensed key) share prices. They are the second
 sanctioned place figures appear, and they are held to a rule enforced in code
 (§6d), not in editorial habit: every figure comes from a named public source
 with a followable link, carries the time **that source** produced it, and is
@@ -211,10 +215,13 @@ src/config/                Every fact the site states, and the navigation.
 src/lib/content/           The issue content layer. See section 6.
 src/lib/disruptions/       The register and exposure layer. See section 6a.
 src/lib/accounts/          The account contract and its Supabase store. See 6b.
-src/lib/live/              The live layer: seven public feeds, one adapter each. See 6d.
+src/lib/live/              The live layer: nine feeds, one adapter each. See 6d.
   types.ts, meta.ts,         Pure — safe in client components. Components import
-  nodes.ts, display.ts       labels from these, never from the layer index.
-  sources/                   The adapters. SERVER ONLY; the index reads the AIS key.
+  nodes.ts, display.ts,      labels from these, never from the layer index.
+  countries.ts
+  derive.ts                  Flags and the place board, derived from a snapshot. Pure.
+  sources/                   The adapters. SERVER ONLY; the index reads the keys.
+src/config/markets.ts      The funds quoted when a licensed quote key is set.
 src/lib/supabase/          Supabase clients. admin.ts is SERVER ONLY. See 6b.
 src/lib/env.ts             Environment access and URL resolution.
 src/lib/format.ts          Dates, issue numbers, reading time.
@@ -223,9 +230,11 @@ src/lib/structured-data.ts JSON-LD builders.
 src/components/            Presentational components. Five client components:
                            site-nav, sign-in-panel, and the three in live/.
 src/components/live/       The monitor's pieces. live-age, auto-refresh and
-                           signal-chart are client components; reading-block is not.
+                           price-chart are client components; the rest are not.
 src/app/monitor/           The live page. ISR, revalidate = 900. See 6d.
-src/app/live.json/         The live snapshot, machine-readable. Same cycle.
+src/app/live.json/         The live snapshot, flags and place board. Same cycle.
+src/app/articles/          Articles and long-term reviews. Static. See 6.
+src/app/feed.json/         Every post — briefings, articles, reviews — as JSON Feed.
 src/app/account/           The signed-in page and its server actions. Dynamic.
 src/app/auth/              Magic-link callback and sign-out. Dynamic.
 src/proxy.ts               Session refresh. NOT middleware.ts — renamed in Next 16.
@@ -251,6 +260,22 @@ site never fetches the feed at request time or at build time.
 All three of those are enforced by `no-restricted-imports` rules in
 `eslint.config.mjs`, so breaking the boundary fails the lint rather than quietly
 coupling the site to an external service.
+
+### Posts have a kind: briefing, article or long-term review
+
+Everything written — the emailed briefing, articles and long-term reviews — is
+written in Beehiiv and arrives through the same `npm run sync-issues`, so
+publishing any of it stays the one step Rule 6 allows. **The kind comes from
+the post's Beehiiv tags**: tag a post "Article" or "Long-term review" and it
+files itself (`KIND_TAGS` in `src/lib/content/types.ts`; anything else is a
+briefing). The sync prints where each post will appear. A `kind:` line in the
+frontmatter overrides the tags for a hand-written file.
+
+In the public API, "issue" still means a briefing — `listIssues()` and
+`getIssue()` return briefings only, which is what every caller meant — and
+`listArticles()` / `getArticle()` serve `/articles`. A briefing's slug 404s
+under `/articles` and the reverse, so a post has exactly one URL. Slugs are
+unique across all three kinds, because they share one directory.
 
 Issue files are `content/issues/NNNN-slug.md`. `NNNN` is a **sort key, not the
 issue number** — a numbering gap or a special issue must not corrupt ordering.
@@ -343,6 +368,7 @@ startedAt: "2026-08-01"
 updatedAt: "2026-09-10"             # the review date. Required.
 summary: "One or two plain sentences."
 author: "editor"                    # an id from publication.authors, or omit
+places: ["panama"]                  # tracked place ids (src/lib/live/nodes.ts), or omit
 sources:
   - title: "Advisory to Shipping No. 31-2026"
     url: "https://pancanal.com/..."
@@ -404,6 +430,13 @@ the mechanism, confidence, date and sources are all still intact — and droppin
 a sound assessment over a metadata typo would be the wrong trade. This is worth
 recognising as a shape: unreachable with one entry, near-certain with twenty,
 and twenty overlapping entries is exactly what the chart exists to draw.
+
+**`places` links an entry to the monitor.** It holds tracked place ids from
+`src/lib/live/nodes.ts`; the monitor's place board then lists the entry beside
+that place's live readings, and `/live.json` carries the link. An unknown id is
+warned about and dropped (a correction, not a refusal). It is a statement about
+geography only — naming a port says nothing about any company. The scaffolder
+asks for it and validates it the same way (§12).
 
 **`author` is how the register stays traceable with more than one writer.** It
 holds an `id` from `publication.authors`; an id not on the masthead is warned
@@ -642,20 +675,22 @@ until issues were publishing on a schedule. The author overrode that and asked
 for live, close to real-time data with a fifteen-minute update period. That is
 their call; what follows is how it was made safe to publish.
 
-### Seven feeds
+### Nine feeds
 
 | Source | What the page reads | Key |
 |---|---|---|
+| GDELT Event Database 2.0 (raw 15-minute files) | Where conflict reporting is above its own normal — places, countries, kinds of problem | none |
 | AISStream (WebSocket) | Vessels heard in a box across each of ten chokepoints, in a 30-second sample | `AISSTREAM_API_KEY` |
-| GDELT DOC 2.0 | News volume on four themes, 15-minute intervals over 24 h; latest headlines | none |
 | USGS | Earthquakes M4.5+, past day | none |
 | GDACS | Orange and red disaster alerts, past 14 days | none |
 | NOAA NHC | Active tropical cyclones, Atlantic and E. Pacific | none |
 | NASA EONET | Open natural events within 300 km of a tracked location | none |
 | Open-Meteo | Current wind at twelve container ports | none |
+| FRED (EIA and Federal Reserve data) | Brent, WTI, Henry Hub gas, US diesel, the broad dollar — daily settlements | none |
+| Finnhub | Share prices of five funds plus exposure-chart tickers | `FINNHUB_API_KEY` — **licensing decision, see Terms** |
 
-Six need no key and work the moment the site is deployed. Without the AIS key
-that one panel says "not switched on yet" and nothing else changes.
+Seven need no key. Without a key, a keyed panel says "not switched on yet" and
+nothing else changes.
 
 ### The rule the layer exists to enforce
 
@@ -677,6 +712,67 @@ only the absolute time, which stays true forever — the same move §6a makes
 for review dates. Freshness (*Live / Delayed / Stale*) is judged per source,
 because cadences differ by orders of magnitude: a vessel count is old after
 thirty minutes, an EONET event is curated daily. Windows are in `meta.ts`.
+
+### What's changing: how "above normal" is measured
+
+The author asked for "what is changing, where problems are rising, points of
+interest, flag locations with an abnormal amount of articles" — explicitly
+*not* how much of the news is on each topic, which is what the first version
+drew. `sources/gdelt.ts` now answers that question, and the method is
+published on `/monitor` and at `/about#live`:
+
+- **Input:** GDELT's raw 15-minute event exports (61 tab-separated columns,
+  no header, checked on every row). Conflict-type events only — CAMEO
+  QuadClass 3 and 4. "Reports" is GDELT's `NumArticles`: articles that
+  mentioned an event geocoded to a place. **It counts reporting, not events.**
+- **Window:** the last three hours (12 files) against the **same three hours
+  on each of the previous seven days** (28 files, 45 minutes apart). The
+  time-of-day match is load-bearing: the mix of the world's news shifts with
+  the sun, and an all-day baseline flagged Asian ports every night.
+- **Shares, not counts:** a place's share of *all* reporting now, divided by
+  its share in the baseline. World news volume swings through the day; a
+  share cancels that. A place absent from the baseline is treated as having
+  `minExpected` (2) reports, so a first appearance reads as large, not
+  infinite.
+- **Outputs:** city-level hotspots (≥20 reports and ≥3× normal, ranked by
+  reports above normal), countries (≥50 and ≥2×), ten kinds of problem by
+  CAMEO code (strikes 143, blockades 144/191, sanctions 163, seizures 171 …),
+  and every tracked place (surging ≥3×, elevated ≥2×, with ≥10 reports).
+- **Radii are per kind, and tighter than the hazard radius.** Stories are
+  geocoded to a city, and at 300 km one strike in Rotterdam raised alerts for
+  Rotterdam, Antwerp *and* the Strait of Dover. Ports and clusters use 100 km;
+  chokepoints 200 km, because attacks on shipping are placed at the nearest
+  coastal city (Aden is ~180 km from Bab el-Mandeb).
+
+Every threshold lives in `REPORTING_RULES` in `types.ts`, and the page prints
+them from there. Change one and the published method follows.
+
+**Why the raw files, not GDELT's query API.** The DOC 2.0 API refused every
+request from GitHub's runners in both real runs (429, then timeouts). The raw
+exports are static downloads with no request limit, and each is immutable once
+published, so each file is fetched with a nine-day `revalidate`: after the
+first cycle, a regeneration downloads only the newest file or two and reads
+the rest of the baseline from the fetch cache. The zip reader is
+`sources/unzip.ts` — Node's zlib, no dependency (Rule 4).
+
+### Flags and the place board
+
+`derive.ts` builds two things from a snapshot, purely, so `/monitor`,
+`/live.json` and any client compute the same result:
+
+- **Flags** — every rule in `FLAG_RULES` firing on a reading: conflict
+  reporting surging or elevated at a place, a worldwide hotspot, an M6+ quake
+  or PAGER orange/red, a GDACS red (or orange near a place), a cyclone near a
+  place, a gale (or near gale) at a port, a natural event near a place, a 5%
+  daily move in crude. Each carries its rule in words, the reading's own time,
+  its source and a place id. **A flag is a rule firing, not a judgement**; it
+  never blends readings or says what they mean for a company. A flag's `id` is
+  stable while its condition holds, so a watcher diffs `/live.json` flags
+  exactly as it diffs the register (§6c).
+- **The place board** — every tracked place, one row: reporting level, hazards
+  within reach, wind or ships, flag count, and the register entries whose
+  `places` name it (§6a). Nothing is combined into a score. Flagged places sort
+  first; the rest keep their fixed order.
 
 ### Three shapes, and no fourth
 
@@ -717,13 +813,15 @@ takes the page down or delays the others beyond its own timeout.
 
 ### Traps specific to this layer
 
-- **GDELT allows one request per five seconds per IP**, and answers faster
-  callers with HTTP 429. Requests are sequential, 5.5 s apart, stop at the
-  first 429, and run inside a 32-second budget (see the findings below). On
-  Vercel the outbound IP is shared with other customers, so 429s can happen
-  regardless; the panel then says so and every other panel still renders.
-  Each theme costs 5.5 s of regeneration time and a share of that budget —
-  add one only if it earns it.
+- **GDELT's raw read runs inside a 30-second budget**, eight files at a time
+  with 10-second timeouts, and skips what would overrun. A missing file costs
+  one slot (GDELT does occasionally skip an interval); below 8 recent or 14
+  baseline files the comparison is not made and the panel says why. Parsing
+  ~40 files is CPU work on the same thread as the AIS sample — acceptable at
+  this size, but do not widen the window without measuring.
+- **Keys travel in headers, never URLs.** Finnhub's goes in `X-Finnhub-Token`
+  so nothing that logs URLs can capture it. Both keys have build guards in
+  `input-ledger.ts` against a `NEXT_PUBLIC_` prefix.
 - **The AISStream key is server-only.** It is read once in `sources/index.ts`,
   passed to the adapter, sent only inside the subscription message, and never
   stored on a `Reading`, logged, or placed in `/live.json`. `input-ledger.ts`
@@ -753,20 +851,21 @@ would be an exposure claim that skipped every requirement in §6a. "Within
 
 ### The charts
 
-News volume is four small multiples — one sparkline per theme — rather than
-four lines on one axis, because volumes differ by an order of magnitude and a
-shared axis would flatten three of them. Each has its own scale, labelled on
-the right (the financial convention), and the page says so. The line plots a
-theme's **share** of all articles GDELT monitored, not the raw count, because
-world news output has a strong daily cycle and a raw count would "spike" every
-afternoon. Raw counts are in the readout and the table view.
+- **Energy prices** are small multiples, one per series — never one axis for
+  dollars a barrel, dollars per million Btu and an index. Each is scaled to
+  its own six-month low and high, labelled on the right (the financial
+  convention), because a price level is not a magnitude from zero. Changes are
+  written with a real minus sign and never coloured red or green: colour would
+  make a direction look like a verdict. `components/live/price-chart.tsx`, with
+  a keyboard-operable crosshair.
+- **Kinds of problem** are a dumbbell per row: normal share and share now on
+  one common axis, a legend (two series), and both values written out.
+- **Chokepoints** are a fixed-order table with inline bars.
 
 Marks use existing tokens only: `--accent` for bars and lines (3.1:1 on
-`--ink`, clear of the 3:1 a non-text mark needs — exactly its sanctioned
-structural use) and `--accent-text` for the one emphasised point.
-`--status-active` is never a chart colour. Hand-written SVG with
-`vector-effect: non-scaling-stroke`, no chart library (§7). The crosshair is
-keyboard-operable, and a table view lists every interval.
+`--ink`, its sanctioned structural use) and `--accent-text` for the emphasised
+point. `--status-active` is never a chart colour. Hand-written SVG and styled
+cells, no chart library (§7).
 
 ### Terms — read before monetising
 
@@ -775,6 +874,16 @@ keyboard-operable, and a table view lists every interval.
   or runs ads, this source needs a paid plan or has to go.
 - **GDELT** permits commercial use but requires a citation and a link to
   gdeltproject.org wherever the data is used; the page and `/live.json` carry it.
+- **FRED's series here are U.S. government data** (EIA, Federal Reserve
+  Board) and in the public domain; FRED asks to be cited, and the page does.
+  This is why energy prices could be added at all.
+- **Stock quotes are the strict one.** Every free tier checked — Finnhub's
+  included — is personal, non-commercial use, and a public website showing
+  prices is redistribution. The adapter is built and tested but **off by
+  default**; setting `FINNHUB_API_KEY` on the public site is a licensing
+  decision (DEPLOY.md Part 6), not a configuration step. Only funds and
+  exposure-chart tickers are ever quoted (`config/markets.ts` explains why a
+  hand-picked list of named companies would be an unsourced exposure claim).
 - The rest are marked "not verified in this build" in `meta.ts` rather than
   given a plausible-sounding licence. Verify them before charging.
 
@@ -792,7 +901,7 @@ Its log is the record. First run, 22 September 2026:
 | NOAA NHC | **Parsed.** 3 active storms; latest advisory 48 min old |
 | NASA EONET | **Parsed.** 48 open events, 2 within 300 km of a tracked location |
 | Open-Meteo | **Parsed.** All 12 ports; latest model interval 3 min old |
-| GDELT | **Refused — HTTP 429 on every request**, each taking ~11 s to arrive. Shape still unverified |
+| GDELT DOC API (the first design) | **Refused — HTTP 429 on every request**, each taking ~11 s to arrive; timeouts on the second run. Replaced by the raw event files — see "What's changing" |
 | AISStream | Not run — no key in the repository's secrets |
 
 **What the GDELT result changed.** Five slow refusals plus the pacing gaps
@@ -804,14 +913,10 @@ budget with 8-second per-request timeouts; what it did not reach is reported
 as "not requested this cycle". Simulated: an instant 429 now costs one
 request and 0.1 s, eleven-second answers cost 21.5 s, success is unchanged.
 
-**The open question is whether GDELT will serve Vercel at all.** Actions
-runners and Vercel functions both leave from shared cloud IP ranges, and
-GDELT's limit is per IP. If `/monitor` shows GDELT rate-limited cycle after
-cycle in production, pacing will not fix it. The fallback is a different
-route to the same data: GDELT also publishes raw fifteen-minute update files
-at `data.gdeltproject.org`, which are static downloads with no request limit.
-That is a larger adapter (zipped CSV) and is not built. Decide on evidence
-from production, not from one CI run.
+**The open question was whether GDELT's API would serve Vercel at all**, and
+two refusals from shared cloud IPs answered it well enough: the adapter now
+reads the raw fifteen-minute files instead (see "What's changing"). The same
+workflow verifies the new adapter and FRED; add their results here.
 
 To verify AIS the same way, add a repository secret named `AISSTREAM_API_KEY`;
 the workflow passes it through, and the script prints only whether it is set.
@@ -824,8 +929,9 @@ the workflow passes it through, and the script prints only whether it is set.
   a code change.
 - **No alerting.** A watcher that polls `/live.json` and notifies readers is
   the separate service in §14.2.
-- **No prices.** Freight rates, commodity prices and indices remain out of
-  scope (§13).
+- **No freight rates, and no stock prices by default.** Energy prices come
+  from public-domain government data; share prices only behind a licensed key
+  (§13). Commercial freight indices (Drewry, Freightos, Baltic) remain out.
 
 ## 7. Dependencies
 
@@ -840,9 +946,9 @@ never pulls them into its graph.
 
 **There is no charting library and there should not be one.** The exposure chart
 is a `<table>` of styled cells, which is why each cell can be a link, hold
-visually-hidden text and take keyboard focus. The monitor's sparklines are
-hand-written SVG in `components/live/signal-chart.tsx`, and its chokepoint bars
-are styled table cells, for the same reasons. A canvas or SVG chart library
+visually-hidden text and take keyboard focus. The monitor's price charts are
+hand-written SVG in `components/live/price-chart.tsx`, and its bars and
+dumbbells are styled elements, for the same reasons. A canvas or SVG chart library
 would lose all three and add a client bundle to a page that currently ships no
 JavaScript at all.
 Dev (sync script and review tooling only): `fast-xml-parser`, `sanitize-html`,
@@ -858,6 +964,9 @@ This is the one recurring manual step in the project.
 
 ```
 1. Write and send the issue in Beehiiv, as normal.
+   An article or long-term review is written there too — publish it to the
+   web and tag it "Article" or "Long-term review"; it then files itself
+   under /articles (§6). No other step.
 2. npm run sync-issues
 3. Review the new file in content/issues/ — check the HTML converted cleanly.
 4. git add content/issues/ && git commit -m "content: add issue N"
@@ -1093,6 +1202,7 @@ four answers here.**
 | `NOVUS_CONTENT_DIR` | Overrides the issue archive directory | No — review tooling only, **never set on Vercel** | Site |
 | `NOVUS_DISRUPTIONS_DIR` | Overrides the register directory | No — review tooling only, **never set on Vercel** | Site |
 | `AISSTREAM_API_KEY` | Enables the chokepoint vessel counts on `/monitor`. Free at aisstream.io. **Never `NEXT_PUBLIC_`** — the build refuses | No — without it that one panel says "not switched on yet" | **Server only** |
+| `FINNHUB_API_KEY` | Share prices on `/monitor`. **A licensing decision first** — free tier is non-commercial. Never `NEXT_PUBLIC_` | No — off by default | **Server only** |
 | `BEEHIIV_RSS_URL` | The feed to sync from | Only to run the sync | **Sync script only** — not needed on Vercel |
 
 ## 12. Commands
@@ -1190,12 +1300,21 @@ site publishes assessments with an as-of date, not a ticker.
 
 **Amended by the author: live physical-world readings are in scope.** The
 author asked for "updates and close to real time data". `/monitor` now reads
-seven public feeds — vessel positions, news volume, natural hazards, weather —
+public feeds — vessel positions, reporting against normal, natural hazards, weather —
 every fifteen minutes. That is deliberately *not* the market data forbidden
 above: none of it is a price, a rate or an index, and none of it is presented
 as an assessment. Every reading carries its source's own timestamp (§6d).
 Adding a price or freight-rate feed is still a separate decision to ask about,
 because being wrong about a price costs more than being late about a storm.
+
+**Amended again by the author: energy and share prices.** Asked "can I get
+stock and crude oil prices", the author took both. Energy prices shipped: they
+are public-domain U.S. government series (EIA, Federal Reserve Board) via
+FRED, daily settlements shown with their observation date — an as-of value,
+not a ticker. Share prices are built but **off by default**, because no free
+provider licenses public display; switching them on is the author's licensing
+call (DEPLOY.md Part 6). Freight rates remain out: every index worth showing
+is commercially licensed.
 
 The alerts app is a real, stated direction — the seam is documented in §14.2 and
 nothing here forecloses it. It is still out of scope for *this repository*,
@@ -1217,7 +1336,7 @@ closes them would be expensive to undo.
 ### 14.1 The indicators layer
 
 **Partly built — see §6d.** `src/lib/live/` is this layer for physical-world
-readings (vessels, news volume, hazards, weather), and it answers the three
+readings (vessels, reporting, hazards, weather, energy prices), and it answers the three
 questions below: every reading has a source, an as-of timestamp taken from
 the data, and a defined stale behaviour. What remains unbuilt is the part
 this section worried about most — prices and freight rates — and that stays
@@ -1257,8 +1376,10 @@ timestamps, and the archive has both by design:
 build `feed.json` from `listIssues()`. That was the wrong feed: alerts do not
 fire on newsletters. `src/app/register.json/route.ts` emits the **register**
 instead, which is the actual trigger source, and §6c records why its items are
-state rather than events. An issues feed remains a reasonable reading
-convenience and is still unbuilt; it is not a prerequisite for the app.
+state rather than events. An issues feed was later built as
+`/feed.json` — every post, briefings, articles and reviews, summaries only —
+because the app prototype's Read screen needed a real list rather than an
+invented one. `/live.json` is the third seam: live flags, diffed the same way.
 
 **Where the app's state must NOT live.** Device tokens, per-reader preferences,
 delivery logs and read receipts are mutable, per-user, privacy-bearing data. This

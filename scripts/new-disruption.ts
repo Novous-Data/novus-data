@@ -110,6 +110,8 @@ interface DisruptionInput {
   id: string;
   /** An `id` from publication.authors, or null when nobody is named yet. */
   author: string | null;
+  /** Tracked place ids from src/lib/live/nodes.ts. Mirrors the loader: unknown ids are refused here. */
+  places: string[];
   title: string;
   shortLabel: string;
   status: (typeof STATUSES)[number];
@@ -335,6 +337,7 @@ function render(entry: DisruptionInput): string {
     `updatedAt: ${yamlString(entry.updatedAt)}`,
     `summary: ${yamlString(entry.summary)}`,
     ...(entry.author ? [`author: ${yamlString(entry.author)}`] : []),
+    ...(entry.places.length > 0 ? [`places: [${entry.places.map((p) => yamlString(p)).join(', ')}]`] : []),
     'sources:',
     renderSources(entry.sources, '  '),
   ];
@@ -382,6 +385,11 @@ summary: "One or two plain sentences."
 # Who made this assessment — an id from publication.authors. Delete the line
 # on a one-author publication; it falls back to the editor either way.
 # author: "editor"
+
+# Tracked places this concerns, so the monitor's place board shows this entry
+# beside the live readings there. Optional. Ids are in src/lib/live/nodes.ts;
+# an unknown id is dropped with a warning.
+# places: ["suez", "bab-el-mandeb"]
 
 # At least one, or the whole entry is skipped.
 sources:
@@ -532,6 +540,24 @@ async function main(): Promise<void> {
       warn('No author is named in publication.authors yet — this entry will carry no byline.');
     }
 
+    // Places. Optional, and validated here exactly as the loader validates
+    // them, so a scaffolded entry never links a place that does not exist.
+    const { ALL_NODES } = await import('@/lib/live/nodes');
+    blank();
+    console.log(colour.dim('  Tracked places this concerns (optional). The monitor lists this entry beside them.'));
+    console.log(colour.dim(`  Ids: ${ALL_NODES.map((node) => node.id).join(', ')}`));
+    const placesAnswer = await ask(rl, 'Places, comma-separated', {
+      allowEmpty: true,
+      validate: (value) => {
+        const unknown = value
+          .split(',')
+          .map((part) => part.trim())
+          .filter((part) => part && !ALL_NODES.some((node) => node.id === part));
+        return unknown.length > 0 ? `Not tracked places: ${unknown.join(', ')}` : null;
+      },
+    });
+    const places = [...new Set(placesAnswer.split(',').map((part) => part.trim()).filter(Boolean))];
+
     heading('Sources for the disruption itself');
     console.log(colour.dim('  With none of these the whole entry is skipped.'));
     const sources = await askSources(rl, 'this disruption', 1);
@@ -559,6 +585,7 @@ async function main(): Promise<void> {
     const entry: DisruptionInput = {
       id,
       author,
+      places,
       title,
       shortLabel,
       status,

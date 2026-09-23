@@ -15,7 +15,7 @@
  *
  * - **Timestamps are relative to now**, and chosen so the demo shows every
  *   freshness state at once: most sources live, GDACS delayed, EONET stale,
- *   one GDELT theme rate-limited. Fixed dates would make every panel read
+ *   three GDELT files missing. Fixed dates would make every panel read
  *   "stale" a week after this was written, and the states are what a reviewer
  *   most needs to see.
  *
@@ -23,12 +23,17 @@
  * digit range, so no sample vessel can collide with a real ship.
  */
 
+import type { MarketSymbol } from '@/config/markets';
+
 import { CHOKEPOINTS, PORTS } from '../nodes';
 import type { AisSummary } from './ais';
 import { createAisAccumulator } from './ais';
 import type { GdeltRaw } from './gdelt';
-import { GDELT_THEMES } from './gdelt';
+import { EXPORT_COLUMNS, slotTimes, tallyExport } from './gdelt';
+import type { FredRaw } from './fred';
+import { FRED_SERIES } from './fred';
 import type { FetchedJson } from './http';
+import type { QuotesRaw } from './quotes';
 
 if (process.env.NODE_ENV === 'production' && process.env.CONTENT_SOURCE === 'fixtures') {
   throw new Error(
@@ -41,13 +46,6 @@ if (process.env.NODE_ENV === 'production' && process.env.CONTENT_SOURCE === 'fix
 const MINUTE = 60_000;
 const ago = (minutes: number) => new Date(Date.now() - minutes * MINUTE);
 const iso = (minutes: number) => ago(minutes).toISOString();
-
-/** GDELT's compact timestamp, floored to a fifteen-minute interval. */
-function gdeltStamp(minutesAgo: number): string {
-  const date = ago(minutesAgo);
-  date.setUTCMinutes(Math.floor(date.getUTCMinutes() / 15) * 15, 0, 0);
-  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-}
 
 /** A small deterministic generator, so the demo is the same on every load. */
 function seeded(seed: number) {
@@ -99,59 +97,92 @@ export function fixtureAis(): AisSummary {
   return accumulator.summary(iso(1), 30);
 }
 
+/**
+ * GDELT: synthetic 61-column event files, tallied by the real parser.
+ *
+ * Built so every output the change detection can produce appears: a hotspot
+ * with a first appearance (no baseline), a surging place and an elevated one,
+ * a country surge coded at country level, rising problem types, steady
+ * background that must NOT be flagged, and three missing files.
+ */
 export function fixtureGdelt(): GdeltRaw {
-  const random = seeded(11);
-  const base: Record<string, number> = {
-    chokepoints: 38,
-    'ports-labour': 22,
-    'trade-policy': 31,
-    energy: 27,
-  };
-  const series: GdeltRaw['series'] = GDELT_THEMES.map((theme) => {
-    // One theme demonstrates a partial failure: the rate limit GDELT enforces.
-    if (theme.id === 'energy') {
-      return {
-        themeId: theme.id,
-        fetched: null,
-        error: 'GDELT is rate-limiting requests; it will be retried next cycle.',
-      };
-    }
-    const data = Array.from({ length: 96 }, (_, i) => {
-      const minutesAgo = (95 - i) * 15 + 20;
-      // A late surge on chokepoints so the sparkline has a shape worth reading.
-      const surge = theme.id === 'chokepoints' && i > 80 ? (i - 80) * 6 : 0;
-      return {
-        date: gdeltStamp(minutesAgo),
-        value: Math.round(base[theme.id] * (0.6 + random() * 0.8) + surge),
-        norm: 18_000 + Math.round(random() * 4_000),
-      };
-    });
-    return {
-      themeId: theme.id,
-      fetched: { body: { timeline: [{ series: 'Article Count', data }] }, served: iso(20) },
-      error: null,
-    };
-  });
+  const latest = ago(8);
+  latest.setUTCMinutes(Math.floor(latest.getUTCMinutes() / 15) * 15, 0, 0);
+  const { recent, baseline } = slotTimes(latest.getTime());
 
-  const articles = [
-    ['[SAMPLE] Container lines extend diversions as canal transits stay below normal', 'example.invalid', 25],
-    ['[SAMPLE] Dockworkers set a strike deadline at two northern European terminals', 'example.invalid', 48],
-    ['[SAMPLE] Export licence rules tightened for a processed critical mineral', 'example.invalid', 71],
-    ['[SAMPLE] Port authority reports vessel queue easing after weekend closure', 'example.invalid', 96],
-    ['[SAMPLE] Refinery restart delayed, regional fuel supply tightens', 'example.invalid', 130],
-    ['[SAMPLE] Shipping insurers revise war-risk premiums for a key strait', 'example.invalid', 175],
-  ].map(([title, domain, minutes], i) => ({
-    url: `https://${domain}/sample-headline-${i + 1}`,
-    title,
-    seendate: gdeltStamp(minutes as number),
-    domain,
-    language: 'English',
-    sourcecountry: '[SAMPLE]',
-  }));
+  interface Row {
+    base: string;
+    quad: '1' | '3' | '4';
+    reports: number;
+    geoType: '1' | '4';
+    name: string;
+    cc: string;
+    lat: number;
+    lon: number;
+    id: string;
+    url: string;
+  }
+
+  const line = (r: Row): string => {
+    const f = new Array<string>(EXPORT_COLUMNS).fill('');
+    f[0] = String(Math.floor(Math.random() * 1e9));
+    f[26] = r.base + '0';
+    f[27] = r.base;
+    f[28] = r.base.slice(0, 2);
+    f[29] = r.quad;
+    f[33] = String(r.reports);
+    f[51] = r.geoType;
+    f[52] = r.name;
+    f[53] = r.cc;
+    f[56] = String(r.lat);
+    f[57] = String(r.lon);
+    f[58] = r.id;
+    f[60] = r.url;
+    return f.join('\t');
+  };
+
+  const place = (name: string, cc: string, lat: number, lon: number, id: string) =>
+    ({ name: `[SAMPLE] ${name}`, cc, lat, lon, id, geoType: '4' as const });
+
+  const aden = place('Port city on the Gulf of Aden', 'YM', 12.79, 45.03, 'S-ADEN');
+  const rotterdam = place('North Sea port city', 'NL', 51.92, 4.48, 'S-RTM');
+  const kaohsiung = place('Southern Taiwan port city', 'TW', 22.62, 120.3, 'S-KHH');
+  const bandar = place('Gulf port city', 'IR', 27.18, 56.27, 'S-BND');
+  const santos = place('South Atlantic port city', 'BR', -23.96, -46.33, 'S-SSZ');
+  const capital = place('Inland capital', 'US', 38.9, -77.03, 'S-CAP');
+
+  const file = (isRecent: boolean, slot: number): string => {
+    const rows: Row[] = [];
+    const url = (tag: string, n: number) => `https://example.invalid/sample/${tag}-${slot}-${n}`;
+    // The denominator: steady non-conflict reporting everywhere.
+    rows.push({ ...capital, base: '042', quad: '1', reports: 380, url: url('capital', 1) });
+    // Steady conflict background — present in both windows, must not flag.
+    rows.push({ ...bandar, base: '112', quad: '3', reports: 6, url: url('gulf', 1) });
+    rows.push({ ...santos, base: '141', quad: '3', reports: 3, url: url('santos', 1) });
+
+    if (isRecent) {
+      // Surging and new: fighting and a blockade near the strait.
+      rows.push({ ...aden, base: '190', quad: '4', reports: 6, url: `https://example.invalid/sample/aden-report-${slot % 4}` });
+      rows.push({ ...aden, base: '191', quad: '4', reports: 3, url: `https://example.invalid/sample/aden-blockade-${slot % 3}` });
+      // A port strike.
+      rows.push({ ...rotterdam, base: '143', quad: '3', reports: 5, url: `https://example.invalid/sample/port-strike-${slot % 3}` });
+      // Elevated, not surging.
+      rows.push({ ...kaohsiung, base: '130', quad: '3', reports: slot % 2 === 0 ? 3 : 2, url: url('taiwan', 1) });
+      // Sanctions coded at country level — a country surge with no city.
+      rows.push({ ...place('China', 'CH', 35, 105, 'CH'), geoType: '1', base: '163', quad: '3', reports: 7, url: url('sanctions', 1) });
+    } else {
+      rows.push({ ...rotterdam, base: '143', quad: '3', reports: slot % 3 === 0 ? 1 : 0, url: url('rotterdam', 1) });
+      rows.push({ ...kaohsiung, base: '130', quad: '3', reports: 1, url: url('taiwan', 1) });
+      rows.push({ ...place('China', 'CH', 35, 105, 'CH'), geoType: '1', base: '163', quad: '3', reports: 2, url: url('sanctions', 1) });
+    }
+    return rows.filter((r) => r.reports > 0).map(line).join('\n') + '\n';
+  };
 
   return {
-    series,
-    headlines: { fetched: { body: { articles }, served: iso(20) }, error: null },
+    latest: latest.toISOString(),
+    // Three files missing, to show the comparison running on what it has.
+    recent: recent.map((_, i) => (i === 5 ? null : tallyExport(file(true, i)))),
+    baseline: baseline.map((_, i) => (i === 3 || i === 17 ? null : tallyExport(file(false, i)))),
   };
 }
 
@@ -275,5 +306,63 @@ export function fixtureWeather(): FetchedJson {
       };
     }),
     served: iso(12),
+  };
+}
+
+/**
+ * FRED: CSV in FRED's own format, through the real parser. Brent jumps on
+ * the last day so the oil-move flag has something to fire on; one series
+ * fails, to show a partial result.
+ */
+export function fixtureFred(): FredRaw {
+  const random = seeded(19);
+  const start: Record<string, number> = {
+    DCOILBRENTEU: 76,
+    DCOILWTICO: 72,
+    DHHNGSP: 2.8,
+    GASDESW: 3.7,
+    DTWEXBGS: 121,
+  };
+  const series = FRED_SERIES.map((spec) => {
+    if (spec.id === 'DHHNGSP') {
+      return { id: spec.id, text: null, error: 'FRED did not answer in time.' };
+    }
+    const lines = [`observation_date,${spec.id}`];
+    let value = start[spec.id];
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    for (let daysAgo = 180; daysAgo >= 1; daysAgo -= 1) {
+      const date = new Date(today.getTime() - daysAgo * 24 * 60 * MINUTE);
+      const weekday = date.getUTCDay();
+      if (spec.cadence === 'weekly' ? weekday !== 1 : weekday === 0 || weekday === 6) continue;
+      value *= 1 + (random() - 0.5) * (spec.unit === 'index' ? 0.006 : 0.03);
+      if (spec.id === 'DCOILBRENTEU' && daysAgo <= 3) value *= 1.021;
+      // FRED writes "." for a holiday; the parser must skip it, not fill it.
+      const written = daysAgo === 40 ? '.' : value.toFixed(spec.unit === 'usd-bbl' ? 2 : 3);
+      lines.push(`${date.toISOString().slice(0, 10)},${written}`);
+    }
+    return { id: spec.id, text: lines.join('\n'), error: null };
+  });
+  return { series };
+}
+
+/** Finnhub-shaped quote bodies, plus one symbol the provider does not know. */
+export function fixtureQuotes(symbols: MarketSymbol[]): QuotesRaw {
+  const random = seeded(23);
+  const time = Math.floor((Date.now() - 16 * MINUTE) / 1000);
+  return {
+    results: [...symbols, { symbol: 'NOPE', label: '[SAMPLE] An unrecognised symbol' }].map(({ symbol, label }) => {
+      if (symbol === 'NOPE') {
+        return { symbol, label, fetched: { body: { c: 0, d: null, dp: null, pc: 0, t: 0 }, served: iso(16) }, error: null };
+      }
+      const pc = 20 + random() * 400;
+      const c = pc * (1 + (random() - 0.5) * 0.04);
+      return {
+        symbol,
+        label,
+        fetched: { body: { c: Math.round(c * 100) / 100, pc: Math.round(pc * 100) / 100, t: time }, served: iso(16) },
+        error: null,
+      };
+    }),
   };
 }

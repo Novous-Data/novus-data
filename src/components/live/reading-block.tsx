@@ -38,7 +38,15 @@ export function ReadingBlock<T>({
         {reading.status === 'ok' ? (
           <>
             {' '}
-            Data as of <LiveAge at={reading.asOf} source={reading.source} /> — {reading.asOfBasis}.
+            Data as of{' '}
+            <LiveAge
+              at={reading.asOf}
+              source={reading.source}
+              // FRED values are dated, not timed — a daily settlement. "00:00
+              // UTC" beside one would claim a precision nobody published.
+              precision={reading.source === 'fred' ? 'day' : 'minute'}
+            />{' '}
+            — {reading.asOfBasis}.
           </>
         ) : null}
       </p>

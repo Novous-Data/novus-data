@@ -47,7 +47,8 @@ async function main(): Promise<void> {
   }
 
   info(`AISSTREAM_API_KEY is ${process.env.AISSTREAM_API_KEY?.trim() ? 'set' : 'not set'}.`);
-  info('Reading all seven feeds — about 35 seconds…');
+  info(`FINNHUB_API_KEY is ${process.env.FINNHUB_API_KEY?.trim() ? 'set' : 'not set'}.`);
+  info('Reading every feed — about 35 seconds…');
 
   const started = Date.now();
   const snapshot = await readLiveSnapshot();
@@ -126,16 +127,24 @@ function describe(source: string, data: unknown): string[] {
       return lines;
     }
     case 'gdelt': {
-      const series = d.series as Array<{ themeId: string; points: unknown[] }>;
-      const headlines = d.headlines as unknown[];
+      const g = d as unknown as {
+        recentFiles: number;
+        recentFilesExpected: number;
+        baselineFiles: number;
+        baselineFilesExpected: number;
+        totalReports: number;
+        conflictReports: number;
+        hotspots: Array<{ name: string; ratio: number; reports: number }>;
+        countries: Array<{ name: string; ratio: number }>;
+        places: Array<{ nodeId: string; level: string; ratio: number }>;
+      };
       const lines = [
-        `${series.length} theme series: ${series.map((s) => `${s.themeId} ${s.points.length} intervals`).join(', ')}.`,
-        `${headlines.length} English headlines after de-duplication.`,
+        `${g.recentFiles}/${g.recentFilesExpected} recent and ${g.baselineFiles}/${g.baselineFilesExpected} baseline event files read; ${g.totalReports} reports, ${g.conflictReports} conflict-type.`,
+        `${g.hotspots.length} hotspots${g.hotspots.length > 0 ? `: ${g.hotspots.slice(0, 3).map((h) => `${h.name} ${h.ratio.toFixed(1)}×`).join('; ')}` : ''}.`,
+        `${g.countries.length} countries above normal; places not normal: ${g.places.filter((p) => p.level !== 'normal').map((p) => `${p.nodeId} ${p.level}`).join(', ') || 'none'}.`,
       ];
-      // A day at fifteen-minute resolution is 96 intervals. Far fewer means
-      // GDELT answered at a coarser resolution than the adapter assumes.
-      if (series.some((s) => s.points.length < 48)) {
-        lines.push(colour.amber('Fewer intervals than a day at 15 minutes (96) — check the timelinevolraw resolution.'));
+      if (g.totalReports > 0 && g.conflictReports / g.totalReports > 0.8) {
+        lines.push(colour.amber('Conflict share above 80% of all reporting — check the QuadClass column mapping.'));
       }
       return lines;
     }
@@ -149,6 +158,17 @@ function describe(source: string, data: unknown): string[] {
       return [`${String(d.totalOpen)} open events; ${(d.nearTradeNodes as unknown[]).length} near a tracked location.`];
     case 'weather':
       return [`${(d.ports as unknown[]).length} ports with current wind.`];
+    case 'fred': {
+      const series = d.series as Array<{ id: string; latest: { date: string; value: number }; points: unknown[] }>;
+      return series.map((s) => `${s.id}: ${s.latest.value} on ${s.latest.date} (${s.points.length} observations)`);
+    }
+    case 'quotes': {
+      const q = d as unknown as { quotes: Array<{ symbol: string; price: number }>; missing: string[] };
+      return [
+        `${q.quotes.length} prices: ${q.quotes.map((x) => `${x.symbol} ${x.price}`).join(', ')}.`,
+        ...(q.missing.length > 0 ? [`No price for: ${q.missing.join(', ')}.`] : []),
+      ];
+    }
     default:
       return [];
   }

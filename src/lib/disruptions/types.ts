@@ -186,6 +186,14 @@ export interface DisruptionSummary {
    * than falling back to the masthead.
    */
   author: string | null;
+  /**
+   * Tracked places this disruption concerns — ids from the live layer's
+   * reference points (src/lib/live/nodes.ts), e.g. "suez", "rotterdam".
+   * Optional. It is what lets the monitor's place board show a register
+   * entry beside the live readings for the same place, and it is a statement
+   * about geography only: naming a port here says nothing about any company.
+   */
+  places: string[];
   sources: Source[];
   exposures: Exposure[];
 }

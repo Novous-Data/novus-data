@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 import { footerNav } from '@/config/nav';
-import { listIssues } from '@/lib/content';
+import { listArticles, listIssues } from '@/lib/content';
 import { listDisruptions, listEntities } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
 import { toDate } from '@/lib/format';
@@ -12,8 +12,9 @@ import { toDate } from '@/lib/format';
  * no edit here (Rule 6).
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [issues, disruptions, entities] = await Promise.all([
+  const [issues, articles, disruptions, entities] = await Promise.all([
     listIssues(),
+    listArticles(),
     listDisruptions(),
     listEntities(),
   ]);
@@ -51,6 +52,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
+  const articleRoutes: MetadataRoute.Sitemap = articles.map((article) => {
+    const published = toDate(article.publishedAt);
+    return {
+      url: absoluteUrl(`/articles/${article.slug}`),
+      ...(published ? { lastModified: published } : {}),
+      changeFrequency: 'yearly' as const,
+      priority: article.kind === 'review' ? 0.8 : 0.7,
+    };
+  });
+
   const disruptionRoutes: MetadataRoute.Sitemap = disruptions.map((disruption) => {
     const reviewed = toDate(disruption.updatedAt);
     return {
@@ -75,5 +86,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  return [...staticRoutes, ...disruptionRoutes, ...entityRoutes, ...issueRoutes];
+  return [...staticRoutes, ...disruptionRoutes, ...entityRoutes, ...articleRoutes, ...issueRoutes];
 }

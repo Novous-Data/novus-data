@@ -19,7 +19,8 @@
  *   - GDELT permits commercial use but requires a citation and a link to
  *     gdeltproject.org wherever the data is used or redistributed.
  *
- * The rest are marked "not verified" rather than given a plausible-sounding
+ * Stock quotes are the third, and the strictest: see the quotes entry. The
+ * rest are marked "not verified" rather than given a plausible-sounding
  * licence. An invented terms line is worse than an honest gap.
  *
  * Freshness windows are per source because cadences differ by orders of
@@ -46,11 +47,11 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
   },
   gdelt: {
     id: 'gdelt',
-    name: 'GDELT DOC 2.0',
+    name: 'GDELT Event Database 2.0',
     publisher: 'The GDELT Project',
-    measures: 'News volume on four disruption themes',
+    measures: 'Where conflict reporting is rising above its own normal',
     homepage: 'https://www.gdeltproject.org/',
-    cadence: 'Every fifteen minutes',
+    cadence: 'A new event file every fifteen minutes',
     terms:
       'Free and open, commercial use permitted, provided every use cites the GDELT Project with a link to gdeltproject.org (GDELT data page).',
     delayedAfterMinutes: 45,
@@ -117,5 +118,33 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     delayedAfterMinutes: 45,
     staleAfterMinutes: 180,
     requiresEnv: null,
+  },
+  fred: {
+    id: 'fred',
+    name: 'FRED',
+    publisher: 'Federal Reserve Bank of St. Louis, from EIA and Federal Reserve Board data',
+    measures: 'Crude oil, natural gas, diesel and the dollar',
+    homepage: 'https://fred.stlouisfed.org/',
+    cadence: 'Daily settlement values, published about a business day later; diesel weekly',
+    terms:
+      'The series shown are U.S. government data (EIA, Federal Reserve Board) and in the public domain; FRED asks that it be cited as the source. Stated from the series notes, not re-verified per series in this build.',
+    // A daily series is a business day behind by design, and a weekend adds
+    // two more, so "delayed" starts after four days rather than hours.
+    delayedAfterMinutes: 4 * 24 * 60,
+    staleAfterMinutes: 8 * 24 * 60,
+    requiresEnv: null,
+  },
+  quotes: {
+    id: 'quotes',
+    name: 'Finnhub stock quotes',
+    publisher: 'Finnhub',
+    measures: 'Share prices of freight, energy and market funds',
+    homepage: 'https://finnhub.io/',
+    cadence: 'Last trade price; the previous session outside trading hours',
+    terms:
+      "Finnhub's free plan is for personal, non-commercial use. Showing its prices on a public website is redistribution and needs a paid plan or Finnhub's written permission. Off unless FINNHUB_API_KEY is set.",
+    delayedAfterMinutes: 24 * 60,
+    staleAfterMinutes: 4 * 24 * 60,
+    requiresEnv: 'FINNHUB_API_KEY',
   },
 };

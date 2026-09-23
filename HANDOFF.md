@@ -115,7 +115,8 @@ and the review preview's panel, so this list cannot silently go stale.
 | `NEXT_PUBLIC_BEEHIIV_HOME_URL`, `NEXT_PUBLIC_BEEHIIV_FEED_URL` | Those footer links do not render |
 | `NEXT_PUBLIC_SITE_URL` | Falls back to `$VERCEL_URL`, then localhost. Set it at domain cutover |
 | `BEEHIIV_RSS_URL` | **The archive is empty and the feed was never inspected.** See 6 |
-| `AISSTREAM_API_KEY` | The chokepoint vessel panel on `/monitor` says "not switched on yet"; the other six live feeds work without it. Free key — DEPLOY.md Part 5 |
+| `AISSTREAM_API_KEY` | The chokepoint vessel panel on `/monitor` says "not switched on yet"; the keyless feeds work without it. Free key — DEPLOY.md Part 5 |
+| `FINNHUB_API_KEY` | Share prices stay off. A licensing decision, not a missing input — DEPLOY.md Part 6 |
 | Logo file | Wordmark and icons are set typographically. See 4.4 |
 | Three visual reference sites | Design follows the brand spec and the editorial references named in the brief |
 
@@ -259,7 +260,7 @@ decisions that would be expensive to reverse:
 
 - **Age comes from inside the data, never our clock**, and is computed in the
   reader's browser. A cached page can be old; it cannot claim to be new.
-- **Seven feeds, not two.** GDELT and AIS as asked, plus five official,
+- **Seven feeds, not two** (nine since 4.26). GDELT and AIS as asked, plus five official,
   keyless sources that fill the obvious gaps: USGS earthquakes, GDACS disaster
   alerts, NOAA hurricanes, NASA EONET natural events, and Open-Meteo port wind.
 - **ISR at fifteen minutes, not live per request.** A thousand readers cost
@@ -288,6 +289,30 @@ block had been silently switching off the "no RSS parser, no sanitiser under
 `src/`" rule for exactly the pages and components it protected. Fixed by
 defining each restriction once and spreading it into every block; probed with
 throwaway files to confirm every rule now fires.
+
+### 4.26 "What is changing", flags, places, prices, articles, and the app
+
+The author asked for the monitor to show what is changing rather than how
+much of the news is on each topic, to flag places with abnormal reporting, for
+stock and crude prices, an articles section with long-term reviews, two more
+features from existing data, and for all of it to work in the app.
+
+- **Change detection replaced topic shares**, on GDELT's raw event files
+  rather than its query API (which refused cloud servers twice). "Above
+  normal" is a place's share of reporting against the same hours on the
+  previous seven days. Method and thresholds are published on the page.
+- **The two features:** rule-based **flags** (every rule printed, each flag
+  with its reading's time and source) and a **place board** (every tracked
+  place, all readings plus linked register entries via a new optional
+  `places` field). Both computed from the same snapshot everywhere.
+- **Prices:** energy and the dollar from public-domain government data,
+  shipped. **Share prices built but off** — no free tier licenses public
+  display. DEPLOY.md Part 6 is the decision.
+- **Articles** are Beehiiv posts tagged "Article" or "Long-term review":
+  same sync, no new step. `/feed.json` lists every post for the app.
+- **The app prototype** (artifact, version 3) gained Live and Read screens,
+  opt-in live-flag alerts, and place following, all read from the site's real
+  feed formats; typography now matches the site.
 
 ## 4. Judgement calls I had to make
 

@@ -326,7 +326,28 @@ export function assertNoPublicAisKey(): void {
   );
 }
 
+/** The same refusal for the stock-quote key: a key in the browser bundle is usable by anyone. */
+export function assertNoPublicQuoteKey(): void {
+  // Literal name, for the same inlining reason as above.
+  if (!process.env.NEXT_PUBLIC_FINNHUB_API_KEY) return;
+
+  throw new Error(
+    [
+      '',
+      'NEXT_PUBLIC_FINNHUB_API_KEY is set.',
+      '',
+      'The Finnhub key must NEVER carry the NEXT_PUBLIC_ prefix: that prefix publishes',
+      'it in the browser bundle, where anyone can copy it and spend its quota.',
+      '',
+      'Rename it to FINNHUB_API_KEY, and regenerate the key in the Finnhub dashboard:',
+      'the old one must be assumed public.',
+      '',
+    ].join('\n'),
+  );
+}
+
 assertNoPublicServiceRoleKey();
 assertNoPublicAisKey();
+assertNoPublicQuoteKey();
 
 assertLaunchReady();

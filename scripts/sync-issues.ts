@@ -24,6 +24,8 @@ import path from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import sanitizeHtml from 'sanitize-html';
 
+import { POST_KIND_LABELS, kindFor, type PostKind } from '@/lib/content/types';
+
 const ISSUES_DIR = path.join(process.cwd(), 'content', 'issues');
 const EXCERPT_TARGET_LENGTH = 200;
 
@@ -296,6 +298,7 @@ function yamlString(value: string | null): string {
 }
 
 interface IssueFile {
+  kind: PostKind;
   fileName: string;
   slug: string;
   contents: string;
@@ -457,6 +460,7 @@ async function main(): Promise<void> {
     toWrite.push({
       fileName,
       slug,
+      kind: kindFor(undefined, item.categories),
       contents: renderIssueFile({
         issueNumber: deriveIssueNumber(item.title),
         title: item.title,
@@ -487,7 +491,12 @@ async function main(): Promise<void> {
   if (toWrite.length > 0) {
     console.log('');
     for (const file of toWrite) {
-      console.log(`  ${options.dryRun ? 'would write' : 'wrote'}  content/issues/${file.fileName}`);
+      // Where the post will appear, so a mis-tagged article is caught here
+      // rather than found later in the briefing archive.
+      const where = file.kind === 'briefing' ? `/briefings/${file.slug}` : `/articles/${file.slug}`;
+      console.log(
+        `  ${options.dryRun ? 'would write' : 'wrote'}  content/issues/${file.fileName}  → ${POST_KIND_LABELS[file.kind]}, ${where}`,
+      );
     }
   }
 

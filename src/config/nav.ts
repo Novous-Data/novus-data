@@ -28,8 +28,8 @@ export const primaryNav: NavItem[] = [
   // page that is different every time it is opened — which is the reason a
   // reader comes back, and so the reason it has to be one click away.
   { href: '/monitor', label: 'Monitor' },
+  { href: '/articles', label: 'Articles' },
   { href: '/briefings', label: 'Briefings' },
-  { href: '/alerts', label: 'Alerts' },
   { href: '/about', label: 'About' },
 ];
 
@@ -40,6 +40,9 @@ export const footerNav: NavItem[] = [
   // where a reader is when the question "what about this name" occurs to them.
   // A sixth header item to reach a seventh page would cost more than it earns.
   { href: '/entities', label: 'Companies' },
+  // Out of the header since Articles arrived: a page describing an app that
+  // does not exist yet earns less header room than published writing.
+  { href: '/alerts', label: 'Alerts' },
   { href: '/coverage', label: 'Coverage' },
   { href: '/subscribe', label: 'Subscribe' },
   { href: '/contact', label: 'Contact' },

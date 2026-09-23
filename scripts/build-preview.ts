@@ -351,7 +351,9 @@ async function writeSampleArchive(): Promise<{
       `excerpt: ${summary.excerpt === null ? 'null' : JSON.stringify(summary.excerpt)}`,
       `beehiivUrl: ${summary.externalUrl === null ? 'null' : JSON.stringify(summary.externalUrl)}`,
       'coverImageUrl: null',
-      'tags: []',
+      // The tags decide the kind — briefing, article or long-term review — so
+      // writing them out is what puts the sample articles under /articles.
+      `tags: ${JSON.stringify(summary.tags)}`,
       '---',
       '',
     ].join('\n');

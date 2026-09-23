@@ -14,12 +14,12 @@ export default function NotFound() {
       </p>
       <ul className="mt-6 flex flex-col">
         <li>
-          <TextLink href="/" className="inline-flex min-h-11 items-center">
+          <TextLink href="/" standalone>
             Novus Data home
           </TextLink>
         </li>
         <li>
-          <TextLink href="/briefings" className="inline-flex min-h-11 items-center">
+          <TextLink href="/briefings" standalone>
             The full briefing archive
           </TextLink>
         </li>

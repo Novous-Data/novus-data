@@ -8,6 +8,7 @@ import { Container } from '@/components/container';
 import { IssueList } from '@/components/issue-list';
 import { JsonLd } from '@/components/json-ld';
 import { NeedsInput } from '@/components/needs-input';
+import { SeveritySwatch } from '@/components/severity-legend';
 import { StatusBadge } from '@/components/status-badge';
 import { SignInPanel } from '@/components/sign-in-panel';
 import { SubscribePanel } from '@/components/subscribe-panel';
@@ -607,11 +608,7 @@ function ExposureRow({ row }: { row: EntityExposure }) {
           </span>
         </div>
         <div className="flex items-center gap-3 sm:justify-end">
-          <span
-            className="exposure-cell !min-h-0 h-3.5 w-6"
-            data-severity={row.worstSeverity}
-            aria-hidden="true"
-          />
+          <SeveritySwatch severity={row.worstSeverity} />
           <span className="text-meta text-muted">
             {SEVERITY_LABELS[row.worstSeverity]} ·{' '}
             <span data-numeric>{row.count}</span>{' '}

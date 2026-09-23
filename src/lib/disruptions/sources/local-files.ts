@@ -34,6 +34,7 @@ import {
   CONFIDENCES,
   DISRUPTION_CATEGORIES,
   DISRUPTION_STATUSES,
+  ID_PATTERN,
   SEVERITIES,
 } from '../types';
 
@@ -49,8 +50,6 @@ import {
 export const DISRUPTIONS_DIRECTORY = process.env.NOVUS_DISRUPTIONS_DIR
   ? path.resolve(process.env.NOVUS_DISRUPTIONS_DIR)
   : path.join(process.cwd(), 'content', 'disruptions');
-
-const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 interface ParsedFile {
   file: string;
@@ -424,8 +423,11 @@ async function readAll(): Promise<ReadResult> {
   const parsed: ParsedFile[] = [];
   const seenIds = new Map<string, string>();
 
-  for (const file of files) {
-    const raw = await readFile(path.join(DISRUPTIONS_DIRECTORY, file), 'utf8');
+  // Read in parallel, parsed in filename order, so warnings and the
+  // first-occurrence rules below behave exactly as a sequential read would.
+  const contents = await Promise.all(files.map((file) => readFile(path.join(DISRUPTIONS_DIRECTORY, file), 'utf8')));
+  for (const [index, file] of files.entries()) {
+    const raw = contents[index];
     const disruption = parseDisruptionFile(file, raw, warnings);
     if (!disruption) continue;
 

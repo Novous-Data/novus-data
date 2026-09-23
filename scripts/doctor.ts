@@ -36,7 +36,6 @@ import {
   blank,
   blocker,
   colour,
-  daysSince,
   detail,
   heading,
   info,
@@ -69,7 +68,7 @@ async function main(): Promise<void> {
   const { publication } = await import('@/config/publication');
   const { readDisruptionDiagnostics } = await import('@/lib/disruptions/sources/local-files');
   const { readDiagnostics } = await import('@/lib/content/sources/local-files');
-  const { STALE_AFTER_DAYS } = await import('@/lib/disruptions/types');
+  const { STALE_AFTER_DAYS, daysSince } = await import('@/lib/disruptions/types');
 
   const args = new Set(process.argv.slice(2));
   const nextOnly = args.has('--next');

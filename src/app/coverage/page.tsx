@@ -33,10 +33,7 @@ export default function CoveragePage() {
                 <span data-numeric className="text-meta text-muted">
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <TextLink
-                  href={`#${topic.id}`}
-                  className="inline-flex min-h-11 items-center text-[0.9375rem]"
-                >
+                <TextLink standalone href={`#${topic.id}`} className="text-[0.9375rem]">
                   {topic.title}
                 </TextLink>
               </li>

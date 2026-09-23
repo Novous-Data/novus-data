@@ -233,6 +233,14 @@ export function authorById(id: string | null | undefined): AuthorProfile | null 
 }
 
 /**
+ * Who recorded an entry: its named author, else the editor, who stands behind
+ * anything the publication prints. Null only while the editor is unnamed.
+ */
+export function recordedBy(id: string | null | undefined): AuthorProfile | null {
+  return authorById(id) ?? (editor().name ? editor() : null);
+}
+
+/**
  * Names as a reader would say them: "A", "A and B", "A, B and C".
  *
  * Null when nobody on the masthead is named, so the caller can render its own

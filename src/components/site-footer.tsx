@@ -50,10 +50,7 @@ export function SiteFooter() {
               <ul className="flex flex-col">
                 {externalLinks.map((link) => (
                   <li key={link.href}>
-                    <ExternalLink
-                      href={link.href}
-                      className="inline-flex min-h-11 items-center text-[0.9375rem]"
-                    >
+                    <ExternalLink standalone href={link.href} className="text-[0.9375rem]">
                       {link.label}
                     </ExternalLink>
                   </li>

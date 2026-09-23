@@ -16,7 +16,7 @@
  * answer would survive the loader. The validation here deliberately mirrors
  * `src/lib/disruptions/sources/local-files.ts`:
  *
- *   ID_PATTERN            lowercase, digits, single hyphens
+ *   ID_PATTERN            lowercase, digits, single hyphens (imported, not copied)
  *   sources               title + url + publisher, url must be http(s)
  *   exposure gate         mechanism, confidence, asOf, and >= 1 source
  *   entity                id, name, kind, sector — ticker may be null
@@ -28,6 +28,14 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+
+import {
+  CONFIDENCES,
+  DISRUPTION_CATEGORIES,
+  DISRUPTION_STATUSES,
+  ID_PATTERN,
+  SEVERITIES,
+} from '@/lib/disruptions/types';
 import {
   blank,
   colour,
@@ -59,18 +67,10 @@ const DISRUPTIONS_DIR = process.env.NOVUS_DISRUPTIONS_DIR
   ? path.resolve(process.env.NOVUS_DISRUPTIONS_DIR)
   : path.join(process.cwd(), 'content', 'disruptions');
 
-const STATUSES = ['watch', 'active', 'easing', 'resolved'] as const;
-const CATEGORIES = [
-  'chokepoint',
-  'port',
-  'policy',
-  'input',
-  'energy',
-  'labour',
-  'weather',
-] as const;
-const SEVERITIES = ['low', 'moderate', 'high'] as const;
-const CONFIDENCES = ['reported', 'inferred', 'estimated'] as const;
+// The register's own lists, so a new status or category reaches the prompts
+// in the same commit that teaches the loader about it.
+const STATUSES = DISRUPTION_STATUSES;
+const CATEGORIES = DISRUPTION_CATEGORIES;
 const KINDS = ['company', 'sector'] as const;
 
 /** What each confidence level actually commits you to, quoted from /about#method. */
@@ -210,7 +210,7 @@ async function askUrl(rl: Prompter, question: string): Promise<string> {
 }
 
 function validateId(value: string): string | null {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)
+  return ID_PATTERN.test(value)
     ? null
     : 'Lowercase letters, digits and single hyphens only.';
 }

@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { getAccountRepository } from '@/lib/accounts';
 import { getCurrentAccountId } from '@/lib/accounts/session';
 import { DEFAULT_ALERT_PREFERENCES, type AlertChannel } from '@/lib/accounts/types';
-import { DISRUPTION_CATEGORIES, SEVERITIES } from '@/lib/disruptions/types';
+import { DISRUPTION_CATEGORIES, ID_PATTERN, SEVERITIES } from '@/lib/disruptions/types';
 import type { DisruptionCategory, Severity } from '@/lib/disruptions/types';
 
 /**
@@ -65,7 +65,7 @@ export async function updateWatchlistAction(formData: FormData) {
         .getAll('entity')
         .filter((value): value is string => typeof value === 'string')
         .map((value) => value.trim())
-        .filter((value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)),
+        .filter((value) => ID_PATTERN.test(value)),
     ),
   ].slice(0, MAX_WATCHLIST_ENTRIES);
 

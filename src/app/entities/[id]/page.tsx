@@ -1,16 +1,15 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { Assessment } from '@/components/assessment';
 import { Container } from '@/components/container';
 import { PrintPermalink } from '@/components/print-permalink';
-import { SourceList } from '@/components/source-list';
+import { SeveritySwatch } from '@/components/severity-legend';
 import { StatusBadge } from '@/components/status-badge';
 import { TextLink } from '@/components/text-link';
 import type { EntityClaim } from '@/lib/disruptions';
 import {
   CATEGORY_LABELS,
-  CONFIDENCE_LABELS,
-  CONFIDENCE_NOTES,
   SEVERITY_LABELS,
   STALE_AFTER_DAYS,
   getEntityProfile,
@@ -18,7 +17,7 @@ import {
   listEntityIds,
 } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
-import { formatLongDate, formatShortDate } from '@/lib/format';
+import { formatLongDate } from '@/lib/format';
 
 export async function generateStaticParams() {
   const ids = await listEntityIds();
@@ -119,11 +118,7 @@ export default async function EntityPage(props: PageProps<'/entities/[id]'>) {
               <div>
                 <dt className="text-muted">Strongest assessment</dt>
                 <dd className="mt-1 flex items-center gap-2 text-fg">
-                  <span
-                    className="exposure-cell !min-h-0 h-3.5 w-6"
-                    data-severity={worstSeverity}
-                    aria-hidden="true"
-                  />
+                  <SeveritySwatch severity={worstSeverity} />
                   {SEVERITY_LABELS[worstSeverity]}
                 </dd>
               </div>
@@ -213,7 +208,6 @@ export default async function EntityPage(props: PageProps<'/entities/[id]'>) {
 
 function ClaimEntry({ claim }: { claim: EntityClaim }) {
   const { disruption, exposure } = claim;
-  const asOf = formatShortDate(exposure.asOf);
 
   return (
     <li id={`disruption-${disruption.id}`} className="border-t border-hairline py-6">
@@ -227,45 +221,15 @@ function ClaimEntry({ claim }: { claim: EntityClaim }) {
           site's 44px target like every other one. */}
       <h3 className="mt-2 text-[1.0625rem] font-medium">
         <TextLink
+          standalone
           href={`/disruptions/${disruption.id}`}
-          className="inline-flex min-h-11 items-center no-underline hover:underline"
+          className="no-underline hover:underline"
         >
           {disruption.title}
         </TextLink>
       </h3>
 
-      <p className="mt-3 max-w-measure text-muted">{exposure.mechanism}</p>
-
-      <dl className="mt-4 flex flex-wrap gap-x-10 gap-y-2 text-meta">
-        <div className="flex items-center gap-2">
-          <dt className="text-muted">Severity</dt>
-          <dd className="flex items-center gap-2 text-fg">
-            <span
-              className="exposure-cell !min-h-0 h-3.5 w-6"
-              data-severity={exposure.severity}
-              data-confidence={exposure.confidence}
-              aria-hidden="true"
-            />
-            {SEVERITY_LABELS[exposure.severity]}
-          </dd>
-        </div>
-        <div className="flex items-center gap-2">
-          <dt className="text-muted">Confidence</dt>
-          <dd className="text-fg">{CONFIDENCE_LABELS[exposure.confidence]}</dd>
-        </div>
-        {asOf ? (
-          <div className="flex items-center gap-2">
-            <dt className="text-muted">As of</dt>
-            <dd data-numeric className="text-fg">
-              <time dateTime={exposure.asOf}>{asOf}</time>
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-
-      <p className="mt-3 text-meta text-muted">{CONFIDENCE_NOTES[exposure.confidence]}</p>
-
-      <SourceList sources={exposure.sources} className="mt-4" compact />
+      <Assessment exposure={exposure} />
     </li>
   );
 }

@@ -217,10 +217,12 @@ src/lib/disruptions/       The register and exposure layer. See section 6a.
 src/lib/accounts/          The account contract and its Supabase store. See 6b.
 src/lib/live/              The live layer: nine feeds, one adapter each. See 6d.
   types.ts, meta.ts,         Pure — safe in client components. Components import
-  nodes.ts, display.ts,      labels from these, never from the layer index.
-  countries.ts
+  clocks.ts, nodes.ts,       labels from these, never from the layer index.
+  display.ts, countries.ts   clocks.ts holds each source's freshness windows.
   derive.ts                  Flags and the place board, derived from a snapshot. Pure.
   sources/                   The adapters. SERVER ONLY; the index reads the keys.
+src/lib/monitor.ts         What /monitor and /live.json both read: the snapshot,
+                           flags, place board and register-by-place. SERVER ONLY.
 src/config/markets.ts      The funds quoted when a licensed quote key is set.
 src/lib/supabase/          Supabase clients. admin.ts is SERVER ONLY. See 6b.
 src/lib/env.ts             Environment access and URL resolution.
@@ -229,6 +231,9 @@ src/lib/og.ts              Font data and colours for generated images.
 src/lib/structured-data.ts JSON-LD builders.
 src/components/            Presentational components. Five client components:
                            site-nav, sign-in-panel, and the three in live/.
+                           post-page.tsx is the one reading page for briefings,
+                           articles and reviews; assessment.tsx is one exposure's
+                           claim, shared by register entries and entity pages.
 src/components/live/       The monitor's pieces. live-age, auto-refresh and
                            price-chart are client components; the rest are not.
 src/app/monitor/           The live page. ISR, revalidate = 900. See 6d.
@@ -711,7 +716,7 @@ clock, and keeps ticking (`components/live/live-age.tsx`). The server renders
 only the absolute time, which stays true forever — the same move §6a makes
 for review dates. Freshness (*Live / Delayed / Stale*) is judged per source,
 because cadences differ by orders of magnitude: a vessel count is old after
-thirty minutes, an EONET event is curated daily. Windows are in `meta.ts`.
+thirty minutes, an EONET event is curated daily. Windows are in `clocks.ts`.
 
 ### What's changing: how "above normal" is measured
 
@@ -1316,7 +1321,11 @@ register's strictness fails *silently on the page* — an exposure missing one o
 its four required fields simply does not render. If
 `src/lib/disruptions/sources/local-files.ts` ever changes what it enforces,
 change `scripts/new-disruption.ts` in the same commit. A scaffolder that writes
-files the loader rejects is worse than no scaffolder.
+files the loader rejects is worse than no scaffolder. What can be shared rather
+than mirrored already is: the id rule (`ID_PATTERN`) and the lists of statuses,
+categories, severities and confidences are imported from
+`src/lib/disruptions/types.ts`, and `doctor`, `review` and the site all measure
+an entry's age with the one `daysSince()` there.
 
 The drift can run the other way too, and did: `isIsoDate()` in `scripts/lib/cli.ts`
 was already strict about `YYYY-MM-DD` while the loader accepted anything

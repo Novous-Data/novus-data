@@ -41,11 +41,11 @@ export const FLAG_THRESHOLDS = {
 export const FLAG_RULES: Array<{ id: string; text: string }> = [
   {
     id: 'reporting',
-    text: `Conflict reporting geocoded within ${REPORTING_RULES.portRadiusKm} km of a tracked port or industrial cluster, or ${REPORTING_RULES.chokepointRadiusKm} km of a chokepoint, is at least ${REPORTING_RULES.surgingRatio}× its normal share (alert) or ${REPORTING_RULES.elevatedRatio}× (watch), with at least ${REPORTING_RULES.placeMinReports} reports.`,
+    text: `Conflict reporting geocoded within ${REPORTING_RULES.portRadiusKm} km of a tracked port or industrial cluster, or ${REPORTING_RULES.chokepointRadiusKm} km of a chokepoint — each story counted for the nearest one only — is at least ${REPORTING_RULES.surgingRatio}× its normal share (alert) or ${REPORTING_RULES.elevatedRatio}× (watch), with at least ${REPORTING_RULES.placeMinReports} reports across ${REPORTING_RULES.minEvents} or more events.`,
   },
   {
     id: 'hotspot',
-    text: `A city anywhere is reporting at least ${REPORTING_RULES.hotspotMinRatio}× its normal share with at least ${REPORTING_RULES.hotspotMinReports} reports (watch; the ${FLAG_THRESHOLDS.maxHotspotFlags} largest).`,
+    text: `A city anywhere is reporting at least ${REPORTING_RULES.hotspotMinRatio}× its normal share with at least ${REPORTING_RULES.hotspotMinReports} reports across ${REPORTING_RULES.minEvents} or more events (watch; the ${FLAG_THRESHOLDS.maxHotspotFlags} largest).`,
   },
   {
     id: 'quake',
@@ -97,6 +97,13 @@ function dailyMove(series: PriceSeries): { pct: number; from: string; to: string
   return { pct: (latest.value / previous.value - 1) * 100, from: previous.date, to: latest.date };
 }
 
+/** "3.4× the normal share", or — when normal was below the floor — what normal actually was. */
+function againstNormal(c: { ratio: number; floored: boolean }): string {
+  return c.floored
+    ? `where fewer than ${REPORTING_RULES.minExpected} would be normal`
+    : `${c.ratio.toFixed(1)}× the normal share`;
+}
+
 export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
   const flags: LiveFlag[] = [];
 
@@ -109,7 +116,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         id: `reporting:${place.nodeId}`,
         level: place.level === 'surging' ? 'alert' : 'watch',
         title: `Conflict reporting ${place.level === 'surging' ? 'surging' : 'elevated'} near ${placeName(place.nodeId)}`,
-        detail: `${Math.round(place.reports)} reports in the last three hours, ${place.ratio.toFixed(1)}× the normal share for this time of day.`,
+        detail: `${Math.round(place.reports)} reports in the last three hours, ${againstNormal(place)} for this time of day.`,
         rule: FLAG_RULES[0].text,
         source: 'gdelt',
         at: gdelt.asOf,
@@ -122,7 +129,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         id: `hotspot:${spot.key}`,
         level: 'watch',
         title: `Unusual reporting: ${spot.name}`,
-        detail: `${Math.round(spot.reports)} conflict reports in three hours, ${spot.ratio.toFixed(1)}× normal.${
+        detail: `${Math.round(spot.reports)} conflict reports across ${spot.events} events in three hours, ${againstNormal(spot)}.${
           spot.nearest ? ` Nearest tracked place: ${spot.nearest.nodeName}, ${spot.nearest.km} km.` : ''
         }`,
         rule: FLAG_RULES[1].text,

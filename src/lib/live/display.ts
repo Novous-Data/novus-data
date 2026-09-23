@@ -70,6 +70,15 @@ export function formatRatio(ratio: number): string {
   return `${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)}×`;
 }
 
+/**
+ * A multiple of normal that may be a lower bound. When normal was below
+ * REPORTING_RULES.minExpected the multiple was divided by the floor, so the
+ * real figure is at least this — "≥183×", never a precise-looking "183×".
+ */
+export function formatRatioOf(ratio: number, floored: boolean): string {
+  return floored ? `≥${formatRatio(ratio)}` : formatRatio(ratio);
+}
+
 /** "+2.1%" / "−0.4%" with a real minus sign, so the columns align and read. */
 export function formatSignedPct(pct: number | null): string {
   if (pct === null || !Number.isFinite(pct)) return '—';

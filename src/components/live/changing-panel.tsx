@@ -1,5 +1,5 @@
 import { ExternalLink } from '@/components/text-link';
-import { formatCount, formatRatio, formatUtc } from '@/lib/live/display';
+import { formatCount, formatRatio, formatRatioOf, formatUtc } from '@/lib/live/display';
 import type { GdeltData } from '@/lib/live/types';
 import { PROXIMITY_KM, REPORTING_RULES } from '@/lib/live/types';
 
@@ -38,9 +38,11 @@ export function ChangingPanel({ data }: { data: GdeltData }) {
 
       <h3 className="kicker mt-8">Places reporting above normal</h3>
       <p className="mt-1 max-w-[72ch] text-meta text-muted">
-        Cities with at least <span data-numeric>{REPORTING_RULES.hotspotMinReports}</span> conflict reports in the
-        window and at least <span data-numeric>{REPORTING_RULES.hotspotMinRatio}×</span> their normal share of all
-        reporting, ranked by how many reports above normal they are.
+        Cities with at least <span data-numeric>{REPORTING_RULES.hotspotMinReports}</span> conflict reports across
+        at least <span data-numeric>{REPORTING_RULES.minEvents}</span> separately coded events, and at least{' '}
+        <span data-numeric>{REPORTING_RULES.hotspotMinRatio}×</span> their normal share of all reporting, ranked by
+        how many reports above normal they are. Where a city normally has almost no reporting, the multiple is shown
+        as a lower bound (≥).
       </p>
       {data.hotspots.length === 0 ? (
         <p className="mt-3 text-[0.9375rem] text-muted">No city crossed both thresholds in this window.</p>
@@ -53,15 +55,24 @@ export function ChangingPanel({ data }: { data: GdeltData }) {
             >
               <span className="text-meta">
                 <span data-numeric className="block text-[1.0625rem] font-semibold text-fg">
-                  {formatRatio(spot.ratio)}
+                  {formatRatioOf(spot.ratio, spot.floored)}
                 </span>
                 <span className="text-muted">normal</span>
               </span>
               <span className="min-w-0">
                 <span className="block text-[0.9375rem] font-semibold leading-snug text-fg">{spot.name}</span>
                 <span className="mt-0.5 block text-meta text-muted">
-                  <span data-numeric>{formatCount(spot.reports)}</span> reports, against about{' '}
-                  <span data-numeric>{formatCount(spot.expected)}</span> normally
+                  <span data-numeric>{formatCount(spot.reports)}</span> reports across{' '}
+                  <span data-numeric>{formatCount(spot.events)}</span> events,{' '}
+                  {spot.floored ? (
+                    <>
+                      where fewer than <span data-numeric>{REPORTING_RULES.minExpected}</span> would be normal
+                    </>
+                  ) : (
+                    <>
+                      against about <span data-numeric>{formatCount(spot.expected)}</span> normally
+                    </>
+                  )}
                   {spot.nearest ? (
                     <>
                       {' · '}
@@ -108,7 +119,7 @@ export function ChangingPanel({ data }: { data: GdeltData }) {
               <li key={country.code} className="flex items-baseline justify-between gap-4 border-t border-hairline py-2 text-[0.9375rem]">
                 <span className="text-fg">{country.name}</span>
                 <span className="text-meta text-muted">
-                  <span data-numeric className="text-fg">{formatRatio(country.ratio)}</span> ·{' '}
+                  <span data-numeric className="text-fg">{formatRatioOf(country.ratio, country.floored)}</span> ·{' '}
                   <span data-numeric>{formatCount(country.reports)}</span> reports
                 </span>
               </li>

@@ -136,6 +136,8 @@ export interface LocationTally {
   lat: number;
   lon: number;
   reports: number;
+  /** Event rows behind `reports`. */
+  events: number;
   /** The best-reported articles behind this location, most-reported first. */
   sources: Array<{ url: string; reports: number }>;
 }
@@ -149,6 +151,8 @@ export interface FileTally {
   countries: Record<string, number>;
   problems: Record<string, number>;
   places: Record<string, number>;
+  /** Event rows behind each place's reports. */
+  placeEvents: Record<string, number>;
 }
 
 function emptyTally(): FileTally {
@@ -161,11 +165,36 @@ function emptyTally(): FileTally {
     countries: {},
     problems: {},
     places: {},
+    placeEvents: {},
   };
 }
 
 function isHttpUrl(value: string): boolean {
   return /^https?:\/\/[^\s]+$/i.test(value);
+}
+
+/**
+ * The tracked places a story geocoded here counts for: the nearest port or
+ * cluster within reach, and the nearest chokepoint within reach — at most one
+ * of each. Rotterdam and Antwerp are 77 km apart, Shanghai and Ningbo 80, so
+ * counting every place in reach made one Rotterdam story raise Antwerp too,
+ * and two "surging" alerts read as two confirmations of one thing (the first
+ * real run showed both surging together). A port and the chokepoint it sits
+ * on may both count — Singapore and its strait are 12 km apart — because that
+ * overlap is geography, not duplication.
+ */
+function placesCounting(lat: number, lon: number): string[] {
+  let port: { id: string; km: number } | null = null;
+  let chokepoint: { id: string; km: number } | null = null;
+  for (const node of ALL_NODES) {
+    const km = distanceKm(lat, lon, node.lat, node.lon);
+    if (node.kind === 'chokepoint') {
+      if (km <= REPORTING_RULES.chokepointRadiusKm && (!chokepoint || km < chokepoint.km)) chokepoint = { id: node.id, km };
+    } else if (km <= REPORTING_RULES.portRadiusKm && (!port || km < port.km)) {
+      port = { id: node.id, km };
+    }
+  }
+  return [port?.id, chokepoint?.id].filter((id): id is string => id !== undefined);
 }
 
 export function tallyExport(text: string): FileTally {
@@ -214,9 +243,11 @@ export function tallyExport(text: string): FileTally {
       lat,
       lon,
       reports: 0,
+      events: 0,
       sources: [],
     });
     location.reports += reports;
+    location.events += 1;
 
     const url = f[COL.sourceUrl].trim();
     if (isHttpUrl(url)) {
@@ -227,12 +258,9 @@ export function tallyExport(text: string): FileTally {
       location.sources.length = Math.min(location.sources.length, SOURCES_PER_HOTSPOT * 2);
     }
 
-    for (const node of ALL_NODES) {
-      const radius =
-        node.kind === 'chokepoint' ? REPORTING_RULES.chokepointRadiusKm : REPORTING_RULES.portRadiusKm;
-      if (distanceKm(lat, lon, node.lat, node.lon) <= radius) {
-        tally.places[node.id] = (tally.places[node.id] ?? 0) + reports;
-      }
+    for (const nodeId of placesCounting(lat, lon)) {
+      tally.places[nodeId] = (tally.places[nodeId] ?? 0) + reports;
+      tally.placeEvents[nodeId] = (tally.placeEvents[nodeId] ?? 0) + 1;
     }
   }
 
@@ -253,9 +281,11 @@ function merge(tallies: FileTally[]): FileTally {
     add(total.countries, t.countries);
     add(total.problems, t.problems);
     add(total.places, t.places);
+    add(total.placeEvents, t.placeEvents);
     for (const [key, loc] of Object.entries(t.locations)) {
-      const into = (total.locations[key] ??= { ...loc, reports: 0, sources: [] });
+      const into = (total.locations[key] ??= { ...loc, reports: 0, events: 0, sources: [] });
       into.reports += loc.reports;
+      into.events += loc.events;
       for (const source of loc.sources) {
         const existing = into.sources.find((s) => s.url === source.url);
         if (existing) existing.reports += source.reports;
@@ -362,8 +392,8 @@ function domainOf(url: string): string {
   }
 }
 
-function levelFor(reports: number, ratio: number): ReportingLevel {
-  if (reports < REPORTING_RULES.placeMinReports) return 'normal';
+function levelFor(reports: number, events: number, ratio: number): ReportingLevel {
+  if (reports < REPORTING_RULES.placeMinReports || events < REPORTING_RULES.minEvents) return 'normal';
   if (ratio >= REPORTING_RULES.surgingRatio) return 'surging';
   if (ratio >= REPORTING_RULES.elevatedRatio) return 'elevated';
   return 'normal';
@@ -397,14 +427,22 @@ export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
     throw new LiveSourceError('GDELT files were read but contained no reporting to compare.');
   }
 
-  const expectedFrom = (baseReports: number) =>
-    Math.max((baseReports / B.totalReports) * R.totalReports, REPORTING_RULES.minExpected);
+  /**
+   * What `reports` is against normal. `expected` is always the measured
+   * value; only the divisor is floored, and the result says when it was, so
+   * the page never states the floor as a measured normal.
+   */
+  const compare = (reports: number, baseReports: number) => {
+    const expected = (baseReports / B.totalReports) * R.totalReports;
+    const floored = expected < REPORTING_RULES.minExpected;
+    return { expected, floored, ratio: reports / Math.max(expected, REPORTING_RULES.minExpected) };
+  };
 
   const hotspots: Hotspot[] = [];
   for (const [key, loc] of Object.entries(R.locations)) {
     if (loc.reports < REPORTING_RULES.hotspotMinReports) continue;
-    const expected = expectedFrom(B.locations[key]?.reports ?? 0);
-    const ratio = loc.reports / expected;
+    if (loc.events < REPORTING_RULES.minEvents) continue;
+    const { expected, floored, ratio } = compare(loc.reports, B.locations[key]?.reports ?? 0);
     if (ratio < REPORTING_RULES.hotspotMinRatio) continue;
     hotspots.push({
       key,
@@ -414,8 +452,10 @@ export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
       lat: loc.lat,
       lon: loc.lon,
       reports: loc.reports,
+      events: loc.events,
       expected,
       ratio,
+      floored,
       nearest: nearestNode(loc.lat, loc.lon),
       sources: loc.sources
         .slice()
@@ -437,10 +477,9 @@ export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
   const countries: CountrySurge[] = [];
   for (const [code, reports] of Object.entries(R.countries)) {
     if (reports < REPORTING_RULES.countryMinReports) continue;
-    const expected = expectedFrom(B.countries[code] ?? 0);
-    const ratio = reports / expected;
+    const { expected, floored, ratio } = compare(reports, B.countries[code] ?? 0);
     if (ratio < REPORTING_RULES.countryMinRatio) continue;
-    countries.push({ code, name: countryName(code) ?? code, reports, expected, ratio });
+    countries.push({ code, name: countryName(code) ?? code, reports, expected, ratio, floored });
   }
   countries.sort((a, b) => b.reports - b.expected - (a.reports - a.expected));
 
@@ -465,9 +504,9 @@ export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
 
   const places: PlaceReporting[] = ALL_NODES.map((node) => {
     const reports = R.places[node.id] ?? 0;
-    const expected = expectedFrom(B.places[node.id] ?? 0);
-    const ratio = reports / expected;
-    return { nodeId: node.id, reports, expected, ratio, level: levelFor(reports, ratio) };
+    const events = R.placeEvents[node.id] ?? 0;
+    const { expected, floored, ratio } = compare(reports, B.places[node.id] ?? 0);
+    return { nodeId: node.id, reports, events, expected, ratio, floored, level: levelFor(reports, events, ratio) };
   });
 
   const notes = [

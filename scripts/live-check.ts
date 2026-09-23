@@ -134,14 +134,29 @@ function describe(source: string, data: unknown): string[] {
         baselineFilesExpected: number;
         totalReports: number;
         conflictReports: number;
-        hotspots: Array<{ name: string; ratio: number; reports: number }>;
+        hotspots: Array<{
+          name: string;
+          ratio: number;
+          reports: number;
+          events: number;
+          expected: number;
+          floored: boolean;
+          sources: Array<{ domain: string }>;
+        }>;
         countries: Array<{ name: string; ratio: number }>;
-        places: Array<{ nodeId: string; level: string; ratio: number }>;
+        places: Array<{ nodeId: string; level: string; ratio: number; reports: number; expected: number }>;
       };
       const lines = [
         `${g.recentFiles}/${g.recentFilesExpected} recent and ${g.baselineFiles}/${g.baselineFilesExpected} baseline event files read; ${g.totalReports} reports, ${g.conflictReports} conflict-type.`,
-        `${g.hotspots.length} hotspots${g.hotspots.length > 0 ? `: ${g.hotspots.slice(0, 3).map((h) => `${h.name} ${h.ratio.toFixed(1)}×`).join('; ')}` : ''}.`,
-        `${g.countries.length} countries above normal; places not normal: ${g.places.filter((p) => p.level !== 'normal').map((p) => `${p.nodeId} ${p.level}`).join(', ') || 'none'}.`,
+        `${g.hotspots.length} hotspots.`,
+        // The top few in full, so a real run shows whether a surge rests on
+        // several events and publishers or on one syndicated story.
+        ...g.hotspots.slice(0, 5).map(
+          (h) =>
+            `  ${h.name}: ${h.reports} reports / ${h.events} events, normal ${h.expected.toFixed(1)}${h.floored ? ' (floored)' : ''}, ${h.ratio.toFixed(1)}×; ${h.sources.map((s) => s.domain).join(', ') || 'no links'}`,
+        ),
+        `${g.countries.length} countries above normal.`,
+        `Places not normal: ${g.places.filter((p) => p.level !== 'normal').map((p) => `${p.nodeId} ${p.level} (${Math.round(p.reports)} vs ${p.expected.toFixed(1)})`).join(', ') || 'none'}.`,
       ];
       if (g.totalReports > 0 && g.conflictReports / g.totalReports > 0.8) {
         lines.push(colour.amber('Conflict share above 80% of all reporting — check the QuadClass column mapping.'));

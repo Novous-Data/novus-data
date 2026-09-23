@@ -183,6 +183,14 @@ export const REPORTING_RULES = {
   hotspotMinReports: 20,
   /** …and at least this multiple of its normal share of all reporting. */
   hotspotMinRatio: 3,
+  /**
+   * A hotspot, or any level above normal at a tracked place, also needs its
+   * reports spread across at least this many separately coded events. GDELT
+   * counts the articles behind each event, so one miscoded or widely
+   * syndicated story can carry hundreds of reports on its own; three events
+   * means the count rests on more than one thing having been written.
+   */
+  minEvents: 3,
   countryMinReports: 50,
   countryMinRatio: 2,
   /** Near a tracked place: below this many reports, no level is claimed. */
@@ -193,16 +201,20 @@ export const REPORTING_RULES = {
    * a wide radius double-counts: at 300 km one strike in Rotterdam raised
    * alerts for Rotterdam, Antwerp and the Strait of Dover. Chokepoints get
    * more room because attacks on shipping are usually placed at the nearest
-   * coastal city — Aden for Bab el-Mandeb is about 180 km.
+   * coastal city — Aden for Bab el-Mandeb is about 180 km. Within reach, a
+   * story counts only for the nearest port or cluster and the nearest
+   * chokepoint (`placesCounting()` in sources/gdelt.ts).
    */
   portRadiusKm: 100,
   chokepointRadiusKm: 200,
   elevatedRatio: 2,
   surgingRatio: 3,
   /**
-   * A place with no reporting at all in the baseline is treated as if it had
-   * this many reports' worth, so a first appearance reads as large rather
-   * than infinite.
+   * The smallest "normal" a multiple is ever divided by, so a place with
+   * almost no reporting in the baseline reads as large rather than infinite.
+   * When it applies, the comparison is marked `floored`: the multiple is then
+   * a lower bound, and the page says "fewer than 2 would be normal" rather
+   * than stating the floor as though it had been measured.
    */
   minExpected: 2,
 } as const;
@@ -223,10 +235,14 @@ export interface Hotspot {
   lon: number;
   /** Conflict reports in the recent window. */
   reports: number;
-  /** Reports the location would have had at its normal share. */
+  /** Separately coded events those reports are spread across. */
+  events: number;
+  /** Reports the location would have had at its normal share. Measured, never floored. */
   expected: number;
-  /** reports ÷ expected. */
+  /** reports ÷ expected, or ÷ REPORTING_RULES.minExpected when `floored`. */
   ratio: number;
+  /** Normal was below minExpected, so `ratio` is a lower bound. */
+  floored: boolean;
   nearest: NearestNode | null;
   /** Up to three articles behind the count — the reporting itself, unverified. */
   sources: SourceLink[];
@@ -238,6 +254,7 @@ export interface CountrySurge {
   reports: number;
   expected: number;
   ratio: number;
+  floored: boolean;
 }
 
 /** One kind of problem — strikes, blockades, sanctions — and how its share moved. */
@@ -265,8 +282,10 @@ export const REPORTING_LEVEL_LABELS: Record<ReportingLevel, string> = {
 export interface PlaceReporting {
   nodeId: string;
   reports: number;
+  events: number;
   expected: number;
   ratio: number;
+  floored: boolean;
   level: ReportingLevel;
 }
 

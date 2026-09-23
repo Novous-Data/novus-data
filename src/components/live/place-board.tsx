@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { StatusBadge } from '@/components/status-badge';
 import type { DisruptionStatus } from '@/lib/disruptions/types';
-import { formatRatio } from '@/lib/live/display';
+import { formatRatioOf } from '@/lib/live/display';
 import { nodeById } from '@/lib/live/nodes';
 import { REPORTING_LEVEL_LABELS, type PlaceSummary, type TradeNodeKind } from '@/lib/live/types';
 
@@ -77,7 +77,7 @@ export function PlaceBoard({
                     {REPORTING_LEVEL_LABELS[place.reporting.level]}
                   </span>{' '}
                   <span className="text-muted">
-                    · <span data-numeric>{formatRatio(place.reporting.ratio)}</span> normal,{' '}
+                    · <span data-numeric>{formatRatioOf(place.reporting.ratio, place.reporting.floored)}</span> normal,{' '}
                     <span data-numeric>{Math.round(place.reporting.reports)}</span> reports
                   </span>
                 </>

@@ -731,18 +731,33 @@ published on `/monitor` and at `/about#live`:
   the sun, and an all-day baseline flagged Asian ports every night.
 - **Shares, not counts:** a place's share of *all* reporting now, divided by
   its share in the baseline. World news volume swings through the day; a
-  share cancels that. A place absent from the baseline is treated as having
-  `minExpected` (2) reports, so a first appearance reads as large, not
-  infinite.
+  share cancels that. A multiple is never divided by less than `minExpected`
+  (2), so a first appearance reads as large, not infinite — **and when that
+  floor applies the comparison is marked `floored`**, the multiple prints as a
+  lower bound (`≥183×`), and the text says "fewer than 2 would be normal".
+  `expected` itself is always the measured value. The first real run is why:
+  the page said "365 reports, against about 2 normally" when normal was
+  near zero, stating the floor as though it had been measured.
 - **Outputs:** city-level hotspots (≥20 reports and ≥3× normal, ranked by
   reports above normal), countries (≥50 and ≥2×), ten kinds of problem by
   CAMEO code (strikes 143, blockades 144/191, sanctions 163, seizures 171 …),
   and every tracked place (surging ≥3×, elevated ≥2×, with ≥10 reports).
+- **Three events, not one story (`minEvents`).** A hotspot, or any level above
+  normal at a tracked place, also needs its reports spread across at least
+  three separately coded events. `NumArticles` is per event, so one miscoded
+  or widely syndicated story can carry hundreds of reports alone; a single
+  event row is the likeliest false alert this method can produce.
 - **Radii are per kind, and tighter than the hazard radius.** Stories are
   geocoded to a city, and at 300 km one strike in Rotterdam raised alerts for
   Rotterdam, Antwerp *and* the Strait of Dover. Ports and clusters use 100 km;
   chokepoints 200 km, because attacks on shipping are placed at the nearest
   coastal city (Aden is ~180 km from Bab el-Mandeb).
+- **Each story counts for one port and one chokepoint at most — the nearest
+  in reach** (`placesCounting()`). Tighter radii were not enough: Rotterdam
+  and Antwerp are 77 km apart and Shanghai and Ningbo 80, so their 100 km
+  circles overlap, and the first real run showed Rotterdam and Antwerp
+  surging together. A port and the chokepoint it sits on may both count
+  (Singapore and its strait are 12 km apart) — that overlap is geography.
 
 Every threshold lives in `REPORTING_RULES` in `types.ts`, and the page prints
 them from there. Change one and the published method follows.
@@ -915,8 +930,40 @@ request and 0.1 s, eleven-second answers cost 21.5 s, success is unchanged.
 
 **The open question was whether GDELT's API would serve Vercel at all**, and
 two refusals from shared cloud IPs answered it well enough: the adapter now
-reads the raw fifteen-minute files instead (see "What's changing"). The same
-workflow verifies the new adapter and FRED; add their results here.
+reads the raw fifteen-minute files instead (see "What's changing").
+
+Third run, 23 September 2026 — the raw-file adapter and FRED, first contact:
+
+| Feed | Result |
+|---|---|
+| GDELT raw event files | **Parsed.** 12/12 recent and 28/28 baseline files; 84,669 reports, 22,414 conflict-type; 12 hotspots, 10 countries above normal; 3 min old. **The whole read, all nine feeds, took 1.4 s** — against 78 s for the API it replaced |
+| FRED | **Parsed.** All five series; Brent, WTI and Henry Hub latest 15 Sept, diesel 21 Sept, dollar 18 Sept. `asOf` 18 Sept = 5 days, **Delayed**. The three EIA series all ending on the same day, eight days back, is consistent with EIA publishing daily spot prices in weekly batches — so the 8-day stale window sits right at the edge, and each series prints its own date on the page for exactly this reason |
+| USGS, GDACS, NHC, EONET, Open-Meteo | **Parsed** again, all Live |
+| AISStream, Finnhub | Not run — no keys in the repository's secrets |
+
+What that run showed, and what changed because of it:
+
+- **The top hotspots were small places with near-zero normals** — Gosport
+  182.5×, Burnham (Somerset) 100×, "Cape Cod, Florida" 81.5× (GDELT's geocoder;
+  Cape Cod is in Massachusetts). Dividing by the floor made those multiples
+  look measured, which is what `floored` now fixes. Whether they were real
+  stories or single syndicated items the log could not say, which is what
+  `minEvents` guards and why `live:check` now prints each top hotspot's
+  events, measured normal and publishers.
+- **Dover, Rotterdam and Antwerp were all "surging" at once**, for two
+  different reasons. Rotterdam and Antwerp: overlapping circles — every
+  story placed in Rotterdam is 72 km from the Antwerp node and counted for
+  both. Fixed by nearest-only counting, above. Dover: Gosport is 186 km from
+  the Dover Strait node, inside the 200 km chokepoint radius, so a story
+  cluster on the south coast of England raised the strait. That one is the
+  rule working as published, and the page states the radius — but read the
+  next runs for it. If chokepoints keep inheriting unrelated coastal towns,
+  narrow the chokepoint radius rather than adding exceptions.
+- **Speed is not the constraint any more.** `live:check` runs outside Next,
+  so it has no fetch cache at all: 40 files downloaded, unzipped and parsed
+  from cold in 1.4 s. A cold production regeneration is therefore far inside
+  the 30-second budget, and after the first one the cache cuts it to one or
+  two downloads.
 
 To verify AIS the same way, add a repository secret named `AISSTREAM_API_KEY`;
 the workflow passes it through, and the script prints only whether it is set.

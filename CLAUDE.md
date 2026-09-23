@@ -778,8 +778,13 @@ published on `/monitor` and at `/about#live`:
   or a geocoding error (Winn Parish, Louisiana, sourced to
   winnipegfreepress.com). Only cities above a *measured* normal are
   hotspots, and only they can raise a flag. Tracked places still flag on a
-  floored normal: their radius is chosen, and a port that is never in the
-  news suddenly being in it is the case the board exists for.
+  floored normal — their radius is chosen, and a port that is never in the
+  news suddenly being in it is the case the board exists for — **but only as
+  a watch, never an alert.** "Surging" claims a trend and there is no
+  measured normal to have one against; the fourth run had the Dover Strait
+  at 90 against 0, all of it one chain-syndicated story placed in Folkestone.
+  Alerts are what the app will notify on (§14.2), so this is the line that
+  keeps a reprinted local story from waking anyone.
 
 Every threshold lives in `REPORTING_RULES` in `types.ts`, and the page prints
 them from there. Change one and the published method follows.
@@ -983,6 +988,15 @@ What that run showed, and what changed because of it:
   reached Gosport (186 km) and, far worse, London (126 km) — the next run
   had Dover at 815 reports against a normal of 181. Fixed by the Dover
   Strait's own 65 km radius, above.
+- **With those rules, the fourth run read sensibly.** Measured hotspots:
+  Pituffik (Greenland), Kigali, Ciudad Juárez, a Sydney suburb and
+  Brussels, each above a normal it actually has. The chain-syndicated
+  items (Gosport, Folkestone, "Cape Cod, Florida") sat in the no-baseline
+  list, where they belong. The one place that still moved was the Dover
+  Strait, from that Folkestone story, which is why a place with no measured
+  normal now tops out at a watch. Three runs is not a calibration: read
+  `live:check` again after a week in production before touching a
+  threshold.
 - **Speed is not the constraint any more.** `live:check` runs outside Next,
   so it has no fetch cache at all: 40 files downloaded, unzipped and parsed
   from cold in 1.4 s. A cold production regeneration is therefore far inside

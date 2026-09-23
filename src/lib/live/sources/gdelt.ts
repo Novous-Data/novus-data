@@ -403,8 +403,14 @@ function domainOf(url: string): string {
   }
 }
 
-function levelFor(reports: number, events: number, ratio: number): ReportingLevel {
+function levelFor(reports: number, events: number, ratio: number, floored: boolean): ReportingLevel {
   if (reports < REPORTING_RULES.placeMinReports || events < REPORTING_RULES.minEvents) return 'normal';
+  // "Surging" is a claim about a trend, and with no measurable normal there
+  // is no trend to claim. In the fourth real run the Strait of Dover read
+  // 90 reports against a normal of 0 — all of it one story syndicated across
+  // a newspaper chain and placed in Folkestone. Such a place is still worth
+  // a look, so it is elevated (a watch), never surging (an alert).
+  if (floored) return ratio >= REPORTING_RULES.elevatedRatio ? 'elevated' : 'normal';
   if (ratio >= REPORTING_RULES.surgingRatio) return 'surging';
   if (ratio >= REPORTING_RULES.elevatedRatio) return 'elevated';
   return 'normal';
@@ -517,7 +523,15 @@ export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
     const reports = R.places[node.id] ?? 0;
     const events = R.placeEvents[node.id] ?? 0;
     const { expected, floored, ratio } = compare(reports, B.places[node.id] ?? 0);
-    return { nodeId: node.id, reports, events, expected, ratio, floored, level: levelFor(reports, events, ratio) };
+    return {
+      nodeId: node.id,
+      reports,
+      events,
+      expected,
+      ratio,
+      floored,
+      level: levelFor(reports, events, ratio, floored),
+    };
   });
 
   const notes = [

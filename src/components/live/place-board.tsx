@@ -1,8 +1,9 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { StatusBadge } from '@/components/status-badge';
+import { TextLink } from '@/components/text-link';
 import type { DisruptionStatus } from '@/lib/disruptions/types';
+import { FLAG_THRESHOLDS } from '@/lib/live/derive';
 import { formatRatioOf } from '@/lib/live/display';
 import { ALL_NODES, nodeById, reportingRadiusKm } from '@/lib/live/nodes';
 import { REPORTING_LEVEL_LABELS, REPORTING_RULES, type PlaceSummary, type TradeNodeKind } from '@/lib/live/types';
@@ -39,10 +40,8 @@ export function PlaceBoard({
   places: PlaceSummary[];
   register: Record<string, PlaceRegisterEntry[]>;
 }) {
-  const ordered = places
-    .map((place, index) => ({ place, index }))
-    .sort((a, b) => b.place.flags - a.place.flags || a.index - b.index)
-    .map(({ place }) => place);
+  // Array sort is stable, so places with equal flag counts keep their fixed order.
+  const ordered = [...places].sort((a, b) => b.flags - a.flags);
 
   return (
     <ul className="border-b border-hairline">
@@ -96,7 +95,7 @@ export function PlaceBoard({
             <Cell label={node.kind === 'port' ? 'Wind' : node.kind === 'chokepoint' ? 'Ships' : 'Register'}>
               {node.kind === 'port' ? (
                 place.wind ? (
-                  <span className={place.wind.beaufort >= 7 ? 'font-semibold text-fg' : 'text-muted'}>
+                  <span className={place.wind.beaufort >= FLAG_THRESHOLDS.nearGaleBeaufort ? 'font-semibold text-fg' : 'text-muted'}>
                     Beaufort <span data-numeric>{place.wind.beaufort}</span>, {place.wind.label.toLowerCase()}
                   </span>
                 ) : (
@@ -117,12 +116,7 @@ export function PlaceBoard({
                   {entries.map((entry) => (
                     <span key={entry.id} className="flex flex-wrap items-center gap-x-2">
                       <StatusBadge status={entry.status} />
-                      <Link
-                        href={`/disruptions/${entry.id}`}
-                        className="text-link underline decoration-[color-mix(in_srgb,var(--accent-text)_45%,transparent)] underline-offset-[0.2em]"
-                      >
-                        {entry.title}
-                      </Link>
+                      <TextLink href={`/disruptions/${entry.id}`}>{entry.title}</TextLink>
                     </span>
                   ))}
                 </span>

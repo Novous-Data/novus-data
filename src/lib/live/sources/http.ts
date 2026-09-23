@@ -24,15 +24,7 @@ import type { LiveSourceId } from '../types';
  * reader sees is a sentence this layer wrote.
  */
 export class LiveSourceError extends Error {
-  constructor(
-    public readonly publicReason: string,
-    /**
-     * Set when the upstream answered 429. A caller making several requests to
-     * one host uses it to stop early: once a server is being refused, every
-     * further request in the same cycle is refused too, and only costs time.
-     */
-    public readonly rateLimited = false,
-  ) {
+  constructor(public readonly publicReason: string) {
     super(publicReason);
     this.name = 'LiveSourceError';
   }
@@ -52,75 +44,33 @@ export interface FetchedJson {
   served: string | null;
 }
 
-export async function fetchJson(
-  url: string,
-  source: LiveSourceId,
-  options: {
-    timeoutMs?: number;
-    label?: string;
-    /**
-     * Extra request headers — used to carry an API key in a header rather
-     * than in the URL, so the key never appears in anything that logs URLs.
-     */
-    headers?: Record<string, string>;
-  } = {},
-): Promise<FetchedJson> {
-  const label = options.label ?? source;
-  let response: Response;
-
-  try {
-    response = await fetch(url, {
-      headers: { accept: 'application/json', 'user-agent': USER_AGENT, ...options.headers },
-      signal: AbortSignal.timeout(options.timeoutMs ?? 12_000),
-      next: { revalidate: LIVE_REVALIDATE_SECONDS, tags: ['live', `live:${source}`] },
-    });
-  } catch (error) {
-    const timedOut = error instanceof Error && error.name === 'TimeoutError';
-    throw new LiveSourceError(
-      timedOut ? `${label} did not answer in time.` : `${label} could not be reached.`,
-    );
-  }
-
-  if (response.status === 429) {
-    throw new LiveSourceError(`${label} is rate-limiting requests; it will be retried next cycle.`, true);
-  }
-  if (!response.ok) {
-    throw new LiveSourceError(`${label} answered with HTTP ${response.status}.`);
-  }
-
-  const served = isoFrom(response.headers.get('date'));
-  const text = await response.text();
-  if (text.trim() === '') return { body: {}, served };
-
-  try {
-    return { body: JSON.parse(text) as unknown, served };
-  } catch {
-    // GDELT in particular answers some malformed queries with 200 and a line
-    // of plain text. Treat it as a failure, and do not echo it.
-    throw new LiveSourceError(`${label} returned something other than JSON.`);
-  }
+interface RequestOptions {
+  timeoutMs?: number;
+  label?: string;
+  /**
+   * Seconds the data cache keeps a 200. Defaults to the page's fifteen-minute
+   * cycle. A file that never changes once published (a GDELT export is named
+   * for its fifteen-minute slot and never rewritten) can be cached far longer,
+   * which is what keeps a seven-day baseline cheap: each file is downloaded
+   * once, then read from the cache on every later regeneration. Only 200s are
+   * stored, so a file that 404s is asked for again next time rather than
+   * remembered as missing.
+   */
+  revalidateSeconds?: number;
+  /**
+   * Extra request headers — used to carry an API key in a header rather than
+   * in the URL, so the key never appears in anything that logs URLs.
+   */
+  headers?: Record<string, string>;
 }
 
-/**
- * A raw GET for bodies that are not JSON — a text index, a zip archive.
- *
- * `revalidateSeconds` defaults to the page's fifteen-minute cycle. A file that
- * never changes once published (a GDELT export is named for its fifteen-minute
- * slot and never rewritten) can be cached far longer, which is what keeps a
- * seven-day baseline cheap: each file is downloaded once, then read from the
- * cache on every later regeneration. Only 200s are stored, so a file that
- * 404s is asked for again next time rather than remembered as missing.
- */
-async function fetchRaw(
-  url: string,
-  source: LiveSourceId,
-  options: { timeoutMs?: number; label?: string; revalidateSeconds?: number },
-): Promise<Response> {
+/** The one GET every adapter goes through: cached, tagged, timed out, and failing in words this layer wrote. */
+async function fetchRaw(url: string, source: LiveSourceId, options: RequestOptions): Promise<Response> {
   const label = options.label ?? source;
   let response: Response;
   try {
     response = await fetch(url, {
-      headers: { 'user-agent': USER_AGENT },
+      headers: { 'user-agent': USER_AGENT, ...options.headers },
       signal: AbortSignal.timeout(options.timeoutMs ?? 12_000),
       next: {
         revalidate: options.revalidateSeconds ?? LIVE_REVALIDATE_SECONDS,
@@ -134,26 +84,42 @@ async function fetchRaw(
     );
   }
   if (response.status === 429) {
-    throw new LiveSourceError(`${label} is rate-limiting requests; it will be retried next cycle.`, true);
+    throw new LiveSourceError(`${label} is rate-limiting requests; it will be retried next cycle.`);
   }
   if (!response.ok) throw new LiveSourceError(`${label} answered with HTTP ${response.status}.`);
   return response;
 }
 
-export async function fetchText(
+export async function fetchJson(
   url: string,
   source: LiveSourceId,
-  options: { timeoutMs?: number; label?: string; revalidateSeconds?: number } = {},
-): Promise<{ text: string; served: string | null }> {
-  const response = await fetchRaw(url, source, options);
-  return { text: await response.text(), served: isoFrom(response.headers.get('date')) };
+  options: Omit<RequestOptions, 'revalidateSeconds'> = {},
+): Promise<FetchedJson> {
+  const response = await fetchRaw(url, source, {
+    ...options,
+    headers: { accept: 'application/json', ...options.headers },
+  });
+  const served = isoFrom(response.headers.get('date'));
+  const text = await response.text();
+  if (text.trim() === '') return { body: {}, served };
+
+  try {
+    return { body: JSON.parse(text) as unknown, served };
+  } catch {
+    // A 200 with a body that is not JSON — an HTML error page, a line of
+    // plain text. Treat it as a failure, and do not echo it.
+    throw new LiveSourceError(`${options.label ?? source} returned something other than JSON.`);
+  }
 }
 
-export async function fetchBytes(
-  url: string,
-  source: LiveSourceId,
-  options: { timeoutMs?: number; label?: string; revalidateSeconds?: number } = {},
-): Promise<Buffer> {
+/** A raw GET for bodies that are not JSON: a text index, a CSV. */
+export async function fetchText(url: string, source: LiveSourceId, options: RequestOptions = {}): Promise<string> {
+  const response = await fetchRaw(url, source, options);
+  return response.text();
+}
+
+/** A raw GET for binary bodies — a zip archive. */
+export async function fetchBytes(url: string, source: LiveSourceId, options: RequestOptions = {}): Promise<Buffer> {
   const response = await fetchRaw(url, source, options);
   return Buffer.from(await response.arrayBuffer());
 }
@@ -200,15 +166,6 @@ export function isoFrom(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-/** GDELT writes timestamps as `20260922T151500Z`. */
-export function isoFromGdelt(value: unknown): string | null {
-  const text = str(value);
-  const match = text?.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
-  if (!match) return null;
-  const [, y, mo, d, h, mi, s] = match;
-  return isoFrom(`${y}-${mo}-${d}T${h}:${mi}:${s}Z`);
-}
-
 /** The latest of a set of ISO strings, or null. */
 export function latestIso(values: Array<string | null>): string | null {
   let best: string | null = null;
@@ -222,10 +179,6 @@ export function latestIso(values: Array<string | null>): string | null {
     }
   }
   return best;
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

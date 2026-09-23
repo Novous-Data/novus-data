@@ -1,16 +1,7 @@
 import { publication } from '@/config/publication';
 import { absoluteUrl } from '@/lib/env';
-import { listDisruptions } from '@/lib/disruptions';
-import {
-  FLAG_RULES,
-  LIVE_REVALIDATE_SECONDS,
-  LIVE_SOURCE_IDS,
-  PROXIMITY_KM,
-  SOURCE_META,
-  deriveFlags,
-  derivePlaces,
-  getLiveSnapshot,
-} from '@/lib/live';
+import { FLAG_RULES, LIVE_REVALIDATE_SECONDS, LIVE_SOURCE_IDS, PROXIMITY_KM, SOURCE_META } from '@/lib/live';
+import { readMonitor } from '@/lib/monitor';
 
 /**
  * The live snapshot, machine-readable — the same data /monitor renders.
@@ -56,24 +47,14 @@ export const revalidate = 900;
 export const maxDuration = 60;
 
 export async function GET() {
-  const disruptions = await listDisruptions();
-  const open = disruptions.filter((d) => d.status !== 'resolved');
-  const tickers = new Map<string, string>();
-  for (const d of open) {
-    for (const e of d.exposures) if (e.entity.ticker) tickers.set(e.entity.ticker, e.entity.name);
-  }
-
-  const snapshot = await getLiveSnapshot({
-    extraSymbols: [...tickers].map(([symbol, label]) => ({ symbol, label })),
-  });
-  // Derived exactly as /monitor derives them, from the same snapshot, so the
-  // app and the page can never disagree about what is flagged.
-  const flags = deriveFlags(snapshot);
-  const places = derivePlaces(snapshot, flags).map((place) => ({
+  // Read exactly as /monitor reads it, so the app and the page can never
+  // disagree about what is flagged.
+  const { snapshot, flags, places: board, registerByPlace } = await readMonitor();
+  const places = board.map((place) => ({
     ...place,
     // Register entries naming this place, so a client can link a flag
     // straight to the assessment — or see that there is none yet.
-    register: open.filter((d) => d.places.includes(place.nodeId)).map((d) => ({
+    register: (registerByPlace[place.nodeId] ?? []).map((d) => ({
       id: d.id,
       title: d.title,
       status: d.status,

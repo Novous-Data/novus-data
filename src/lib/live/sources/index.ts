@@ -53,15 +53,15 @@ async function settle<T>(source: LiveSourceId, run: () => Promise<Reading<T>>): 
   }
 }
 
-/** Server-only secrets. Read here, passed to the adapter, never stored in a Reading. */
-function aisKey(): string | null {
-  const key = process.env.AISSTREAM_API_KEY?.trim();
-  return key ? key : null;
-}
-
-function quoteKey(): string | null {
-  const key = process.env.FINNHUB_API_KEY?.trim();
-  return key ? key : null;
+/**
+ * Runs a keyed source with the secret from the variable its SOURCE_META entry
+ * names, or reports it not configured. Server-only: the key is read here,
+ * passed to the adapter, and never stored in a Reading.
+ */
+async function withKey<T>(source: 'ais' | 'quotes', run: (key: string) => Promise<Reading<T>>): Promise<Reading<T>> {
+  const envVar = SOURCE_META[source].requiresEnv!;
+  const key = process.env[envVar]?.trim();
+  return key ? run(key) : { status: 'not-configured', source, envVar };
 }
 
 /** The configured funds, then any extra symbols the caller passes, without duplicates. */
@@ -88,12 +88,9 @@ export async function readLiveSnapshot(options: SnapshotOptions = {}): Promise<L
   const symbols = symbolsFor(options.extraSymbols ?? []);
 
   const [ais, gdelt, usgs, gdacs, nhc, eonet, weather, fred, quotes] = await Promise.all([
-    settle('ais', async () => {
-      if (demo) return parseAis(fixtures.fixtureAis());
-      const key = aisKey();
-      if (!key) return { status: 'not-configured' as const, source: 'ais' as const, envVar: 'AISSTREAM_API_KEY' };
-      return parseAis(await fetchAis(key));
-    }),
+    settle('ais', async () =>
+      demo ? parseAis(fixtures.fixtureAis()) : withKey('ais', async (key) => parseAis(await fetchAis(key))),
+    ),
     settle('gdelt', async () => parseGdelt(demo ? fixtures.fixtureGdelt() : await fetchGdelt())),
     settle('usgs', async () => parseUsgs(demo ? fixtures.fixtureUsgs() : await fetchUsgs())),
     settle('gdacs', async () => parseGdacs(demo ? fixtures.fixtureGdacs() : await fetchGdacs())),
@@ -101,12 +98,11 @@ export async function readLiveSnapshot(options: SnapshotOptions = {}): Promise<L
     settle('eonet', async () => parseEonet(demo ? fixtures.fixtureEonet() : await fetchEonet())),
     settle('weather', async () => parseWeather(demo ? fixtures.fixtureWeather() : await fetchWeather())),
     settle('fred', async () => parseFred(demo ? fixtures.fixtureFred() : await fetchFred())),
-    settle('quotes', async () => {
-      if (demo) return parseQuotes(fixtures.fixtureQuotes(symbols));
-      const key = quoteKey();
-      if (!key) return { status: 'not-configured' as const, source: 'quotes' as const, envVar: 'FINNHUB_API_KEY' };
-      return parseQuotes(await fetchQuotes(key, symbols));
-    }),
+    settle('quotes', async () =>
+      demo
+        ? parseQuotes(fixtures.fixtureQuotes(symbols))
+        : withKey('quotes', async (key) => parseQuotes(await fetchQuotes(key, symbols))),
+    ),
   ]);
 
   return {

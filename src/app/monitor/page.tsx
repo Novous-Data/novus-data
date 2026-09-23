@@ -7,11 +7,10 @@ import { ChangingPanel } from '@/components/live/changing-panel';
 import { FlagList } from '@/components/live/flag-list';
 import { LiveAge } from '@/components/live/live-age';
 import { EnergyPanel, QuotesTable } from '@/components/live/markets-panel';
-import { PlaceBoard, ReportingRadii, type PlaceRegisterEntry } from '@/components/live/place-board';
+import { PlaceBoard, ReportingRadii } from '@/components/live/place-board';
 import { ReadingBlock } from '@/components/live/reading-block';
 import { PageHeader } from '@/components/page-header';
 import { ExternalLink, TextLink } from '@/components/text-link';
-import { listDisruptions } from '@/lib/disruptions';
 import { absoluteUrl } from '@/lib/env';
 import {
   CHOKEPOINTS,
@@ -21,9 +20,6 @@ import {
   PORTS,
   PROXIMITY_KM,
   SOURCE_META,
-  deriveFlags,
-  derivePlaces,
-  getLiveSnapshot,
   getLiveSourceName,
   nodeById,
   type AisData,
@@ -37,6 +33,7 @@ import {
   type WeatherData,
 } from '@/lib/live';
 import { formatCount, formatUtc, formatUtcDate, formatUtcShort } from '@/lib/live/display';
+import { readMonitor } from '@/lib/monitor';
 
 /**
  * /monitor — the live page.
@@ -85,29 +82,10 @@ const SECTION_FOR: Record<keyof Omit<LiveSnapshot, 'generatedAt'>, string> = {
 };
 
 export default async function MonitorPage() {
-  // The register supplies two things the live layer deliberately does not
-  // read for itself: which entries name which places, and the tickers of
-  // companies already on the exposure chart (see config/markets.ts for why
-  // only those companies are ever quoted).
-  const disruptions = await listDisruptions();
-  const open = disruptions.filter((d) => d.status !== 'resolved');
-  const tickers = new Map<string, string>();
-  for (const d of open) {
-    for (const exposure of d.exposures) {
-      if (exposure.entity.ticker) tickers.set(exposure.entity.ticker, exposure.entity.name);
-    }
-  }
-  const register: Record<string, PlaceRegisterEntry[]> = {};
-  for (const d of open) {
-    for (const place of d.places) (register[place] ??= []).push({ id: d.id, title: d.title, status: d.status });
-  }
-
-  const snapshot = await getLiveSnapshot({
-    extraSymbols: [...tickers].map(([symbol, label]) => ({ symbol, label })),
-  });
+  // The register supplies which entries name which places, and the tickers
+  // of companies already on the exposure chart — see lib/monitor.ts.
+  const { snapshot, flags, places, registerByPlace } = await readMonitor();
   const demo = getLiveSourceName() === 'fixtures';
-  const flags = deriveFlags(snapshot);
-  const places = derivePlaces(snapshot, flags);
   const everyFeedAnswered = LIVE_SOURCE_IDS.every((id) => snapshot[id].status !== 'unavailable');
 
   return (
@@ -165,7 +143,7 @@ export default async function MonitorPage() {
             page say about it and any register entry that names it. Places with flags come first.
             Hazards count within {PROXIMITY_KM} km — a distance, not an assessment of impact.
           </Intro>
-          <PlaceBoard places={places} register={register} />
+          <PlaceBoard places={places} register={registerByPlace} />
           <ReportingRadii />
         </Section>
 
@@ -296,7 +274,7 @@ function FeedStatus({ snapshot }: { snapshot: LiveSnapshot }) {
               </span>
               <span className="text-muted">
                 {reading.status === 'ok' ? (
-                  <LiveAge at={reading.asOf} source={id} precision={id === 'fred' ? 'day' : 'minute'} />
+                  <LiveAge at={reading.asOf} source={id} precision={SOURCE_META[id].asOfPrecision} />
                 ) : reading.status === 'unavailable' ? (
                   <>
                     <span className="font-semibold text-fg">Unavailable</span> — {reading.reason}
@@ -438,9 +416,7 @@ function QuakeList({ data }: { data: UsgsData }) {
               </>
             }
           >
-            <ExternalLink href={quake.url} className="text-[0.9375rem]">
-              {quake.place}
-            </ExternalLink>
+            <RowTitle href={quake.url}>{quake.place}</RowTitle>
             <span className="block text-meta text-muted">
               <time dateTime={quake.at}>{formatUtc(quake.at)}</time>
               {quake.depthKm !== null ? (
@@ -472,6 +448,17 @@ function QuakeList({ data }: { data: UsgsData }) {
   );
 }
 
+/** A hazard's name, linked to the publisher's page for it when the feed gave one. */
+function RowTitle({ href, children }: { href: string | null; children: ReactNode }) {
+  return href ? (
+    <ExternalLink href={href} className="text-[0.9375rem]">
+      {children}
+    </ExternalLink>
+  ) : (
+    <span className="text-[0.9375rem] text-fg">{children}</span>
+  );
+}
+
 function AlertList({ data }: { data: GdacsData }) {
   if (data.alerts.length === 0) {
     return (
@@ -484,13 +471,7 @@ function AlertList({ data }: { data: GdacsData }) {
     <ul className="border-b border-hairline">
       {data.alerts.map((alert) => (
         <Row key={alert.id} rail={<>{alert.level}</>}>
-          {alert.url ? (
-            <ExternalLink href={alert.url} className="text-[0.9375rem]">
-              {alert.name}
-            </ExternalLink>
-          ) : (
-            <span className="text-[0.9375rem] text-fg">{alert.name}</span>
-          )}
+          <RowTitle href={alert.url}>{alert.name}</RowTitle>
           <span className="block text-meta text-muted">
             {alert.typeLabel}
             {alert.country ? ` · ${alert.country}` : ''}
@@ -522,13 +503,7 @@ function StormList({ data }: { data: NhcData }) {
     <ul className="border-b border-hairline">
       {data.storms.map((storm) => (
         <Row key={storm.id} rail={<>{storm.classificationLabel}</>}>
-          {storm.advisoryUrl ? (
-            <ExternalLink href={storm.advisoryUrl} className="text-[0.9375rem]">
-              {storm.name}
-            </ExternalLink>
-          ) : (
-            <span className="text-[0.9375rem] text-fg">{storm.name}</span>
-          )}
+          <RowTitle href={storm.advisoryUrl}>{storm.name}</RowTitle>
           <span className="block text-meta text-muted">
             {storm.intensityKt !== null ? (
               <>
@@ -563,13 +538,7 @@ function EventList({ data }: { data: EonetData }) {
         <ul className="border-b border-hairline">
           {data.nearTradeNodes.map((event) => (
             <Row key={event.id} rail={<>{event.category}</>}>
-              {event.url ? (
-                <ExternalLink href={event.url} className="text-[0.9375rem]">
-                  {event.title}
-                </ExternalLink>
-              ) : (
-                <span className="text-[0.9375rem] text-fg">{event.title}</span>
-              )}
+              <RowTitle href={event.url}>{event.title}</RowTitle>
               <span className="block text-meta text-muted">
                 <time dateTime={event.at}>{formatUtcDate(event.at)}</time>
               </span>

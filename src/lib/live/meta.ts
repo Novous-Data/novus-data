@@ -23,12 +23,11 @@
  * rest are marked "not verified" rather than given a plausible-sounding
  * licence. An invented terms line is worse than an honest gap.
  *
- * Freshness windows are per source because cadences differ by orders of
- * magnitude: a vessel count is old after half an hour, a hurricane advisory is
- * issued every three to six hours, and EONET is curated daily.
+ * Freshness windows and date precision are in ./clocks.ts.
  * ---------------------------------------------------------------------------
  */
 
+import { SOURCE_CLOCKS } from './clocks';
 import type { LiveSourceId, SourceMeta } from './types';
 
 export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
@@ -41,8 +40,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     cadence: 'Continuous vessel broadcasts; sampled here for 30 seconds every fifteen minutes',
     terms:
       'Free with a registered API key; must be read from a server, never a browser (AISStream documentation). Full terms not verified in this build — read them before commercial use.',
-    delayedAfterMinutes: 30,
-    staleAfterMinutes: 90,
+    ...SOURCE_CLOCKS.ais,
     requiresEnv: 'AISSTREAM_API_KEY',
   },
   gdelt: {
@@ -54,8 +52,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     cadence: 'A new event file every fifteen minutes',
     terms:
       'Free and open, commercial use permitted, provided every use cites the GDELT Project with a link to gdeltproject.org (GDELT data page).',
-    delayedAfterMinutes: 45,
-    staleAfterMinutes: 180,
+    ...SOURCE_CLOCKS.gdelt,
     requiresEnv: null,
   },
   usgs: {
@@ -66,8 +63,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     homepage: 'https://earthquake.usgs.gov/earthquakes/feed/',
     cadence: 'Feed regenerated every minute',
     terms: 'U.S. federal government data. Terms not re-verified in this build.',
-    delayedAfterMinutes: 30,
-    staleAfterMinutes: 120,
+    ...SOURCE_CLOCKS.usgs,
     requiresEnv: null,
   },
   gdacs: {
@@ -78,8 +74,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     homepage: 'https://www.gdacs.org/',
     cadence: 'Alerts issued and updated as events develop',
     terms: 'Terms not verified in this build — check before republishing.',
-    delayedAfterMinutes: 6 * 60,
-    staleAfterMinutes: 48 * 60,
+    ...SOURCE_CLOCKS.gdacs,
     requiresEnv: null,
   },
   nhc: {
@@ -90,8 +85,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     homepage: 'https://www.nhc.noaa.gov/',
     cadence: 'Advisories every three to six hours per storm (Atlantic and eastern Pacific)',
     terms: 'U.S. federal government data. Terms not re-verified in this build.',
-    delayedAfterMinutes: 7 * 60,
-    staleAfterMinutes: 24 * 60,
+    ...SOURCE_CLOCKS.nhc,
     requiresEnv: null,
   },
   eonet: {
@@ -102,8 +96,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     homepage: 'https://eonet.gsfc.nasa.gov/',
     cadence: 'Curated from upstream sources, typically daily',
     terms: 'U.S. federal government data. Terms not re-verified in this build.',
-    delayedAfterMinutes: 36 * 60,
-    staleAfterMinutes: 7 * 24 * 60,
+    ...SOURCE_CLOCKS.eonet,
     requiresEnv: null,
   },
   weather: {
@@ -115,8 +108,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     cadence: 'Current conditions at fifteen-minute resolution',
     terms:
       'Free API is for NON-COMMERCIAL use only; a site with subscriptions or advertising needs a paid plan (Open-Meteo terms). Data under CC BY 4.0, attribution required.',
-    delayedAfterMinutes: 45,
-    staleAfterMinutes: 180,
+    ...SOURCE_CLOCKS.weather,
     requiresEnv: null,
   },
   fred: {
@@ -128,10 +120,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     cadence: 'Daily settlement values, published about a business day later; diesel weekly',
     terms:
       'The series shown are U.S. government data (EIA, Federal Reserve Board) and in the public domain; FRED asks that it be cited as the source. Stated from the series notes, not re-verified per series in this build.',
-    // A daily series is a business day behind by design, and a weekend adds
-    // two more, so "delayed" starts after four days rather than hours.
-    delayedAfterMinutes: 4 * 24 * 60,
-    staleAfterMinutes: 8 * 24 * 60,
+    ...SOURCE_CLOCKS.fred,
     requiresEnv: null,
   },
   quotes: {
@@ -143,8 +132,7 @@ export const SOURCE_META: Record<LiveSourceId, SourceMeta> = {
     cadence: 'Last trade price; the previous session outside trading hours',
     terms:
       "Finnhub's free plan is for personal, non-commercial use. Showing its prices on a public website is redistribution and needs a paid plan or Finnhub's written permission. Off unless FINNHUB_API_KEY is set.",
-    delayedAfterMinutes: 24 * 60,
-    staleAfterMinutes: 4 * 24 * 60,
+    ...SOURCE_CLOCKS.quotes,
     requiresEnv: 'FINNHUB_API_KEY',
   },
 };

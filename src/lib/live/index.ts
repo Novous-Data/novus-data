@@ -13,10 +13,6 @@
 
 export * from './types';
 export { SOURCE_META } from './meta';
-export { ALL_NODES, CHOKEPOINTS, INDUSTRIAL, PORTS, nodeById } from './nodes';
+export { CHOKEPOINTS, INDUSTRIAL, PORTS, nodeById } from './nodes';
 export { getLiveSourceName, readLiveSnapshot as getLiveSnapshot } from './sources';
-export { PROBLEM_TYPES, RECENT_SLOTS, BASELINE_DAYS } from './sources/gdelt';
-export { AIS_WINDOW_SECONDS } from './sources/ais';
-export { FRED_SERIES } from './sources/fred';
 export { deriveFlags, derivePlaces, FLAG_RULES } from './derive';
-export { countryName } from './countries';

@@ -61,7 +61,6 @@ function parseStorm(raw: unknown): Storm | null {
     pressureMb: num(raw.pressure),
     lat,
     lon,
-    movement: null,
     updated,
     advisoryUrl: advisory,
     nearest: nearestNode(lat, lon),

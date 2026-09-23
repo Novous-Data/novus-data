@@ -13,7 +13,7 @@ import { useEffect } from 'react';
  *
  * Why five minutes when the data moves every fifteen. A regeneration is only
  * started by a request that finds the page stale, and it takes a little while
- * to finish (GDELT has to be paced — see sources/gdelt.ts). Checking on the
+ * to finish (the vessel sample alone is thirty seconds). Checking on the
  * same fifteen-minute cycle can therefore land just before a new version
  * exists and show it a full cycle late. Each check between regenerations is a
  * cache hit that costs next to nothing.
@@ -22,7 +22,9 @@ import { useEffect } from 'react';
  * and focus survive, and nothing flashes. A hidden tab does not poll at all;
  * it refreshes once when the reader comes back, if a check is due.
  */
-export function AutoRefresh({ everyMs = 5 * 60_000 }: { everyMs?: number }) {
+const EVERY_MS = 5 * 60_000;
+
+export function AutoRefresh() {
   const router = useRouter();
 
   useEffect(() => {
@@ -34,10 +36,10 @@ export function AutoRefresh({ everyMs = 5 * 60_000 }: { everyMs?: number }) {
 
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') refresh();
-    }, everyMs);
+    }, EVERY_MS);
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && Date.now() - last >= everyMs) refresh();
+      if (document.visibilityState === 'visible' && Date.now() - last >= EVERY_MS) refresh();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -45,7 +47,7 @@ export function AutoRefresh({ everyMs = 5 * 60_000 }: { everyMs?: number }) {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [router, everyMs]);
+  }, [router]);
 
   return null;
 }

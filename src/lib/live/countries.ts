@@ -188,6 +188,9 @@ export const FIPS_COUNTRY_NAMES: Record<string, string> = {
   ZI: 'Zimbabwe',
 };
 
+/** The country's name, or the code itself when it is not in the table. */
+export function countryName(code: string): string;
+export function countryName(code: string | null): string | null;
 export function countryName(code: string | null): string | null {
   if (!code) return null;
   return FIPS_COUNTRY_NAMES[code] ?? code;

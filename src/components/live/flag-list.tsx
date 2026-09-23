@@ -1,5 +1,5 @@
 import { LiveAge } from '@/components/live/live-age';
-import { ExternalLink } from '@/components/text-link';
+import { ExternalLink, TextLink } from '@/components/text-link';
 import { SOURCE_META } from '@/lib/live/meta';
 import { nodeById } from '@/lib/live/nodes';
 import { FLAG_LEVEL_LABELS, type LiveFlag } from '@/lib/live/types';
@@ -49,12 +49,12 @@ export function FlagList({
                 <span className="mt-0.5 block text-[0.9375rem] text-muted">{flag.detail}</span>
                 <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-meta text-muted">
                   <span>
-                    {SOURCE_META[flag.source].name}, <LiveAge at={flag.at} precision={flag.source === 'fred' ? 'day' : 'minute'} />
+                    {SOURCE_META[flag.source].name}, <LiveAge at={flag.at} precision={SOURCE_META[flag.source].asOfPrecision} />
                   </span>
                   {flag.placeId ? (
-                    <a href={`#place-${flag.placeId}`} className="text-link underline decoration-[color-mix(in_srgb,var(--accent-text)_45%,transparent)] underline-offset-[0.2em] hover:decoration-[var(--accent-text)]">
+                    <TextLink href={`#place-${flag.placeId}`}>
                       {nodeById(flag.placeId)?.name ?? flag.placeId} on the place board
-                    </a>
+                    </TextLink>
                   ) : null}
                   {flag.href ? <ExternalLink href={flag.href}>Source</ExternalLink> : null}
                 </span>

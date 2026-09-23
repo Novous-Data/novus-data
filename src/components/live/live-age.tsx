@@ -5,8 +5,8 @@ import { useSyncExternalStore } from 'react';
 import { formatAge, formatUtc, formatUtcDate } from '@/lib/live/display';
 // Pure modules only. The layer index reaches the network adapters, and a
 // client component that imported it would drag them into the browser bundle.
-import { SOURCE_META } from '@/lib/live/meta';
-import { FRESHNESS_LABELS, freshnessFor, type LiveSourceId } from '@/lib/live/types';
+import { SOURCE_CLOCKS } from '@/lib/live/clocks';
+import { FRESHNESS_LABELS, freshnessFor, type LiveSourceId, type SourceClock } from '@/lib/live/types';
 
 /**
  * A reading's time, and — once the page is in the reader's browser — its age.
@@ -68,18 +68,13 @@ const SKEW_TOLERANCE_MINUTES = 5;
 export function LiveAge({
   at,
   source,
-  className,
   precision = 'minute',
 }: {
   at: string;
   /** When given, the source's own freshness windows decide Live / Delayed / Stale. */
   source?: LiveSourceId;
-  className?: string;
-  /**
-   * 'day' for a value that is dated, not timed — a daily settlement price.
-   * Printing "00:00 UTC" beside it would claim a precision nobody published.
-   */
-  precision?: 'minute' | 'day';
+  /** The source's `asOfPrecision` (see ../../lib/live/clocks.ts). */
+  precision?: SourceClock['asOfPrecision'];
 }) {
   const now = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const then = Date.parse(at);
@@ -90,10 +85,10 @@ export function LiveAge({
     age = minutes < -SKEW_TOLERANCE_MINUTES ? null : Math.max(0, minutes);
   }
 
-  const freshness = age !== null && source ? freshnessFor(age, SOURCE_META[source]) : null;
+  const freshness = age !== null && source ? freshnessFor(age, SOURCE_CLOCKS[source]) : null;
 
   return (
-    <span className={className}>
+    <span>
       <time dateTime={at}>{precision === 'day' ? formatUtcDate(at) : formatUtc(at)}</time>
       {age !== null && precision === 'minute' ? (
         <>

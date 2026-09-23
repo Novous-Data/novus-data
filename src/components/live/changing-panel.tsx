@@ -1,4 +1,4 @@
-import { ExternalLink } from '@/components/text-link';
+import { ExternalLink, TextLink } from '@/components/text-link';
 import { formatCount, formatRatio, formatRatioOf, formatUtc } from '@/lib/live/display';
 import type { GdeltData, Hotspot } from '@/lib/live/types';
 import { PROXIMITY_KM, REPORTING_RULES } from '@/lib/live/types';
@@ -202,12 +202,7 @@ function HotspotRow({ spot }: { spot: Hotspot }) {
               {' · '}
               <span data-numeric>{formatCount(spot.nearest.km)}</span> km from{' '}
               {spot.nearest.km <= PROXIMITY_KM ? (
-                <a
-                  href={`#place-${spot.nearest.nodeId}`}
-                  className="text-link underline decoration-[color-mix(in_srgb,var(--accent-text)_45%,transparent)] underline-offset-[0.2em]"
-                >
-                  {spot.nearest.nodeName}
-                </a>
+                <TextLink href={`#place-${spot.nearest.nodeId}`}>{spot.nearest.nodeName}</TextLink>
               ) : (
                 <>the nearest tracked place, {spot.nearest.nodeName}</>
               )}

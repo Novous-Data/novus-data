@@ -57,7 +57,7 @@ export async function fetchFred(): Promise<FredRaw> {
   const series = await Promise.all(
     FRED_SERIES.map(async (spec) => {
       try {
-        const { text } = await fetchText(`${CSV_URL}?id=${spec.id}&cosd=${start}`, 'fred', {
+        const text = await fetchText(`${CSV_URL}?id=${spec.id}&cosd=${start}`, 'fred', {
           label: 'FRED',
           timeoutMs: 10_000,
         });

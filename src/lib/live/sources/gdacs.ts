@@ -16,7 +16,7 @@
  */
 
 import { nearestNode } from '../nodes';
-import type { GdacsData, HazardAlert, Reading } from '../types';
+import type { GdacsData, GdacsLevel, HazardAlert, Reading } from '../types';
 import {
   LiveSourceError,
   asArray,
@@ -30,7 +30,7 @@ import {
   type FetchedJson,
 } from './http';
 
-const LEVELS = ['Orange', 'Red'];
+const LEVELS: readonly GdacsLevel[] = ['Orange', 'Red'];
 const LOOKBACK_DAYS = 14;
 
 const TYPE_LABELS: Record<string, string> = {
@@ -72,8 +72,8 @@ function parseAlert(feature: unknown): HazardAlert | null {
   if (!type || !eventId || !level) return null;
 
   // Normalise capitalisation; drop anything below the levels asked for.
-  const normalisedLevel = level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
-  if (!LEVELS.includes(normalisedLevel)) return null;
+  const normalisedLevel = LEVELS.find((known) => known.toLowerCase() === level.toLowerCase());
+  if (!normalisedLevel) return null;
 
   const coordinates = asArray(isRecord(feature.geometry) ? feature.geometry.coordinates : null);
   const lon = num(coordinates[0]);

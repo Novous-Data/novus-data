@@ -63,8 +63,25 @@ export const LIVE_SOURCE_IDS: LiveSourceId[] = [
   'quotes',
 ];
 
+/**
+ * How a source's readings age. Kept apart from the rest of `SourceMeta` so the
+ * one client component that needs it (live-age) ships these few numbers
+ * rather than every source's names and terms text.
+ */
+export interface SourceClock {
+  /** Minutes after `asOf` at which a reading is shown as delayed, then stale. */
+  delayedAfterMinutes: number;
+  staleAfterMinutes: number;
+  /**
+   * 'day' for a source whose values are dated, not timed — a daily settlement
+   * price. Printing "00:00 UTC" beside one would claim a precision nobody
+   * published.
+   */
+  asOfPrecision: 'minute' | 'day';
+}
+
 /** What is known about a source before any data is fetched. */
-export interface SourceMeta {
+export interface SourceMeta extends SourceClock {
   id: LiveSourceId;
   /** The product name, as the publisher uses it. */
   name: string;
@@ -81,9 +98,6 @@ export interface SourceMeta {
    * matter, and an invented licence line is worse than an honest "check".
    */
   terms: string;
-  /** Minutes after `asOf` at which a reading is shown as delayed, then stale. */
-  delayedAfterMinutes: number;
-  staleAfterMinutes: number;
   /** Server-side environment variable required, or null for keyless sources. */
   requiresEnv: string | null;
 }
@@ -348,12 +362,15 @@ export interface UsgsData {
   quakes: Quake[];
 }
 
+/** The GDACS alert levels read. Green is excluded — see sources/gdacs.ts. */
+export type GdacsLevel = 'Orange' | 'Red';
+
 export interface HazardAlert {
   id: string;
   type: string;
   typeLabel: string;
   name: string;
-  level: string;
+  level: GdacsLevel;
   country: string | null;
   from: string | null;
   to: string | null;
@@ -365,7 +382,7 @@ export interface HazardAlert {
 }
 
 export interface GdacsData {
-  levels: string[];
+  levels: readonly GdacsLevel[];
   alerts: HazardAlert[];
 }
 
@@ -378,7 +395,6 @@ export interface Storm {
   pressureMb: number | null;
   lat: number;
   lon: number;
-  movement: string | null;
   updated: string;
   advisoryUrl: string | null;
   nearest: NearestNode | null;
@@ -524,7 +540,7 @@ export interface PlaceSummary {
   nodeId: string;
   reporting: PlaceReporting | null;
   quakes: { count: number; maxMagnitude: number | null };
-  alerts: { count: number; worst: string | null };
+  alerts: { count: number; worst: GdacsLevel | null };
   storms: { count: number; nearestKm: number | null };
   events: number;
   wind: { windMs: number; beaufort: number; label: string } | null;
@@ -547,7 +563,7 @@ export const FRESHNESS_LABELS: Record<Freshness, string> = {
 /** Freshness from an age in minutes. Pure, so the client and a test can agree. */
 export function freshnessFor(
   ageMinutes: number,
-  meta: Pick<SourceMeta, 'delayedAfterMinutes' | 'staleAfterMinutes'>,
+  meta: Pick<SourceClock, 'delayedAfterMinutes' | 'staleAfterMinutes'>,
 ): Freshness {
   if (ageMinutes >= meta.staleAfterMinutes) return 'stale';
   if (ageMinutes >= meta.delayedAfterMinutes) return 'delayed';

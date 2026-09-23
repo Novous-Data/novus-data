@@ -36,7 +36,7 @@ import type { AisData, ChokepointSample, Reading } from '../types';
 import { LiveSourceError, isRecord, num, str } from './http';
 
 const STREAM_URL = 'wss://stream.aisstream.io/v0/stream';
-export const AIS_WINDOW_SECONDS = 30;
+const AIS_WINDOW_SECONDS = 30;
 const CONNECT_TIMEOUT_MS = 10_000;
 const UNDERWAY_KNOTS = 1;
 
@@ -46,7 +46,7 @@ export interface AisSummary {
   windowSeconds: number;
   latestMessageAt: string | null;
   totalMessages: number;
-  perNode: Record<string, { mmsi: string[]; underway: string[]; messages: number }>;
+  perNode: Record<string, { vessels: number; underway: number; messages: number }>;
 }
 
 /** AISStream writes `time_utc` in Go's format: "2026-09-22 17:41:03.318353 +0000 UTC". */
@@ -108,7 +108,7 @@ export function createAisAccumulator() {
         perNode: Object.fromEntries(
           [...perNode.entries()].map(([id, bucket]) => [
             id,
-            { mmsi: [...bucket.mmsi], underway: [...bucket.underway], messages: bucket.messages },
+            { vessels: bucket.mmsi.size, underway: bucket.underway.size, messages: bucket.messages },
           ]),
         ),
       };
@@ -208,8 +208,8 @@ export function parseAis(summary: AisSummary): Reading<AisData> {
     const bucket = summary.perNode[node.id];
     return {
       nodeId: node.id,
-      vesselsObserved: bucket?.mmsi.length ?? 0,
-      vesselsUnderway: bucket?.underway.length ?? 0,
+      vesselsObserved: bucket?.vessels ?? 0,
+      vesselsUnderway: bucket?.underway ?? 0,
       messages: bucket?.messages ?? 0,
     };
   });

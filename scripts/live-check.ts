@@ -24,9 +24,11 @@
  * rule as `doctor`: this output is the kind of thing that gets pasted into a
  * chat when asking for help.
  *
- * Takes about 35 seconds: the AIS sample is 30 seconds long, and GDELT has to
- * be paced at one request per five seconds.
+ * Takes about 35 seconds with an AIS key (the vessel sample is 30 seconds
+ * long) and a few seconds without one.
  */
+
+import type { LiveSnapshot, LiveSourceId } from '@/lib/live/types';
 
 import { blank, blocker, colour, detail, heading, info, loadEnvLocal, ok, plural, warn } from './lib/cli';
 
@@ -46,8 +48,10 @@ async function main(): Promise<void> {
     blank();
   }
 
-  info(`AISSTREAM_API_KEY is ${process.env.AISSTREAM_API_KEY?.trim() ? 'set' : 'not set'}.`);
-  info(`FINNHUB_API_KEY is ${process.env.FINNHUB_API_KEY?.trim() ? 'set' : 'not set'}.`);
+  for (const id of LIVE_SOURCE_IDS) {
+    const envVar = SOURCE_META[id].requiresEnv;
+    if (envVar) info(`${envVar} is ${process.env[envVar]?.trim() ? 'set' : 'not set'}.`);
+  }
   info('Reading every feed — about 35 seconds…');
 
   const started = Date.now();
@@ -82,7 +86,8 @@ async function main(): Promise<void> {
     if (freshness === 'live') ok(line);
     else warn(line);
 
-    for (const summary of describe(reading.source, reading.data)) detail(summary);
+    // `id` is a union here, so TypeScript cannot pair each describer with its data.
+    for (const summary of DESCRIBE[id](reading.data as never)) detail(summary);
     for (const note of reading.notes) detail(colour.dim(`note: ${note}`));
   }
 
@@ -111,88 +116,53 @@ async function main(): Promise<void> {
   if (strict && failures > 0) process.exitCode = 1;
 }
 
+type DataOf<K extends LiveSourceId> = Extract<LiveSnapshot[K], { status: 'ok' }>['data'];
+
 /** One or two lines per feed saying what was actually recognised in the response. */
-function describe(source: string, data: unknown): string[] {
-  const d = data as Record<string, unknown>;
-  switch (source) {
-    case 'ais': {
-      const rows = d.chokepoints as Array<{ nodeId: string; vesselsUnderway: number; messages: number }>;
-      const heard = rows.filter((row) => row.messages > 0);
-      const lines = [
-        `${heard.length} of ${rows.length} chokepoint boxes received messages in the ${String(d.windowSeconds)}-second sample.`,
-      ];
-      if (heard.length > 0) {
-        lines.push(heard.map((row) => `${row.nodeId} ${row.vesselsUnderway}`).join(', ') + ' (under way)');
-      }
-      return lines;
+const DESCRIBE: { [K in LiveSourceId]: (data: DataOf<K>) => string[] } = {
+  ais: (d) => {
+    const heard = d.chokepoints.filter((row) => row.messages > 0);
+    const lines = [
+      `${heard.length} of ${d.chokepoints.length} chokepoint boxes received messages in the ${d.windowSeconds}-second sample.`,
+    ];
+    if (heard.length > 0) {
+      lines.push(heard.map((row) => `${row.nodeId} ${row.vesselsUnderway}`).join(', ') + ' (under way)');
     }
-    case 'gdelt': {
-      const g = d as unknown as {
-        recentFiles: number;
-        recentFilesExpected: number;
-        baselineFiles: number;
-        baselineFilesExpected: number;
-        totalReports: number;
-        conflictReports: number;
-        noBaseline: Array<{ name: string; reports: number; events: number; sources: Array<{ domain: string }> }>;
-        hotspots: Array<{
-          name: string;
-          ratio: number;
-          reports: number;
-          events: number;
-          expected: number;
-          floored: boolean;
-          sources: Array<{ domain: string }>;
-        }>;
-        countries: Array<{ name: string; ratio: number }>;
-        places: Array<{ nodeId: string; level: string; ratio: number; reports: number; expected: number }>;
-      };
-      const lines = [
-        `${g.recentFiles}/${g.recentFilesExpected} recent and ${g.baselineFiles}/${g.baselineFilesExpected} baseline event files read; ${g.totalReports} reports, ${g.conflictReports} conflict-type.`,
-        `${g.hotspots.length} hotspots.`,
-        // The top few in full, so a real run shows whether a surge rests on
-        // several events and publishers or on one syndicated story.
-        ...g.hotspots.slice(0, 5).map(
-          (h) =>
-            `  ${h.name}: ${h.reports} reports / ${h.events} events, normal ${h.expected.toFixed(1)}${h.floored ? ' (floored)' : ''}, ${h.ratio.toFixed(1)}×; ${h.sources.map((s) => s.domain).join(', ') || 'no links'}`,
-        ),
-        `${g.noBaseline.length} with no measurable normal (listed, never flagged)${g.noBaseline.length > 0 ? ':' : '.'}`,
-        ...g.noBaseline.map(
-          (h) => `  ${h.name}: ${h.reports} reports / ${h.events} events; ${h.sources.map((s) => s.domain).join(', ') || 'no links'}`,
-        ),
-        `${g.countries.length} countries above normal.`,
-        `Places not normal: ${g.places.filter((p) => p.level !== 'normal').map((p) => `${p.nodeId} ${p.level} (${Math.round(p.reports)} vs ${p.expected.toFixed(1)})`).join(', ') || 'none'}.`,
-      ];
-      if (g.totalReports > 0 && g.conflictReports / g.totalReports > 0.8) {
-        lines.push(colour.amber('Conflict share above 80% of all reporting — check the QuadClass column mapping.'));
-      }
-      return lines;
+    return lines;
+  },
+  gdelt: (g) => {
+    const lines = [
+      `${g.recentFiles}/${g.recentFilesExpected} recent and ${g.baselineFiles}/${g.baselineFilesExpected} baseline event files read; ${g.totalReports} reports, ${g.conflictReports} conflict-type.`,
+      `${g.hotspots.length} hotspots.`,
+      // The top few in full, so a real run shows whether a surge rests on
+      // several events and publishers or on one syndicated story.
+      ...g.hotspots.slice(0, 5).map(
+        (h) =>
+          `  ${h.name}: ${h.reports} reports / ${h.events} events, normal ${h.expected.toFixed(1)}${h.floored ? ' (floored)' : ''}, ${h.ratio.toFixed(1)}×; ${h.sources.map((s) => s.domain).join(', ') || 'no links'}`,
+      ),
+      `${g.noBaseline.length} with no measurable normal (listed, never flagged)${g.noBaseline.length > 0 ? ':' : '.'}`,
+      ...g.noBaseline.map(
+        (h) => `  ${h.name}: ${h.reports} reports / ${h.events} events; ${h.sources.map((s) => s.domain).join(', ') || 'no links'}`,
+      ),
+      `${g.countries.length} countries above normal.`,
+      `Places not normal: ${g.places.filter((p) => p.level !== 'normal').map((p) => `${p.nodeId} ${p.level} (${Math.round(p.reports)} vs ${p.expected.toFixed(1)})`).join(', ') || 'none'}.`,
+    ];
+    if (g.totalReports > 0 && g.conflictReports / g.totalReports > 0.8) {
+      lines.push(colour.amber('Conflict share above 80% of all reporting — check the QuadClass column mapping.'));
     }
-    case 'usgs':
-      return [`${(d.quakes as unknown[]).length} earthquakes, magnitude ${String(d.minMagnitude)}+.`];
-    case 'gdacs':
-      return [`${(d.alerts as unknown[]).length} open alerts at levels ${(d.levels as string[]).join(', ')}.`];
-    case 'nhc':
-      return [`${(d.storms as unknown[]).length} active storms.`];
-    case 'eonet':
-      return [`${String(d.totalOpen)} open events; ${(d.nearTradeNodes as unknown[]).length} near a tracked location.`];
-    case 'weather':
-      return [`${(d.ports as unknown[]).length} ports with current wind.`];
-    case 'fred': {
-      const series = d.series as Array<{ id: string; latest: { date: string; value: number }; points: unknown[] }>;
-      return series.map((s) => `${s.id}: ${s.latest.value} on ${s.latest.date} (${s.points.length} observations)`);
-    }
-    case 'quotes': {
-      const q = d as unknown as { quotes: Array<{ symbol: string; price: number }>; missing: string[] };
-      return [
-        `${q.quotes.length} prices: ${q.quotes.map((x) => `${x.symbol} ${x.price}`).join(', ')}.`,
-        ...(q.missing.length > 0 ? [`No price for: ${q.missing.join(', ')}.`] : []),
-      ];
-    }
-    default:
-      return [];
-  }
-}
+    return lines;
+  },
+  usgs: (d) => [`${d.quakes.length} earthquakes, magnitude ${d.minMagnitude}+.`],
+  gdacs: (d) => [`${d.alerts.length} open alerts at levels ${d.levels.join(', ')}.`],
+  nhc: (d) => [`${d.storms.length} active storms.`],
+  eonet: (d) => [`${d.totalOpen} open events; ${d.nearTradeNodes.length} near a tracked location.`],
+  weather: (d) => [`${d.ports.length} ports with current wind.`],
+  fred: (d) => d.series.map((s) => `${s.id}: ${s.latest.value} on ${s.latest.date} (${s.points.length} observations)`),
+  quotes: (q) => [
+    `${q.quotes.length} prices: ${q.quotes.map((x) => `${x.symbol} ${x.price}`).join(', ')}.`,
+    ...(q.missing.length > 0 ? [`No price for: ${q.missing.join(', ')}.`] : []),
+  ],
+};
 
 main().catch((error: unknown) => {
   console.error(colour.red('\nlive:check failed to run:'));

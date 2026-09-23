@@ -65,8 +65,8 @@ const SLOT_MS = 15 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
 
 /** Twelve fifteen-minute files: the last three hours. */
-export const RECENT_SLOTS = 12;
-export const BASELINE_DAYS = 7;
+const RECENT_SLOTS = 12;
+const BASELINE_DAYS = 7;
 /** Four files from the same three-hour window on each baseline day, 45 minutes apart. */
 const BASELINE_SLOTS_PER_DAY = 4;
 const BASELINE_STEP_MS = 45 * 60_000;
@@ -115,7 +115,7 @@ const CITY_GEO_TYPES = new Set(['3', '4']);
  * a strike, a blockade or a sanction is a supply chain event in a way most
  * diplomatic friction is not. Codes are CAMEO's, not ours.
  */
-export const PROBLEM_TYPES: Array<{ id: string; label: string; bases?: string[]; roots?: string[] }> = [
+const PROBLEM_TYPES: Array<{ id: string; label: string; bases?: string[]; roots?: string[] }> = [
   { id: 'strikes', label: 'Strikes and boycotts', bases: ['143'] },
   { id: 'blockades', label: 'Blockades and obstruction', bases: ['144', '191'] },
   { id: 'sanctions', label: 'Sanctions and embargoes', bases: ['163'] },
@@ -195,8 +195,13 @@ function placesCounting(lat: number, lon: number, geocodedName: string): string[
   let port: Hit = null;
   let chokepoint: Hit = null;
   for (const node of ALL_NODES) {
+    const radius = reportingRadiusKm(node);
+    // A degree of latitude is 111.2 km, so a node further than the radius in
+    // latitude alone is out of reach; this skips the haversine for most
+    // nodes on every row, which is most of this function's cost.
+    if (Math.abs(lat - node.lat) * 111 > radius) continue;
     const km = distanceKm(lat, lon, node.lat, node.lon);
-    if (km > reportingRadiusKm(node)) continue;
+    if (km > radius) continue;
     if (node.kind === 'chokepoint') {
       if (!chokepoint || km < chokepoint.km) chokepoint = { node, km };
     } else if (!port || km < port.km) {
@@ -359,7 +364,7 @@ export async function fetchGdelt(): Promise<GdeltRaw> {
 
   // The index is the one thing that must be fresh: it names the newest file.
   const index = await fetchText(LAST_UPDATE_URL, 'gdelt', { label: 'GDELT', timeoutMs: 8_000 });
-  const stamp = index.text.match(/(\d{14})\.export\.CSV\.zip/i)?.[1];
+  const stamp = index.match(/(\d{14})\.export\.CSV\.zip/i)?.[1];
   const latest = stamp ? timeOfStamp(stamp) : null;
   if (latest === null) throw new LiveSourceError("GDELT's update index did not name an event file.");
 
@@ -496,7 +501,7 @@ export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
     if (reports < REPORTING_RULES.countryMinReports) continue;
     const { expected, floored, ratio } = compare(reports, B.countries[code] ?? 0);
     if (ratio < REPORTING_RULES.countryMinRatio) continue;
-    countries.push({ code, name: countryName(code) ?? code, reports, expected, ratio, floored });
+    countries.push({ code, name: countryName(code), reports, expected, ratio, floored });
   }
   countries.sort((a, b) => b.reports - b.expected - (a.reports - a.expected));
 

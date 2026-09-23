@@ -37,41 +37,26 @@ export const FLAG_THRESHOLDS = {
   maxHotspotFlags: 5,
 } as const;
 
-/** The rules, in the words the page prints. */
-export const FLAG_RULES: Array<{ id: string; text: string }> = [
-  {
-    id: 'reporting',
-    text: `Conflict reporting geocoded near a tracked place — within ${REPORTING_RULES.portRadiusKm} km of a port or industrial cluster or ${REPORTING_RULES.chokepointRadiusKm} km of a chokepoint, or the place's own narrower radius where a large unrelated city would otherwise fall inside (each is on the place board), each story counted for the nearest place only — is at least ${REPORTING_RULES.surgingRatio}× its normal share (alert) or ${REPORTING_RULES.elevatedRatio}× (watch), with at least ${REPORTING_RULES.placeMinReports} reports across ${REPORTING_RULES.minEvents} or more events. A place with no measurable normal is at most a watch.`,
-  },
-  {
-    id: 'hotspot',
-    text: `A city anywhere with a measurable normal is reporting at least ${REPORTING_RULES.hotspotMinRatio}× its normal share with at least ${REPORTING_RULES.hotspotMinReports} reports across ${REPORTING_RULES.minEvents} or more events (watch; the ${FLAG_THRESHOLDS.maxHotspotFlags} largest).`,
-  },
-  {
-    id: 'quake',
-    text: `An earthquake of magnitude ${FLAG_THRESHOLDS.quakeMagnitude.toFixed(1)} or more within ${PROXIMITY_KM} km of a tracked place, or any with a USGS PAGER alert of orange or red (alert).`,
-  },
-  {
-    id: 'gdacs',
-    text: `A GDACS red alert anywhere (alert), or an orange alert within ${PROXIMITY_KM} km of a tracked place (watch).`,
-  },
-  {
-    id: 'storm',
-    text: `An active tropical cyclone within ${PROXIMITY_KM} km of a tracked place (alert).`,
-  },
-  {
-    id: 'wind',
-    text: `Mean wind at a tracked port of Beaufort ${FLAG_THRESHOLDS.galeBeaufort}, gale, or above (alert), or Beaufort ${FLAG_THRESHOLDS.nearGaleBeaufort} (watch).`,
-  },
-  {
-    id: 'event',
-    text: `A wildfire, volcano or other open natural event within ${PROXIMITY_KM} km of a tracked place (watch).`,
-  },
-  {
-    id: 'price',
-    text: `Brent or WTI crude moved ${FLAG_THRESHOLDS.oilDailyMovePct}% or more between its last two daily observations (watch).`,
-  },
-];
+/**
+ * The rules, in the words the page prints, keyed by the prefix of the flag ids
+ * they produce. Each flag looks its rule up by that key, so the printed order
+ * can change without attaching the wrong rule to a flag.
+ */
+const RULE_TEXT = {
+  reporting: `Conflict reporting geocoded near a tracked place — within ${REPORTING_RULES.portRadiusKm} km of a port or industrial cluster or ${REPORTING_RULES.chokepointRadiusKm} km of a chokepoint, or the place's own narrower radius where a large unrelated city would otherwise fall inside (each is on the place board), each story counted for the nearest place only — is at least ${REPORTING_RULES.surgingRatio}× its normal share (alert) or ${REPORTING_RULES.elevatedRatio}× (watch), with at least ${REPORTING_RULES.placeMinReports} reports across ${REPORTING_RULES.minEvents} or more events. A place with no measurable normal is at most a watch.`,
+  hotspot: `A city anywhere with a measurable normal is reporting at least ${REPORTING_RULES.hotspotMinRatio}× its normal share with at least ${REPORTING_RULES.hotspotMinReports} reports across ${REPORTING_RULES.minEvents} or more events (watch; the ${FLAG_THRESHOLDS.maxHotspotFlags} largest).`,
+  quake: `An earthquake of magnitude ${FLAG_THRESHOLDS.quakeMagnitude.toFixed(1)} or more within ${PROXIMITY_KM} km of a tracked place, or any with a USGS PAGER alert of orange or red (alert).`,
+  gdacs: `A GDACS red alert anywhere (alert), or an orange alert within ${PROXIMITY_KM} km of a tracked place (watch).`,
+  storm: `An active tropical cyclone within ${PROXIMITY_KM} km of a tracked place (alert).`,
+  wind: `Mean wind at a tracked port of Beaufort ${FLAG_THRESHOLDS.galeBeaufort}, gale, or above (alert), or Beaufort ${FLAG_THRESHOLDS.nearGaleBeaufort} (watch).`,
+  event: `A wildfire, volcano or other open natural event within ${PROXIMITY_KM} km of a tracked place (watch).`,
+  price: `Brent or WTI crude moved ${FLAG_THRESHOLDS.oilDailyMovePct}% or more between its last two daily observations (watch).`,
+} as const;
+
+export const FLAG_RULES: Array<{ id: string; text: string }> = Object.entries(RULE_TEXT).map(([id, text]) => ({
+  id,
+  text,
+}));
 
 function placeName(id: string | null | undefined): string {
   return (id && nodeById(id)?.name) || 'a tracked place';
@@ -117,7 +102,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         level: place.level === 'surging' ? 'alert' : 'watch',
         title: `Conflict reporting ${place.level === 'surging' ? 'surging' : 'elevated'} near ${placeName(place.nodeId)}`,
         detail: `${Math.round(place.reports)} reports in the last three hours, ${againstNormal(place)} for this time of day.`,
-        rule: FLAG_RULES[0].text,
+        rule: RULE_TEXT.reporting,
         source: 'gdelt',
         at: gdelt.asOf,
         placeId: place.nodeId,
@@ -132,7 +117,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         detail: `${Math.round(spot.reports)} conflict reports across ${spot.events} events in three hours, ${againstNormal(spot)}.${
           spot.nearest ? ` Nearest tracked place: ${spot.nearest.nodeName}, ${spot.nearest.km} km.` : ''
         }`,
-        rule: FLAG_RULES[1].text,
+        rule: RULE_TEXT.hotspot,
         source: 'gdelt',
         at: gdelt.asOf,
         placeId: spot.nearest && spot.nearest.km <= PROXIMITY_KM ? spot.nearest.nodeId : null,
@@ -151,7 +136,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         level: 'alert',
         title: `M${quake.magnitude.toFixed(1)} earthquake${near.length > 0 ? ` near ${placeName(near[0])}` : ''}`,
         detail: `${quake.place}.${quake.pagerAlert ? ` USGS PAGER alert: ${quake.pagerAlert}.` : ''}`,
-        rule: FLAG_RULES[2].text,
+        rule: RULE_TEXT.quake,
         source: 'usgs',
         at: quake.at,
         placeId: near[0] ?? null,
@@ -163,7 +148,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
   if (gdacs.status === 'ok') {
     for (const alert of gdacs.data.alerts) {
       const near = placesNear(alert.lat, alert.lon);
-      const red = alert.level.toLowerCase() === 'red';
+      const red = alert.level === 'Red';
       if (!red && near.length === 0) continue;
       flags.push({
         id: `gdacs:${alert.id}`,
@@ -172,7 +157,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         detail: `${alert.typeLabel}${alert.country ? `, ${alert.country}` : ''}.${
           near.length > 0 ? ` Within ${PROXIMITY_KM} km of ${placeName(near[0])}.` : ''
         }`,
-        rule: FLAG_RULES[3].text,
+        rule: RULE_TEXT.gdacs,
         source: 'gdacs',
         at: alert.updated ?? alert.from ?? gdacs.asOf,
         placeId: near[0] ?? null,
@@ -190,7 +175,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         level: 'alert',
         title: `${storm.classificationLabel} ${storm.name} near ${placeName(near[0])}`,
         detail: `${storm.intensityKt !== null ? `${storm.intensityKt} kt winds. ` : ''}Position from the latest advisory.`,
-        rule: FLAG_RULES[4].text,
+        rule: RULE_TEXT.storm,
         source: 'nhc',
         at: storm.updated,
         placeId: near[0],
@@ -207,7 +192,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         level: port.beaufort >= FLAG_THRESHOLDS.galeBeaufort ? 'alert' : 'watch',
         title: `${port.beaufortLabel} at ${placeName(port.nodeId)}`,
         detail: `Mean wind ${port.windMs.toFixed(1)} m/s${port.gustMs !== null ? `, gusts ${port.gustMs.toFixed(1)} m/s` : ''} — Beaufort ${port.beaufort}.`,
-        rule: FLAG_RULES[5].text,
+        rule: RULE_TEXT.wind,
         source: 'weather',
         at: port.at,
         placeId: port.nodeId,
@@ -224,7 +209,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         level: 'watch',
         title: `${event.category}: ${event.title}`,
         detail: `${event.nearest.km} km from ${event.nearest.nodeName}.`,
-        rule: FLAG_RULES[6].text,
+        rule: RULE_TEXT.event,
         source: 'eonet',
         at: event.at,
         placeId: event.nearest.nodeId,
@@ -243,7 +228,7 @@ export function deriveFlags(snapshot: LiveSnapshot): LiveFlag[] {
         level: 'watch',
         title: `${series.label} ${move.pct > 0 ? 'up' : 'down'} ${Math.abs(move.pct).toFixed(1)}%`,
         detail: `From ${move.from} to ${move.to}, per the ${series.origin}.`,
-        rule: FLAG_RULES[7].text,
+        rule: RULE_TEXT.price,
         source: 'fred',
         at: `${move.to}T00:00:00.000Z`,
         placeId: null,
@@ -273,10 +258,7 @@ export function derivePlaces(snapshot: LiveSnapshot, flags: LiveFlag[]): PlaceSu
     const port = weather.status === 'ok' ? weather.data.ports.find((p) => p.nodeId === node.id) : undefined;
     const sample = ais.status === 'ok' ? ais.data.chokepoints.find((c) => c.nodeId === node.id) : undefined;
 
-    const severity = ['green', 'orange', 'red'];
-    const worst = alerts
-      .map((a) => a.level)
-      .sort((a, b) => severity.indexOf(b.toLowerCase()) - severity.indexOf(a.toLowerCase()))[0];
+    const worst = alerts.length === 0 ? null : alerts.some((a) => a.level === 'Red') ? 'Red' : 'Orange';
 
     return {
       nodeId: node.id,
@@ -285,7 +267,7 @@ export function derivePlaces(snapshot: LiveSnapshot, flags: LiveFlag[]): PlaceSu
         count: quakes.length,
         maxMagnitude: quakes.length > 0 ? Math.max(...quakes.map((q) => q.magnitude)) : null,
       },
-      alerts: { count: alerts.length, worst: worst ?? null },
+      alerts: { count: alerts.length, worst },
       storms: {
         count: storms.length,
         nearestKm:

@@ -498,6 +498,12 @@ companies on purpose — see the comment there.
 
 ## Part 7 — Move the repository into a free organisation
 
+**Done 23 September 2026.** The organisation exists and the repository now
+lives at **`github.com/novus-data/novus-data`**; the steps below are kept as
+the record of how, and step 5 is the checklist for anything that still points
+at the old `Novous-Data/novus-data` address. `Novous-Data` remains the
+editor's personal login; it is no longer where the repository lives.
+
 **Why.** The repository belongs to a personal account (`Novous-Data`), and
 GitHub gives a personal account's collaborators one fixed level — *write* —
 with no way to make anyone else an admin. Settings, secrets, branch rulesets,

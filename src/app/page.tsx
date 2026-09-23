@@ -446,7 +446,7 @@ function WhatWeDo() {
       // to every publisher for a preview of a page one click away.
       href: '/monitor',
       title: 'The monitor',
-      body: 'Seven public feeds, re-read every fifteen minutes: ships moving through ten chokepoints, how much of the world’s news is about disruption, and natural hazards and wind near the ports that matter. Every reading shows when its source produced it.',
+      body: 'Public feeds, re-read every fifteen minutes: where reporting of strikes, blockades, sanctions and fighting is running above its normal, flags at ports and straits, ships at ten chokepoints, hazards, port wind and energy prices. Every reading shows when its source produced it.',
       cta: 'Open the monitor',
     },
     {

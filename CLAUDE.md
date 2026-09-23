@@ -926,6 +926,10 @@ verifiable bio facts, the contact address, the three Beehiiv URLs, the publishin
 cadence, the real logo file, and confirmation of the drafted topic list and
 methodology statement.
 
+Launch decisions made so far, and the ones still open, are in @DECISIONS.md.
+Read it before proposing a new section, a new kind of data, or anything
+involving money.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

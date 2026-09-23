@@ -444,7 +444,7 @@ function renderPreview(
   }
 
   .field { display: flex; align-items: center; gap: 8px; }
-  .field label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .field label, .seg-caption { color: var(--muted); font-size: 12px; white-space: nowrap; }
 
   select, .seg button {
     font: inherit;
@@ -465,6 +465,11 @@ function renderPreview(
   .seg button { border-radius: 0; margin-left: -1px; }
   .seg button:first-child { border-radius: 2px 0 0 2px; margin-left: 0; }
   .seg button:last-child { border-radius: 0 2px 2px 0; }
+  /* A width this window cannot actually show is offered but visibly inert,
+     rather than silently rendering something narrower than its own label. */
+  .seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .seg button:disabled:hover { border-color: var(--line); }
+
   .seg button[aria-pressed="true"] {
     background: var(--accent);
     border-color: var(--accent);
@@ -571,10 +576,13 @@ function renderPreview(
     <select id="page"></select>
   </div>
 
-  <div class="field seg" role="group" aria-label="Viewport width">
-    <button type="button" data-width="390">Phone</button>
-    <button type="button" data-width="820">Tablet</button>
-    <button type="button" data-width="0" aria-pressed="true">Desktop</button>
+  <div class="field">
+    <span class="seg-caption">Preview at</span>
+    <div class="seg" role="group" aria-label="Preview width">
+      <button type="button" data-width="390">Phone</button>
+      <button type="button" data-width="820">Tablet</button>
+      <button type="button" data-width="0" aria-pressed="true">Fit window</button>
+    </div>
   </div>
 </div>
 
@@ -736,9 +744,42 @@ function renderPreview(
       '<body class="' + page.bodyClass + '">' + page.body + '</body></html>';
   }
 
+  function measuredWidth() {
+    var el = shadowHost || (frame && !frame.hidden ? frame : null);
+    return el ? Math.round(el.getBoundingClientRect().width) : 0;
+  }
+
   function updateCaption() {
     captionRoute.textContent = currentPage().route;
-    captionWidth.textContent = width ? width + 'px' : 'full width';
+    var actual = measuredWidth();
+    captionWidth.textContent = actual ? 'rendered at ' + actual + 'px' : 'fits this window';
+  }
+
+  /* The narrow presets only mean anything on a window wide enough to hold
+     them. Below that the frame is already that narrow, so offering to
+     "simulate" a phone would render a frame WIDER than the label claims. */
+  function fitButtons() {
+    var avail = stage.parentNode.getBoundingClientRect().width;
+    widthButtons.forEach(function (button) {
+      var w = Number(button.getAttribute('data-width'));
+      var tooWide = w > 0 && w > avail;
+      button.disabled = tooWide;
+      button.title = tooWide
+        ? 'This window is ' + Math.round(avail) + 'px wide, so it cannot show a ' + w + 'px frame.'
+        : '';
+      if (tooWide && button.getAttribute('aria-pressed') === 'true') {
+        selectWidth(widthButtons[widthButtons.length - 1]);
+      }
+    });
+  }
+
+  function selectWidth(button) {
+    widthButtons.forEach(function (other) { other.setAttribute('aria-pressed', 'false'); });
+    button.setAttribute('aria-pressed', 'true');
+    width = Number(button.getAttribute('data-width'));
+    stage.style.maxWidth = width ? width + 'px' : '100%';
+    updateCaption();
+    window.setTimeout(function () { resize(); updateCaption(); }, 220);
   }
 
   function resize() {
@@ -826,17 +867,16 @@ function renderPreview(
   });
 
   widthButtons.forEach(function (button) {
-    button.addEventListener('click', function () {
-      widthButtons.forEach(function (other) { other.setAttribute('aria-pressed', 'false'); });
-      button.setAttribute('aria-pressed', 'true');
-      width = Number(button.getAttribute('data-width'));
-      stage.style.maxWidth = width ? width + 'px' : '100%';
-      updateCaption();
-      window.setTimeout(resize, 220);
-    });
+    button.addEventListener('click', function () { selectWidth(button); });
+  });
+
+  window.addEventListener('resize', function () {
+    fitButtons();
+    updateCaption();
   });
 
   fillPages();
+  fitButtons();
   draw();
 })();
 </script>

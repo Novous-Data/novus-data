@@ -33,16 +33,24 @@ ships only when both agree, so one "not yet" is enough to hold it back.
 - **Articles are not in the launch.** The section goes live once `Novous-Data`
   has finished an article, so it never opens empty.
 
+## Where the repository lives
+
+Done by `Novous-Data` on 2026-09-23: the repository moved into the free
+organisation `novus-data`, which also fixes the "Novous" spelling. The address
+is now `github.com/novus-data/novus-data`, and the old one redirects.
+
+When this was written, `arowsom-oss` still had write access only. Becoming an
+owner takes two steps: `arowsom-oss` accepts the organisation's invite, then
+`Novous-Data` changes the role to Owner.
+
 ## Still open
 
 1. What goes live on launch day: the main branch as it is, or the main branch
    plus the fixes from pull request #9 (the new font, the print fix and the
    register bug fixes)?
 2. Whether the site makes money, and how.
-3. Where the repository lives: a personal account, or a free organisation
-   (pull request #9 adds the steps as DEPLOY.md Part 7).
-4. Whose account the site is hosted from.
-5. Who the editor is, the first name on the masthead.
-6. The minimum content needed before launch.
-7. How often the briefing goes out.
-8. The launch date.
+3. Whose account the site is hosted from.
+4. Who the editor is, the first name on the masthead.
+5. The minimum content needed before launch.
+6. How often the briefing goes out.
+7. The launch date.

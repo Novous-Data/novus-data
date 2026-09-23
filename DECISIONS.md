@@ -48,9 +48,39 @@ owner takes two steps: `arowsom-oss` accepts the organisation's invite, then
 1. What goes live on launch day: the main branch as it is, or the main branch
    plus the fixes from pull request #9 (the new font, the print fix and the
    register bug fixes)?
-2. Whether the site makes money, and how.
+2. Whether the site makes money, and how. If yes, work through the checklist
+   below first.
 3. Whose account the site is hosted from.
 4. Who the editor is, the first name on the masthead.
 5. The minimum content needed before launch.
 6. How often the briefing goes out.
 7. The launch date.
+
+## Before the site makes money
+
+Recorded on 2026-09-23 as a reminder. None of this is needed while the site is
+free, and it is a list of things to check, not legal advice. "Makes money"
+means anything: paid subscriptions, ads, sponsorships or selling something.
+
+- [ ] **Both of you agree.** Money is a big change under the rule above.
+- [ ] **Move Vercel from Hobby to Pro.** Hobby is for non-commercial use only,
+      so a site that earns money breaks its terms.
+- [ ] **Check each service's age rules**: Vercel, Beehiiv, and any payment
+      provider. Many require account holders to be 18. If one of you isn't, a
+      parent may need to own the account.
+- [ ] **Refund policy page**, if anything is sold, such as paid subscriptions.
+      Ads alone don't need one.
+- [ ] **Terms and conditions page.** Also worth adding as soon as reader
+      sign-in goes live, because an account is an agreement with the reader.
+- [ ] **Cookie consent banner, only if ads or analytics arrive.** Today the
+      site sets no cookie unless someone signs in, and a login cookie needs no
+      banner. Ad networks almost always add tracking cookies, and those do.
+      Rewrite `/privacy` in the same change.
+- [ ] **A postal address in the newsletter.** Once the newsletter carries ads
+      or sells something, US anti-spam law (CAN-SPAM) expects a physical postal
+      address in every email. Use a PO box or mailbox service, never a home
+      address. Check whether Beehiiv asks for one sooner.
+- [ ] **Taxes.** Money earned may need reporting, and some places require a
+      registered business. Check the rules where you live.
+- [ ] **Business details on the site**: the name and contact email at minimum.
+      Still no home address.

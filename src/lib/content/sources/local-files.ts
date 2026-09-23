@@ -250,8 +250,11 @@ async function readAll(): Promise<ReadResult> {
   const parsed: ParsedFile[] = [];
   const seenSlugs = new Map<string, string>();
 
-  for (const file of files) {
-    const raw = await readFile(path.join(ISSUES_DIRECTORY, file), 'utf8');
+  // Read in parallel, parsed in filename order, so warnings and the
+  // first-occurrence rules below behave exactly as a sequential read would.
+  const contents = await Promise.all(files.map((file) => readFile(path.join(ISSUES_DIRECTORY, file), 'utf8')));
+  for (const [index, file] of files.entries()) {
+    const raw = contents[index];
     const issue = parseIssueFile(file, raw, warnings);
     if (!issue) continue;
 

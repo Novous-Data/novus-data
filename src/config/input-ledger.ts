@@ -277,23 +277,21 @@ export function assertLaunchReady(): void {
  */
 export function assertNoPublicServiceRoleKey(): void {
   // Checked by literal name: Next only inlines literals, so this must not be
-  // built up from a variable or it will not be replaced at all.
-  if (!process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) return;
-
-  throw new Error(
+  // built up from a variable or it will not be replaced at all. The same
+  // holds for every call below.
+  refusePublicKey(
+    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
+    'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY',
     [
-      '',
-      'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY is set.',
-      '',
       'The service role key must NEVER carry the NEXT_PUBLIC_ prefix. That prefix',
       'inlines the value into the browser bundle, and this key bypasses row-level',
       'security — so publishing it makes every reader row readable and writable by',
       'anyone who opens the site.',
-      '',
+    ],
+    [
       'Rename it to SUPABASE_SERVICE_ROLE_KEY, and rotate the key in the Supabase',
       'dashboard: the old one must be assumed compromised.',
-      '',
-    ].join('\n'),
+    ],
   );
 }
 
@@ -307,43 +305,41 @@ export function assertNoPublicServiceRoleKey(): void {
  * site's account. The prefix mistake is the realistic way it would leak.
  */
 export function assertNoPublicAisKey(): void {
-  // Literal name, for the same inlining reason as above.
-  if (!process.env.NEXT_PUBLIC_AISSTREAM_API_KEY) return;
-
-  throw new Error(
+  refusePublicKey(
+    process.env.NEXT_PUBLIC_AISSTREAM_API_KEY,
+    'NEXT_PUBLIC_AISSTREAM_API_KEY',
     [
-      '',
-      'NEXT_PUBLIC_AISSTREAM_API_KEY is set.',
-      '',
       'The AISStream key must NEVER carry the NEXT_PUBLIC_ prefix: that prefix',
       'publishes it in the browser bundle, and AISStream requires the key to stay',
       'on the server.',
-      '',
+    ],
+    [
       'Rename it to AISSTREAM_API_KEY, and generate a new key at aisstream.io:',
       'the old one must be assumed public.',
-      '',
-    ].join('\n'),
+    ],
   );
 }
 
 /** The same refusal for the stock-quote key: a key in the browser bundle is usable by anyone. */
 export function assertNoPublicQuoteKey(): void {
-  // Literal name, for the same inlining reason as above.
-  if (!process.env.NEXT_PUBLIC_FINNHUB_API_KEY) return;
-
-  throw new Error(
+  refusePublicKey(
+    process.env.NEXT_PUBLIC_FINNHUB_API_KEY,
+    'NEXT_PUBLIC_FINNHUB_API_KEY',
     [
-      '',
-      'NEXT_PUBLIC_FINNHUB_API_KEY is set.',
-      '',
       'The Finnhub key must NEVER carry the NEXT_PUBLIC_ prefix: that prefix publishes',
       'it in the browser bundle, where anyone can copy it and spend its quota.',
-      '',
+    ],
+    [
       'Rename it to FINNHUB_API_KEY, and regenerate the key in the Finnhub dashboard:',
       'the old one must be assumed public.',
-      '',
-    ].join('\n'),
+    ],
   );
+}
+
+/** Throws, naming the variable, what its prefix exposes and how to recover, if `value` is set. */
+function refusePublicKey(value: string | undefined, name: string, why: string[], remedy: string[]): void {
+  if (!value) return;
+  throw new Error(['', `${name} is set.`, '', ...why, '', ...remedy, ''].join('\n'));
 }
 
 assertNoPublicServiceRoleKey();

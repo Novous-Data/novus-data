@@ -69,6 +69,6 @@ export const config = {
    * on.
    */
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|register.json|(?:.*/)?(?:icon|apple-icon|opengraph-image|twitter-image)|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|register.json|live.json|feed.json|(?:.*/)?(?:icon|apple-icon|opengraph-image|twitter-image)|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)',
   ],
 };

@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import type { DisruptionStatus } from '@/lib/disruptions/types';
 import { formatRatioOf } from '@/lib/live/display';
-import { nodeById } from '@/lib/live/nodes';
-import { REPORTING_LEVEL_LABELS, type PlaceSummary, type TradeNodeKind } from '@/lib/live/types';
+import { ALL_NODES, nodeById, reportingRadiusKm } from '@/lib/live/nodes';
+import { REPORTING_LEVEL_LABELS, REPORTING_RULES, type PlaceSummary, type TradeNodeKind } from '@/lib/live/types';
 
 const KIND_LABELS: Record<TradeNodeKind, string> = {
   chokepoint: 'Chokepoint',
@@ -84,6 +84,9 @@ export function PlaceBoard({
               ) : (
                 <span className="text-muted">No reading</span>
               )}
+              <span className="block text-muted">
+                Within <span data-numeric>{reportingRadiusKm(node)}</span> km
+              </span>
             </Cell>
 
             <Cell label="Hazards within reach">
@@ -131,6 +134,40 @@ export function PlaceBoard({
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * Where a place's reporting radius differs from the default for its kind,
+ * and why. Printed because the radius decides what a "surging" place means:
+ * at the default 200 km the Strait of Dover took in London, and a spike in
+ * London's news raised the strait.
+ */
+export function ReportingRadii() {
+  const narrowed = ALL_NODES.filter((node) => node.reporting);
+  return (
+    <details className="mt-4">
+      <summary className="cursor-pointer text-meta text-link">How far reporting counts, place by place</summary>
+      <p className="mt-3 max-w-[72ch] text-meta text-muted">
+        A story counts toward a place when GDELT places it within{' '}
+        <span data-numeric>{REPORTING_RULES.portRadiusKm}</span> km of a port or industrial cluster, or{' '}
+        <span data-numeric>{REPORTING_RULES.chokepointRadiusKm}</span> km of a chokepoint — wider for chokepoints
+        because attacks on shipping are placed at the nearest coastal city. Each story counts for the nearest
+        place only. These places use their own radius, because the default would take in a large city whose news
+        is not about them:
+      </p>
+      <dl className="mt-3 divide-y divide-hairline border-y border-hairline text-meta">
+        {narrowed.map((node) => (
+          <div key={node.id} className="grid gap-x-5 gap-y-0.5 py-2 sm:grid-cols-[14rem_4.5rem_1fr]">
+            <dt className="text-fg">{node.name}</dt>
+            <dd className="text-fg">
+              <span data-numeric>{node.reporting?.km}</span> km
+            </dd>
+            <dd className="text-muted">{node.reporting?.why}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 

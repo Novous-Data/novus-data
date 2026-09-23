@@ -1,6 +1,6 @@
 import { ExternalLink } from '@/components/text-link';
 import { formatCount, formatRatio, formatRatioOf, formatUtc } from '@/lib/live/display';
-import type { GdeltData } from '@/lib/live/types';
+import type { GdeltData, Hotspot } from '@/lib/live/types';
 import { PROXIMITY_KM, REPORTING_RULES } from '@/lib/live/types';
 
 /**
@@ -41,70 +41,36 @@ export function ChangingPanel({ data }: { data: GdeltData }) {
         Cities with at least <span data-numeric>{REPORTING_RULES.hotspotMinReports}</span> conflict reports across
         at least <span data-numeric>{REPORTING_RULES.minEvents}</span> separately coded events, and at least{' '}
         <span data-numeric>{REPORTING_RULES.hotspotMinRatio}×</span> their normal share of all reporting, ranked by
-        how many reports above normal they are. Where a city normally has almost no reporting, the multiple is shown
-        as a lower bound (≥).
+        how many reports above normal they are.
       </p>
       {data.hotspots.length === 0 ? (
-        <p className="mt-3 text-[0.9375rem] text-muted">No city crossed both thresholds in this window.</p>
+        <p className="mt-3 text-[0.9375rem] text-muted">
+          No city with a measurable normal crossed the thresholds in this window.
+        </p>
       ) : (
         <ol className="mt-3 border-b border-hairline">
           {data.hotspots.map((spot) => (
-            <li
-              key={spot.key}
-              className="grid gap-x-5 gap-y-1 border-t border-hairline py-3 sm:grid-cols-[5.5rem_1fr]"
-            >
-              <span className="text-meta">
-                <span data-numeric className="block text-[1.0625rem] font-semibold text-fg">
-                  {formatRatioOf(spot.ratio, spot.floored)}
-                </span>
-                <span className="text-muted">normal</span>
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[0.9375rem] font-semibold leading-snug text-fg">{spot.name}</span>
-                <span className="mt-0.5 block text-meta text-muted">
-                  <span data-numeric>{formatCount(spot.reports)}</span> reports across{' '}
-                  <span data-numeric>{formatCount(spot.events)}</span> events,{' '}
-                  {spot.floored ? (
-                    <>
-                      where fewer than <span data-numeric>{REPORTING_RULES.minExpected}</span> would be normal
-                    </>
-                  ) : (
-                    <>
-                      against about <span data-numeric>{formatCount(spot.expected)}</span> normally
-                    </>
-                  )}
-                  {spot.nearest ? (
-                    <>
-                      {' · '}
-                      <span data-numeric>{formatCount(spot.nearest.km)}</span> km from{' '}
-                      {spot.nearest.km <= PROXIMITY_KM ? (
-                        <a
-                          href={`#place-${spot.nearest.nodeId}`}
-                          className="text-link underline decoration-[color-mix(in_srgb,var(--accent-text)_45%,transparent)] underline-offset-[0.2em]"
-                        >
-                          {spot.nearest.nodeName}
-                        </a>
-                      ) : (
-                        <>the nearest tracked place, {spot.nearest.nodeName}</>
-                      )}
-                    </>
-                  ) : null}
-                </span>
-                {spot.sources.length > 0 ? (
-                  <span className="mt-1 flex flex-wrap gap-x-3 text-meta text-muted">
-                    <span>Reporting:</span>
-                    {spot.sources.map((source) => (
-                      <ExternalLink key={source.url} href={source.url}>
-                        {source.domain}
-                      </ExternalLink>
-                    ))}
-                  </span>
-                ) : null}
-              </span>
-            </li>
+            <HotspotRow key={spot.key} spot={spot} />
           ))}
         </ol>
       )}
+
+      {data.noBaseline.length > 0 ? (
+        <>
+          <h3 className="kicker kicker-muted mt-8">Usually absent from the news</h3>
+          <p className="mt-1 max-w-[72ch] text-meta text-muted">
+            Cities that carry almost no conflict reporting at this time of day all week, and now clear the same report
+            and event thresholds. With no normal to measure against, no multiple is given and none of them raises a
+            flag. In the first real runs every one was a single story reprinted across a newspaper group, or a place
+            GDELT&rsquo;s geocoder misread — follow the links before reading anything into one.
+          </p>
+          <ol className="mt-3 border-b border-hairline">
+            {data.noBaseline.map((spot) => (
+              <HotspotRow key={spot.key} spot={spot} />
+            ))}
+          </ol>
+        </>
+      ) : null}
 
       {data.countries.length > 0 ? (
         <>
@@ -200,5 +166,65 @@ export function ChangingPanel({ data }: { data: GdeltData }) {
         </tbody>
       </table>
     </>
+  );
+}
+
+/**
+ * One city: its multiple of a measured normal — or, with no normal to
+ * measure, its report count — what the count rests on, and where it is.
+ */
+function HotspotRow({ spot }: { spot: Hotspot }) {
+  return (
+    <li className="grid gap-x-5 gap-y-1 border-t border-hairline py-3 sm:grid-cols-[5.5rem_1fr]">
+      <span className="text-meta">
+        <span data-numeric className="block text-[1.0625rem] font-semibold text-fg">
+          {spot.floored ? formatCount(spot.reports) : formatRatio(spot.ratio)}
+        </span>
+        <span className="text-muted">{spot.floored ? 'reports' : 'normal'}</span>
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[0.9375rem] font-semibold leading-snug text-fg">{spot.name}</span>
+        <span className="mt-0.5 block text-meta text-muted">
+          {spot.floored ? (
+            <>
+              Across <span data-numeric>{formatCount(spot.events)}</span> events, where fewer than{' '}
+              <span data-numeric>{REPORTING_RULES.minExpected}</span> reports would be normal
+            </>
+          ) : (
+            <>
+              <span data-numeric>{formatCount(spot.reports)}</span> reports across{' '}
+              <span data-numeric>{formatCount(spot.events)}</span> events, against about{' '}
+              <span data-numeric>{formatCount(spot.expected)}</span> normally
+            </>
+          )}
+          {spot.nearest ? (
+            <>
+              {' · '}
+              <span data-numeric>{formatCount(spot.nearest.km)}</span> km from{' '}
+              {spot.nearest.km <= PROXIMITY_KM ? (
+                <a
+                  href={`#place-${spot.nearest.nodeId}`}
+                  className="text-link underline decoration-[color-mix(in_srgb,var(--accent-text)_45%,transparent)] underline-offset-[0.2em]"
+                >
+                  {spot.nearest.nodeName}
+                </a>
+              ) : (
+                <>the nearest tracked place, {spot.nearest.nodeName}</>
+              )}
+            </>
+          ) : null}
+        </span>
+        {spot.sources.length > 0 ? (
+          <span className="mt-1 flex flex-wrap gap-x-3 text-meta text-muted">
+            <span>Reporting:</span>
+            {spot.sources.map((source) => (
+              <ExternalLink key={source.url} href={source.url}>
+                {source.domain}
+              </ExternalLink>
+            ))}
+          </span>
+        ) : null}
+      </span>
+    </li>
   );
 }

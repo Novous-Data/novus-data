@@ -7,7 +7,7 @@ import { ChangingPanel } from '@/components/live/changing-panel';
 import { FlagList } from '@/components/live/flag-list';
 import { LiveAge } from '@/components/live/live-age';
 import { EnergyPanel, QuotesTable } from '@/components/live/markets-panel';
-import { PlaceBoard, type PlaceRegisterEntry } from '@/components/live/place-board';
+import { PlaceBoard, ReportingRadii, type PlaceRegisterEntry } from '@/components/live/place-board';
 import { ReadingBlock } from '@/components/live/reading-block';
 import { PageHeader } from '@/components/page-header';
 import { ExternalLink, TextLink } from '@/components/text-link';
@@ -166,6 +166,7 @@ export default async function MonitorPage() {
             Hazards count within {PROXIMITY_KM} km — a distance, not an assessment of impact.
           </Intro>
           <PlaceBoard places={places} register={register} />
+          <ReportingRadii />
         </Section>
 
         <Section id="chokepoints" title="Chokepoints">

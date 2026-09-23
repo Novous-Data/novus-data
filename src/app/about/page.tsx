@@ -143,7 +143,10 @@ export default function AboutPage() {
             <p className="mt-3">
               &ldquo;Above normal&rdquo; is measured, not judged: a place&rsquo;s share of all
               reporting in the last three hours against its share in the same hours on each of the
-              previous seven days. It counts reporting, not events. Flags are published rules
+              previous seven days. It counts reporting, not events. A place counts only reporting
+              placed within its own stated radius, drawn to leave out large cities whose news is
+              not about it, and a city with no measurable normal is listed but never flagged.
+              Flags are published rules
               firing on readings — every rule is printed on the monitor — and a flag is a reason to
               look, not a finding.
             </p>

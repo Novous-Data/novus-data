@@ -41,11 +41,11 @@ export const FLAG_THRESHOLDS = {
 export const FLAG_RULES: Array<{ id: string; text: string }> = [
   {
     id: 'reporting',
-    text: `Conflict reporting geocoded within ${REPORTING_RULES.portRadiusKm} km of a tracked port or industrial cluster, or ${REPORTING_RULES.chokepointRadiusKm} km of a chokepoint — each story counted for the nearest one only — is at least ${REPORTING_RULES.surgingRatio}× its normal share (alert) or ${REPORTING_RULES.elevatedRatio}× (watch), with at least ${REPORTING_RULES.placeMinReports} reports across ${REPORTING_RULES.minEvents} or more events.`,
+    text: `Conflict reporting geocoded near a tracked place — within ${REPORTING_RULES.portRadiusKm} km of a port or industrial cluster or ${REPORTING_RULES.chokepointRadiusKm} km of a chokepoint, or the place's own narrower radius where a large unrelated city would otherwise fall inside (each is on the place board), each story counted for the nearest place only — is at least ${REPORTING_RULES.surgingRatio}× its normal share (alert) or ${REPORTING_RULES.elevatedRatio}× (watch), with at least ${REPORTING_RULES.placeMinReports} reports across ${REPORTING_RULES.minEvents} or more events.`,
   },
   {
     id: 'hotspot',
-    text: `A city anywhere is reporting at least ${REPORTING_RULES.hotspotMinRatio}× its normal share with at least ${REPORTING_RULES.hotspotMinReports} reports across ${REPORTING_RULES.minEvents} or more events (watch; the ${FLAG_THRESHOLDS.maxHotspotFlags} largest).`,
+    text: `A city anywhere with a measurable normal is reporting at least ${REPORTING_RULES.hotspotMinRatio}× its normal share with at least ${REPORTING_RULES.hotspotMinReports} reports across ${REPORTING_RULES.minEvents} or more events (watch; the ${FLAG_THRESHOLDS.maxHotspotFlags} largest).`,
   },
   {
     id: 'quake',

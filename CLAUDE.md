@@ -758,6 +758,28 @@ published on `/monitor` and at `/about#live`:
   circles overlap, and the first real run showed Rotterdam and Antwerp
   surging together. A port and the chokepoint it sits on may both count
   (Singapore and its strait are 12 km apart) — that overlap is geography.
+- **A place may set its own radius, and most near a big city do**
+  (`TradeNode.reporting` in `nodes.ts`: `km`, optional `exclude` by GDELT
+  place-name prefix, and a `why` the page prints). The rule for choosing
+  one: keep the place's own towns in, keep out any large city whose news is
+  not about the place. The second real run is why — at the default 200 km
+  the Dover Strait took in London (126 km) and "surged" 815 against 180;
+  Suez took in Cairo; Rotterdam The Hague (22 km, the international courts);
+  Antwerp Brussels (48 km, the EU). The Hague and Brussels sit too close to
+  cut by radius, so they are excluded by name, and **the nearest place's
+  exclusion is final** — The Hague must not fall through to Antwerp. Taipei
+  stays inside the Taiwan Strait's radius deliberately and the entry says
+  why. Check any new place against the major cities around it before adding
+  it; the probe that found these is a ten-line script over `ALL_NODES`.
+- **A city with no measurable normal is listed, never flagged**
+  (`noBaseline`, "Usually absent from the news"). In both real runs every
+  such hotspot was one story reprinted across a newspaper group (Gosport:
+  gazetteherald, thetottenhamindependent, northwaleschronicle — one chain)
+  or a geocoding error (Winn Parish, Louisiana, sourced to
+  winnipegfreepress.com). Only cities above a *measured* normal are
+  hotspots, and only they can raise a flag. Tracked places still flag on a
+  floored normal: their radius is chosen, and a port that is never in the
+  news suddenly being in it is the case the board exists for.
 
 Every threshold lives in `REPORTING_RULES` in `types.ts`, and the page prints
 them from there. Change one and the published method follows.
@@ -776,7 +798,8 @@ the rest of the baseline from the fetch cache. The zip reader is
 `/live.json` and any client compute the same result:
 
 - **Flags** — every rule in `FLAG_RULES` firing on a reading: conflict
-  reporting surging or elevated at a place, a worldwide hotspot, an M6+ quake
+  reporting surging or elevated at a place, a worldwide hotspot above a
+  measured normal, an M6+ quake
   or PAGER orange/red, a GDACS red (or orange near a place), a cyclone near a
   place, a gale (or near gale) at a port, a natural event near a place, a 5%
   daily move in crude. Each carries its rule in words, the reading's own time,
@@ -932,7 +955,8 @@ request and 0.1 s, eleven-second answers cost 21.5 s, success is unchanged.
 two refusals from shared cloud IPs answered it well enough: the adapter now
 reads the raw fifteen-minute files instead (see "What's changing").
 
-Third run, 23 September 2026 — the raw-file adapter and FRED, first contact:
+Third and fourth runs, 23 September 2026 — the raw-file adapter and FRED,
+first contact, then the same with each hotspot's evidence printed:
 
 | Feed | Result |
 |---|---|
@@ -946,19 +970,19 @@ What that run showed, and what changed because of it:
 - **The top hotspots were small places with near-zero normals** — Gosport
   182.5×, Burnham (Somerset) 100×, "Cape Cod, Florida" 81.5× (GDELT's geocoder;
   Cape Cod is in Massachusetts). Dividing by the floor made those multiples
-  look measured, which is what `floored` now fixes. Whether they were real
-  stories or single syndicated items the log could not say, which is what
-  `minEvents` guards and why `live:check` now prints each top hotspot's
-  events, measured normal and publishers.
+  look measured, which is what `floored` now fixes. The next run printed
+  what they rested on: many events each (13 for Gosport, so `minEvents`
+  would not have caught them) but one syndicated story apiece, and one
+  outright misreading — Burnham, Somerset was sourced partly to the
+  *Maldon and Burnham Standard*, which covers Burnham-on-Crouch in Essex.
+  That is what moved them to `noBaseline`.
 - **Dover, Rotterdam and Antwerp were all "surging" at once**, for two
   different reasons. Rotterdam and Antwerp: overlapping circles — every
   story placed in Rotterdam is 72 km from the Antwerp node and counted for
-  both. Fixed by nearest-only counting, above. Dover: Gosport is 186 km from
-  the Dover Strait node, inside the 200 km chokepoint radius, so a story
-  cluster on the south coast of England raised the strait. That one is the
-  rule working as published, and the page states the radius — but read the
-  next runs for it. If chokepoints keep inheriting unrelated coastal towns,
-  narrow the chokepoint radius rather than adding exceptions.
+  both. Fixed by nearest-only counting, above. Dover: the 200 km circle
+  reached Gosport (186 km) and, far worse, London (126 km) — the next run
+  had Dover at 815 reports against a normal of 181. Fixed by the Dover
+  Strait's own 65 km radius, above.
 - **Speed is not the constraint any more.** `live:check` runs outside Next,
   so it has no fetch cache at all: 40 files downloaded, unzipped and parsed
   from cold in 1.4 s. A cold production regeneration is therefore far inside

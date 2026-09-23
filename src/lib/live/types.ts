@@ -138,6 +138,15 @@ export interface TradeNode {
   box?: BoundingBox;
   /** Plain-words caveat shown beside the node, e.g. on receiver coverage. */
   note?: string;
+  /**
+   * How far from this place a news story may be geocoded and still count
+   * toward its conflict reporting, when the default for its kind
+   * (REPORTING_RULES) would take in a large city whose news is not about the
+   * place. `exclude` names places GDELT geocodes to that fall inside the
+   * radius but must not count — matched against the start of GDELT's full
+   * place name. `why` is printed on the page.
+   */
+  reporting?: { km: number; exclude?: string[]; why: string };
 }
 
 /** The nearest trade node to a point, for "180 km from Port of Busan". A distance, never an impact claim. */
@@ -196,7 +205,10 @@ export const REPORTING_RULES = {
   /** Near a tracked place: below this many reports, no level is claimed. */
   placeMinReports: 10,
   /**
-   * How close a story must be geocoded to count for a place. Tighter than
+   * How close a story must be geocoded to count for a place, unless the
+   * place sets its own (`TradeNode.reporting`, narrower where a large
+   * unrelated city falls inside the default — London is 126 km from the
+   * Dover Strait). Tighter than
    * the hazard radius (PROXIMITY_KM), because news is geocoded to a city and
    * a wide radius double-counts: at 300 km one strike in Rotterdam raised
    * alerts for Rotterdam, Antwerp and the Strait of Dover. Chokepoints get
@@ -301,7 +313,15 @@ export interface GdeltData {
   /** All reporting in the recent window, every kind of event — the denominator. */
   totalReports: number;
   conflictReports: number;
+  /** Cities above a measured normal. These can raise flags. */
   hotspots: Hotspot[];
+  /**
+   * Cities with no measurable normal — almost no reporting at this time of
+   * day all week — that now clear the report and event thresholds. Listed for
+   * checking, never flagged: in the first real runs every one was a single
+   * story syndicated across a newspaper group or a place the geocoder misread.
+   */
+  noBaseline: Hotspot[];
   countries: CountrySurge[];
   problems: ProblemTrend[];
   places: PlaceReporting[];

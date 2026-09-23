@@ -134,6 +134,7 @@ function describe(source: string, data: unknown): string[] {
         baselineFilesExpected: number;
         totalReports: number;
         conflictReports: number;
+        noBaseline: Array<{ name: string; reports: number; events: number; sources: Array<{ domain: string }> }>;
         hotspots: Array<{
           name: string;
           ratio: number;
@@ -154,6 +155,10 @@ function describe(source: string, data: unknown): string[] {
         ...g.hotspots.slice(0, 5).map(
           (h) =>
             `  ${h.name}: ${h.reports} reports / ${h.events} events, normal ${h.expected.toFixed(1)}${h.floored ? ' (floored)' : ''}, ${h.ratio.toFixed(1)}×; ${h.sources.map((s) => s.domain).join(', ') || 'no links'}`,
+        ),
+        `${g.noBaseline.length} with no measurable normal (listed, never flagged)${g.noBaseline.length > 0 ? ':' : '.'}`,
+        ...g.noBaseline.map(
+          (h) => `  ${h.name}: ${h.reports} reports / ${h.events} events; ${h.sources.map((s) => s.domain).join(', ') || 'no links'}`,
         ),
         `${g.countries.length} countries above normal.`,
         `Places not normal: ${g.places.filter((p) => p.level !== 'normal').map((p) => `${p.nodeId} ${p.level} (${Math.round(p.reports)} vs ${p.expected.toFixed(1)})`).join(', ') || 'none'}.`,

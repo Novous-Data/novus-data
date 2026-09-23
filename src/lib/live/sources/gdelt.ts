@@ -42,7 +42,7 @@
  */
 
 import { countryName } from '../countries';
-import { ALL_NODES, distanceKm, nearestNode } from '../nodes';
+import { ALL_NODES, distanceKm, excludedFromReporting, nearestNode, reportingRadiusKm } from '../nodes';
 import {
   REPORTING_RULES,
   type CountrySurge,
@@ -53,6 +53,7 @@ import {
   type Reading,
   type ReportingLevel,
   type SourceLink,
+  type TradeNode,
 } from '../types';
 import { LiveSourceError, fetchBytes, fetchText } from './http';
 import { unzipFirstEntry } from './unzip';
@@ -82,6 +83,7 @@ const CONCURRENCY = 8;
 const IMMUTABLE_SECONDS = 9 * 24 * 60 * 60;
 
 const MAX_HOTSPOTS = 12;
+const MAX_NO_BASELINE = 6;
 const MAX_COUNTRIES = 10;
 const SOURCES_PER_HOTSPOT = 3;
 
@@ -175,26 +177,35 @@ function isHttpUrl(value: string): boolean {
 
 /**
  * The tracked places a story geocoded here counts for: the nearest port or
- * cluster within reach, and the nearest chokepoint within reach — at most one
- * of each. Rotterdam and Antwerp are 77 km apart, Shanghai and Ningbo 80, so
- * counting every place in reach made one Rotterdam story raise Antwerp too,
- * and two "surging" alerts read as two confirmations of one thing (the first
- * real run showed both surging together). A port and the chokepoint it sits
- * on may both count — Singapore and its strait are 12 km apart — because that
- * overlap is geography, not duplication.
+ * cluster within its reporting radius, and the nearest chokepoint within
+ * its radius — at most one of each. Rotterdam and Antwerp are 77 km apart,
+ * Shanghai and Ningbo 80, so counting every place in reach made one
+ * Rotterdam story raise Antwerp too, and two "surging" alerts read as two
+ * confirmations of one thing (the first real run showed both surging
+ * together). A port and the chokepoint it sits on may both count —
+ * Singapore and its strait are 12 km apart — because that overlap is
+ * geography, not duplication.
+ *
+ * The nearest place decides, and its exclusions are final: The Hague is
+ * excluded from Rotterdam, and must not then fall through to Antwerp, 89 km
+ * away, simply because Antwerp's radius reaches it.
  */
-function placesCounting(lat: number, lon: number): string[] {
-  let port: { id: string; km: number } | null = null;
-  let chokepoint: { id: string; km: number } | null = null;
+function placesCounting(lat: number, lon: number, geocodedName: string): string[] {
+  type Hit = { node: TradeNode; km: number } | null;
+  let port: Hit = null;
+  let chokepoint: Hit = null;
   for (const node of ALL_NODES) {
     const km = distanceKm(lat, lon, node.lat, node.lon);
+    if (km > reportingRadiusKm(node)) continue;
     if (node.kind === 'chokepoint') {
-      if (km <= REPORTING_RULES.chokepointRadiusKm && (!chokepoint || km < chokepoint.km)) chokepoint = { id: node.id, km };
-    } else if (km <= REPORTING_RULES.portRadiusKm && (!port || km < port.km)) {
-      port = { id: node.id, km };
+      if (!chokepoint || km < chokepoint.km) chokepoint = { node, km };
+    } else if (!port || km < port.km) {
+      port = { node, km };
     }
   }
-  return [port?.id, chokepoint?.id].filter((id): id is string => id !== undefined);
+  return [port, chokepoint]
+    .filter((hit): hit is NonNullable<typeof hit> => hit !== null && !excludedFromReporting(hit.node, geocodedName))
+    .map((hit) => hit.node.id);
 }
 
 export function tallyExport(text: string): FileTally {
@@ -258,7 +269,7 @@ export function tallyExport(text: string): FileTally {
       location.sources.length = Math.min(location.sources.length, SOURCES_PER_HOTSPOT * 2);
     }
 
-    for (const nodeId of placesCounting(lat, lon)) {
+    for (const nodeId of placesCounting(lat, lon, f[COL.geoFullName].trim())) {
       tally.places[nodeId] = (tally.places[nodeId] ?? 0) + reports;
       tally.placeEvents[nodeId] = (tally.placeEvents[nodeId] ?? 0) + 1;
     }
@@ -537,7 +548,8 @@ export function parseGdelt(raw: GdeltRaw): Reading<GdeltData> {
       baselineFilesExpected: raw.baseline.length,
       totalReports: R.totalReports,
       conflictReports: R.conflictReports,
-      hotspots: hotspots.slice(0, MAX_HOTSPOTS),
+      hotspots: hotspots.filter((h) => !h.floored).slice(0, MAX_HOTSPOTS),
+      noBaseline: hotspots.filter((h) => h.floored).slice(0, MAX_NO_BASELINE),
       countries: countries.slice(0, MAX_COUNTRIES),
       problems,
       places,

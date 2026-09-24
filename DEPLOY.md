@@ -628,3 +628,78 @@ login, which owns it. A deleted repository can normally be restored for 90
 days — organisation or account **Settings → Repositories → Deleted
 repositories** — so a mistake is recoverable if caught quickly, but do not
 rely on it.
+
+---
+
+## Part 8 — Set up Beehiiv and send the first issue
+
+Beehiiv is where the briefing is written and emailed. The site never talks to
+it at runtime: it needs three addresses from it, and the sync script copies
+each sent issue into `content/issues/` (Part 3). Every step here needs the
+Beehiiv login (Rule 7).
+
+### Before you start
+
+- **Terms and age.** Read Beehiiv's Terms of Use before signing up. If they
+  require account holders to be adults, a parent or guardian opens and owns the
+  account and adds you to it.
+- **A project email address.** Create one for Novus Data (a new Gmail is fine)
+  instead of using a personal address. It becomes the sign-up email, the
+  reply-to on every issue, and `NEXT_PUBLIC_CONTACT_EMAIL` on the site.
+- **A mailing address.** US anti-spam law (CAN-SPAM) requires a postal address
+  in the footer of commercial email, and Beehiiv asks for one. Every subscriber
+  will see it. Do not use a home address: use a PO box or a business address.
+
+### 1. Create the account and the publication
+
+beehiiv.com → **Sign up** with the project email → confirm the email → create a
+publication:
+
+- **Name:** `The Novus Data Briefing` — the name the site already uses
+  (`publication.newsletter.name`). Change both together if you change one.
+- **Subdomain:** short and permanent, e.g. `novusdata` → `novusdata.beehiiv.com`.
+- **Description:** the site's own sentence — "A written round-up of what moved
+  in the register, sent by email."
+
+Start on the free plan. Upgrade only when a feature is actually needed.
+
+### 2. Settings worth setting once
+
+- **Sender name** "The Novus Data Briefing", **reply-to** the project email.
+- **Mailing address** (see above).
+- **Double opt-in** on: subscribers confirm by email, which keeps the list real.
+- **Branding:** logo, and the site's colours — background `#070C20`, accent
+  `#7B92BE`, text `#F4F6FA` — so the email and the site read as one product.
+- **RSS feed:** find it in Settings (search the settings for "RSS") and turn it
+  on. The sync script needs it. If your plan does not offer it, tell Alex: issues
+  can still be added by hand, but that breaks the one-step rule and needs a fix.
+
+### 3. The three addresses the site needs
+
+| Where you find it | Becomes | Needed |
+|---|---|---|
+| The subscribe page — `https://<subdomain>.beehiiv.com/subscribe`; open it to check | `NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL` | **Yes, to launch** |
+| The publication's web address — `https://<subdomain>.beehiiv.com` | `NEXT_PUBLIC_BEEHIIV_HOME_URL` | Optional |
+| The RSS feed address from step 2 | `NEXT_PUBLIC_BEEHIIV_FEED_URL` on Vercel, and `BEEHIIV_RSS_URL` for the sync script | Optional for the site, required to sync |
+
+They go into Vercel as described in Part 1, step 4. None is a secret.
+
+### 4. Write and send the first issue
+
+**New post** → title, subtitle (it becomes the excerpt on the site) and body.
+Before sending:
+
+- **Send a test email** to yourself and read it on a phone.
+- Audience **free**, delivery **email and web**.
+- Check every figure has its source linked, every date is absolute, and nothing
+  claims staff, readers or results that do not exist (CLAUDE.md Rules 1 and 2).
+
+An article or long-term review is written the same way, with the content tag
+**Article** or **Long-term review** added so it files under `/articles`.
+
+### 5. Bring it into the site
+
+Run `npm run sync-issues` with `BEEHIIV_RSS_URL` set, review the new file in
+`content/issues/`, commit and push — Part 3. Do it soon after sending: the feed
+only keeps recent posts. The first real run also answers the four open questions
+in CLAUDE.md §10, which should be recorded there.

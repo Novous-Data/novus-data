@@ -922,6 +922,16 @@ would be an exposure claim that skipped every requirement in §6a. "Within
   a keyboard-operable crosshair.
 - **Kinds of problem** are a dumbbell per row: normal share and share now on
   one common axis, a legend (two series), and both values written out.
+- **Tracked places against their normal** (`components/live/against-normal.tsx`)
+  is a dot per place on a **logarithmic** axis of "times normal", because a
+  multiple is a ratio: 0.5× and 2× sit equally far from normal, and one place
+  at 40× does not flatten the rest. The published thresholds are drawn on the
+  axis (1× solid, 2× and 3× dashed, from `REPORTING_RULES`). Emphasis form:
+  above normal in `--accent-text`, normal in muted grey, too few reports to
+  judge as a hollow ring. The plot is inset so a mark at either end is not
+  clipped.
+- **Countries against their normal** is a bar per country from zero, with a
+  tick where normal would be — magnitude, so a linear axis shared by all rows.
 - **Chokepoints** are a fixed-order table with inline bars.
 
 Marks use existing tokens only: `--accent` for bars and lines (3.1:1 on

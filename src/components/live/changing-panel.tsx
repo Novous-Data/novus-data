@@ -1,5 +1,6 @@
+import { CountriesAgainstNormal, PlacesAgainstNormal } from '@/components/live/against-normal';
 import { ExternalLink, TextLink } from '@/components/text-link';
-import { formatCount, formatRatio, formatRatioOf, formatUtc } from '@/lib/live/display';
+import { formatCount, formatRatio, formatUtc } from '@/lib/live/display';
 import type { GdeltData, Hotspot } from '@/lib/live/types';
 import { PROXIMITY_KM, REPORTING_RULES } from '@/lib/live/types';
 
@@ -7,12 +8,14 @@ import { PROXIMITY_KM, REPORTING_RULES } from '@/lib/live/types';
  * "What's changing": where conflict reporting is above its own normal, and
  * which kinds of problem are taking a larger share of the news.
  *
- * Three forms, each chosen for its job:
+ * Four forms, each chosen for its job:
  *
- * - Places reporting above normal: a ranked list. The ranking IS the
+ * - Tracked places: a dot per place on a logarithmic axis of "times
+ *   normal", with the published thresholds drawn on it (./against-normal).
+ * - Cities reporting above normal: a ranked list. The ranking IS the
  *   information — which places are furthest above their own normal — and
  *   every row carries its count, its multiple and the articles behind it.
- * - Countries: the same, shorter.
+ * - Countries: a bar per country with a tick where normal would be.
  * - Problem types: a dumbbell per row — the normal share and the share in
  *   the last three hours on one common axis — because the question is "did
  *   this move, and which way", and two marks on one line answer it at a
@@ -35,6 +38,14 @@ export function ChangingPanel({ data }: { data: GdeltData }) {
         files and <span data-numeric>{data.baselineFiles}</span> of{' '}
         <span data-numeric>{data.baselineFilesExpected}</span> baseline files read.
       </p>
+
+      <h3 className="kicker mt-8">Tracked places against their normal</h3>
+      <p className="mt-1 max-w-[72ch] text-meta text-muted">
+        Every port, strait and industrial cluster on this page with any conflict reporting nearby, placed against
+        its own normal. A level is claimed only from <span data-numeric>{REPORTING_RULES.placeMinReports}</span>{' '}
+        reports across <span data-numeric>{REPORTING_RULES.minEvents}</span> or more events.
+      </p>
+      <PlacesAgainstNormal places={data.places} />
 
       <h3 className="kicker mt-8">Places reporting above normal</h3>
       <p className="mt-1 max-w-[72ch] text-meta text-muted">
@@ -80,17 +91,7 @@ export function ChangingPanel({ data }: { data: GdeltData }) {
             <span data-numeric>{REPORTING_RULES.countryMinRatio}×</span> the normal share, including stories GDELT
             could place only at country level.
           </p>
-          <ul className="mt-3 grid gap-x-8 border-b border-hairline sm:grid-cols-2">
-            {data.countries.map((country) => (
-              <li key={country.code} className="flex items-baseline justify-between gap-4 border-t border-hairline py-2 text-[0.9375rem]">
-                <span className="text-fg">{country.name}</span>
-                <span className="text-meta text-muted">
-                  <span data-numeric className="text-fg">{formatRatioOf(country.ratio, country.floored)}</span> ·{' '}
-                  <span data-numeric>{formatCount(country.reports)}</span> reports
-                </span>
-              </li>
-            ))}
-          </ul>
+          <CountriesAgainstNormal countries={data.countries} />
         </>
       ) : null}
 

@@ -45,6 +45,20 @@ These are quoted verbatim from the build brief and shape every decision.
 > design requires hand-editing a file per issue beyond the single documented sync
 > step, the design is wrong — change it.
 
+### Working style
+
+Carried over from the project's first repository (1 September 2026), which
+held only setup files and has since been retired. Still how every session
+should work:
+
+- The author is learning web development. Explain non-obvious decisions in one
+  or two lines.
+- Small, reviewable diffs. One concern per commit.
+- Conventional commit messages (`fix:`, `feat:`, `docs:`, `refactor:` …).
+- When something has a real trade-off, say so and give a recommendation.
+- If a requirement in a prompt is ambiguous, ask instead of assuming.
+- Type checks and the production build must pass before a task is called done.
+
 ## 3. Stack and versions
 
 | Thing | Version | Notes |

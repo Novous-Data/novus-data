@@ -537,8 +537,30 @@ Avatar → **Your organizations → New organization → Free**.
 
 ### 3. Make Alex an owner
 
-Organisation → **People** → `arowsom-oss` → **Change role → Owner**. You are
-already an owner as the creator.
+**Not done yet (checked 24 September 2026).** Alex's account, `arowsom-oss`,
+is on the repository as an *outside collaborator* with **write** access — the
+access the old personal account gave him, carried over by the transfer. He is
+not a member of the organisation, so he has no role there to change, and write
+cannot touch settings, secrets, rulesets or collaborators. Signed in as
+`Novous-Data`:
+
+1. Open **github.com/orgs/novus-data/people**.
+2. Click **Invite member**, type `arowsom-oss`, and pick him from the list.
+3. Choose the role **Owner** (not *Member*), then **Send invitation**.
+4. Alex, signed in as `arowsom-oss`, accepts — from the email GitHub sends,
+   or at **github.com/orgs/novus-data/invitation** → **Join novus-data**.
+   Invitations expire after seven days; resend from the same page if needed.
+5. Check: **People** now lists both of you with the role **Owner**. As an
+   owner Alex has admin on every repository in the organisation; his old
+   outside-collaborator entry is no longer needed.
+
+If GitHub instead offers to *convert* the outside collaborator to a member,
+that works too, provided the role chosen is **Owner**. You are already an
+owner as the creator.
+
+Once both of you have two-factor authentication on (step 1), require it for
+everyone: organisation **Settings → Authentication security → Require
+two-factor authentication**.
 
 **What owner means.** Either of you can change anything, including deleting
 the repository, deleting the organisation, and removing the other owner.
@@ -578,3 +600,31 @@ address.
 With both of you owners, either can create the default-branch ruleset in
 CONTRIBUTING.md ("Make the first rule real"). It is the reason admin access
 was worth having.
+
+### 7. Delete the two leftover repositories
+
+Besides `novus-data/novus-data`, two other repositories exist. Both were read
+in full on 24 September 2026, every branch and commit, and neither holds
+anything the main repository needs:
+
+| Repository | What is in it | Where it went |
+|---|---|---|
+| `novus-data/demo-repository` (private) | GitHub's generated sample for a new organisation: a README welcoming you to it, a one-line `index.html`, a sample `package.json`, two example workflows, and a branch adding README badges. No Novus Data code. | Nothing to keep. |
+| `Novous-Data/Novous-Data` (private, personal account) | One commit from 1 September: a first `CLAUDE.md`, a `.gitignore` and `.claude/settings.json`. | The `.gitignore` is covered by the main one. The `CLAUDE.md`'s description of the project is out of date (it predates accounts, the register and the monitor); its working-style rules are now in CLAUDE.md §2. The settings file is in CONTRIBUTING.md, word for word, under "An optional permissions file". |
+
+**Delete by the exact name, and read it twice.** The names are one letter
+apart from the one that matters: keep **`novus-data/novus-data`**.
+
+For each of the two:
+
+1. Open its **Settings** page — `github.com/novus-data/demo-repository/settings`
+   and `github.com/Novous-Data/Novous-Data/settings`.
+2. Scroll to **Danger Zone** → **Delete this repository**.
+3. Confirm through GitHub's prompts, typing the full name when asked —
+   `novus-data/demo-repository`, then `Novous-Data/Novous-Data`.
+
+The first needs an organisation owner; the second only the `Novous-Data`
+login, which owns it. A deleted repository can normally be restored for 90
+days — organisation or account **Settings → Repositories → Deleted
+repositories** — so a mistake is recoverable if caught quickly, but do not
+rely on it.

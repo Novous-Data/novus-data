@@ -222,6 +222,48 @@ npm run check
 Typecheck, lint and doctor in one. If it is clean, the Vercel build will not
 fail for a reason you could have caught in ten seconds.
 
+### An optional permissions file for Claude Code
+
+The project's first repository (retired 24 September 2026) carried a
+`.claude/settings.json` that this one never had. It is kept here rather than
+switched on, because its `ask` rule makes every Claude session — each of
+ours — stop and wait for a click before each `git push`, which also pauses a
+session that is fixing a failing check. Its `deny` rules are worth having on
+their own: they stop Claude reading `.env` files, where the API keys live.
+To switch it on, save this as `.claude/settings.json` in a pull request we
+both agree to:
+
+```json
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run build)",
+      "Bash(npm run dev)",
+      "Bash(npm run lint *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx create-next-app *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(npx vercel *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(rm -rf *)",
+      "Bash(git reset --hard *)"
+    ]
+  }
+}
+```
+
 ---
 
 ## Things that are settled, and why

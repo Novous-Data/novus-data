@@ -88,9 +88,11 @@ and the review preview's panel, so this list cannot silently go stale.
 
 ### Blocks a production build
 
+The editor's name is supplied: **Gavin McGreevy**, confirmed 24 September
+2026. Two inputs remain.
+
 | Input | Where | What I need |
 |---|---|---|
-| Author name | `src/config/publication.ts:107` (`author.name`) | Your name exactly as it should appear in print |
 | Subscribe URL | `NEXT_PUBLIC_BEEHIIV_SUBSCRIBE_URL` | Your Beehiiv subscribe page |
 | Contact email | `NEXT_PUBLIC_CONTACT_EMAIL` | The address you are content to publish |
 
@@ -806,7 +808,6 @@ The complete list. There is nothing else.
 | File and line | What it is |
 |---|---|
 | `src/app/privacy/page.tsx:16` | **The one intentional TODO.** `/privacy` must be reviewed by you before the domain goes live. It describes real behaviour and is explicitly not a legal policy |
-| `src/config/publication.ts:107` | `author.name` is `null` and blocks a production build |
 | `src/config/publication.ts:109` | `author.credentials` is empty |
 | `src/config/publication.ts:93` | `cadence` is `null`; the site claims no schedule |
 | `src/config/publication.ts:96` | `firstIssueDate` is `null` |
